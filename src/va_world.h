@@ -39,6 +39,7 @@ namespace va_godot
 
 class VACustomMaterial;
 class VAEmitter;
+class VAListener;
 
 // Controls which child nodes a material applies to. Does not affect child nodes that have their own material
 enum class PropagateMode
@@ -62,7 +63,11 @@ private:
 
     std::unordered_map<int, va_godot::VACustomMaterial *> custom_materials;
 
+    // The current VAListener. All listeners share one SDK emitter handle, and only this one points at it.
     va_godot::VAEmitter *listener = nullptr;
+
+    // Every VAListener attached to this world, current or not. The first is promoted when the current listener leaves the tree.
+    std::vector<va_godot::VAListener *> listeners;
 
     // Contains every non-listener emitter. When the listener is finally added, this list is processed
     std::vector<va_godot::VAEmitter *> registered_emitters;
@@ -161,7 +166,15 @@ public:
 
     void unregister_pending_target(va_godot::VAEmitter *emitter);
 
-    void unregister_listener(va_godot::VAEmitter *emitter);
+    void register_listener(va_godot::VAListener *node);
+
+    void unregister_listener(va_godot::VAListener *node);
+
+    // Hands the shared listener handle over to node
+    void set_current_listener(va_godot::VAListener *node);
+
+    // If node is the current listener, hands the shared listener handle over to another attached listener (if any)
+    void release_current_listener(va_godot::VAListener *node);
 
     bool export_to_file(const String &file_path);
 

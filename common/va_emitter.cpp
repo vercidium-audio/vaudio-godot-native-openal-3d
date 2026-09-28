@@ -12,8 +12,13 @@
 #include "va_world.h"
 #include "va_world_lookup.h"
 
+#include <unordered_map>
+
 namespace va_godot
 {
+
+// Handles whose node left the tree while removal was still pending, mapped to the VAWorld that destroys them once OnRemoved fires. Main thread only.
+static std::unordered_map<::VAEmitter *, VAWorld *> orphaned_handles;
 
 void VAEmitter::_bind_methods()
 {
@@ -216,7 +221,33 @@ void VAEmitter::_enter_tree()
         return;
     }
 
+    attach_to_world();
+}
+
+void VAEmitter::attach_to_world()
+{
     create_emitter();
+}
+
+void VAEmitter::detach_from_world()
+{
+    va_world->unregister_pending_target(this);
+
+    if (emitter)
+        release_emitter();
+}
+
+void VAEmitter::release_emitter()
+{
+    remove_emitter();
+
+    // Removal is still pending (reverb tail, or removed from within a callback), so this node may be freed or create a new handle before OnRemoved fires. Hand the handle to VAWorld so the callback never reaches this node.
+    if (emitter)
+    {
+        orphaned_handles[emitter] = va_world;
+        vaEmitterSetUserData(emitter, nullptr);
+        emitter = nullptr;
+    }
 }
 
 void VAEmitter::_exit_tree()
@@ -236,13 +267,16 @@ void VAEmitter::_exit_tree()
             "' left the tree without ever finding a VAWorld - no emitter was created for it. Make sure this node's scene was added under a VAWorld while it was in the tree.");
     }
 
-    if (emitter)
-    {
-        va_world->unregister_pending_target(this); // No-op unless this emitter was still waiting in pending_targets for a listener to appear
-        va_world->unregister_listener(this); // No-op unless this is va_world's current listener - avoids a dangling pointer if freed before VAWorld
+    if (!va_world)
+        return;
 
-        remove_emitter();
-    }
+    detach_from_world();
+
+    // A raytrace_once emitter may have started its own removal earlier and still be waiting on its reverb tail
+    if (emitter)
+        release_emitter();
+
+    va_world = nullptr;
 }
 
 // Re-attempts find_va_world each time a node is added anywhere in the tree; once a VAWorld becomes reachable, disconnects and initialises normally via create_emitter().
@@ -258,7 +292,7 @@ void VAEmitter::retry_find_va_world(Node *node)
     get_tree()->disconnect("node_added", callable_mp(this, &VAEmitter::retry_find_va_world));
     waiting_for_world = false;
 
-    create_emitter();
+    attach_to_world();
 }
 
 void VAEmitter::create_emitter()
@@ -522,11 +556,14 @@ void VAEmitter::on_raytraced_by_another_emitter(::VAEmitter *other)
     }
 }
 
-void VAEmitter::on_emitter_removed()
+void VAEmitter::on_emitter_removed(::VAEmitter *handle)
 {
-    // Deliberately not vaEmitterDestroy(emitter) here - see the warning on this method's declaration in va_emitter.h. VAWorld owns final destruction, deferred until vaWorldWait() has fully drained.
-    va_world->defer_emitter_destroy(emitter);
-    emitter = nullptr;
+    // Deliberately not vaEmitterDestroy here - VAWorld owns final destruction, deferred until vaWorldWait() has fully drained.
+    va_world->defer_emitter_destroy(handle);
+
+    // Only clear it if it's still this node's handle
+    if (emitter == handle)
+        emitter = nullptr;
 }
 
 void VAEmitter::on_raytracing_complete_trampoline(::VAEmitter *emitter)
@@ -551,7 +588,27 @@ void VAEmitter::on_removed_trampoline(::VAEmitter *emitter)
 
     if (self)
     {
-        self->on_emitter_removed();
+        self->on_emitter_removed(emitter);
+        return;
+    }
+
+    auto it = orphaned_handles.find(emitter);
+
+    if (it != orphaned_handles.end())
+    {
+        it->second->defer_emitter_destroy(emitter);
+        orphaned_handles.erase(it);
+    }
+}
+
+void VAEmitter::forget_orphaned_handles(VAWorld *world)
+{
+    for (auto it = orphaned_handles.begin(); it != orphaned_handles.end();)
+    {
+        if (it->second == world)
+            it = orphaned_handles.erase(it);
+        else
+            ++it;
     }
 }
 

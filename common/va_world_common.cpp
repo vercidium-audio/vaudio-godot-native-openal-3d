@@ -6,6 +6,7 @@
 #include "va_custom_material.h"
 #include "va_emitter.h"
 #include "va_engine_util.h"
+#include "va_listener.h"
 
 #include <algorithm>
 
@@ -31,6 +32,8 @@ VAWorld::~VAWorld()
                 VA_ERROR("Failed to destroy a pending emitter (VAResult=", VAResultToString(result), ")");
         }
         pending_emitter_destroys.clear();
+
+        VAEmitter::forget_orphaned_handles(this);
 
         VAResult result = vaWorldDestroy(world);
 
@@ -78,20 +81,9 @@ void VAWorld::register_emitter(va_godot::VAEmitter *emitter, bool is_main_listen
             break;
     }
 
+    // Listeners are wired up by set_current_listener
     if (is_main_listener)
-    {
-        if (!listener)
-        {
-            listener = emitter;
-
-            // Set up the sources that were created before the listener existed
-            wire_pending_targets();
-        }
-        else
-            VA_WARN_NAMED("This world can only have one VAListener node. Current listener: '", listener->get_name(), "' Second listener: '", emitter->get_name(), "'");
-
         return;
-    }
 
     // Keep track of all emitters
     registered_emitters.push_back(emitter);
@@ -130,15 +122,82 @@ void VAWorld::unregister_pending_target(va_godot::VAEmitter *emitter)
     registered_emitters.erase(std::remove(registered_emitters.begin(), registered_emitters.end(), emitter), registered_emitters.end());
 }
 
-void VAWorld::unregister_listener(va_godot::VAEmitter *emitter)
+void VAWorld::register_listener(va_godot::VAListener *node)
 {
-    if (listener == emitter)
-    {
-        listener = nullptr;
+    listeners.push_back(node);
 
-        // This node may come back (e.g. scene reload), so let a future missing-listener state warn again.
-        warned_missing_listener = false;
+    if (!listener)
+    {
+        set_current_listener(node);
+        return;
     }
+
+    // A listener added with current=true takes over, e.g. a player scene that was spawned with  VAListener.current=true
+    if (node->is_current())
+    {
+        VA_WARN_NAMED("VAListener '", node->get_name(), "' has current enabled, so it replaced '", listener->get_name(), "' as the current listener. Disable current on listeners that shouldn't take over when added, and call make_current() on the one that should be used.");
+        set_current_listener(node);
+    }
+}
+
+void VAWorld::unregister_listener(va_godot::VAListener *node)
+{
+    listeners.erase(std::remove(listeners.begin(), listeners.end(), node), listeners.end());
+
+    if (listener != node)
+        return;
+
+    if (!listeners.empty())
+    {
+        set_current_listener(listeners.front());
+        return;
+    }
+
+    // Last listener in this world, so the shared handle goes with it
+    node->release_shared_handle();
+    listener = nullptr;
+
+    // A listener may come back (e.g. scene reload), so let a future missing-listener state warn again.
+    warned_missing_listener = false;
+}
+
+void VAWorld::set_current_listener(va_godot::VAListener *node)
+{
+    if (listener == node)
+        return;
+
+    va_godot::VAListener *previous = static_cast<va_godot::VAListener *>(listener);
+    ::VAEmitter *shared_handle = previous ? previous->get_handle() : nullptr;
+
+    if (previous)
+        previous->deactivate();
+
+    listener = node;
+    node->activate(shared_handle);
+
+    // Set up the sources that were created before the listener existed
+    if (!shared_handle)
+        wire_pending_targets();
+}
+
+void VAWorld::release_current_listener(va_godot::VAListener *node)
+{
+    if (listener != node)
+    {
+        node->deactivate();
+        return;
+    }
+
+    for (va_godot::VAListener *other : listeners)
+    {
+        if (other != node)
+        {
+            set_current_listener(other);
+            return;
+        }
+    }
+
+    VA_WARN_NAMED("VAListener '", node->get_name(), "' is the only listener in this world, so it stays current.");
 }
 
 void VAWorld::on_reverb_updated_trampoline(::VAWorld *world)

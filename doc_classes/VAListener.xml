@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="VAListener" inherits="VAEmitter" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		The point sounds are heard from. Muffling and reverb are raytraced relative to the current listener.
+	</brief_description>
+	<description>
+		A [VAWorld] can contain multiple [VAListener] nodes, but only one is current at a time. All listeners in a world share a single raytraced emitter, which follows the current listener's position and uses its settings, so switching listeners doesn't restart raytracing.
+		The first listener added to a world becomes current automatically. A listener added later with [member current] enabled takes over as the current listener. When the current listener leaves the tree, the next listener in the world takes over.
+		For multiplayer games, add a [VAListener] to each player scene with [member current] disabled, then call [method make_current] on the local player's listener.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="make_current">
+			<return type="void" />
+			<description>
+				Makes this the world's current listener. Same as setting [member current] to [code]true[/code].
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="current" type="bool" setter="set_current" getter="is_current" default="false">
+			If [code]true[/code], this is the world's current listener. Setting it to [code]false[/code] hands over to another listener in the world. If this is the only listener, it stays current.
+		</member>
+	</members>
+</class>

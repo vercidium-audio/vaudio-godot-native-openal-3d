@@ -24,10 +24,22 @@ class VAEmitter : public Node3D
 {
     GDCLASS(VAEmitter, Node3D);
 
-private:
+protected:
     VAWorld *va_world = nullptr;
     ::VAEmitter *emitter = nullptr;
 
+    void create_emitter();
+    void remove_emitter();
+    void apply_properties_to_handle();
+
+    // Removes the handle from the world and detaches it from this node, even if its removal is still pending
+    void release_emitter();
+
+    // Invoked once a VAWorld is found / when leaving the tree. Listeners override these to go through VAWorld's shared listener handle instead of owning one.
+    virtual void attach_to_world();
+    virtual void detach_from_world();
+
+private:
     int reverb_ray_count = 0;
     int reverb_bounce_count = 0;
     float reverb_energy_cap = 0.15f;
@@ -69,8 +81,6 @@ private:
     Color permeation_color = Color(255.0f / 255.0f, 127.0f / 255.0f, 42.0f / 255.0f, 51.0f / 255.0f);
     Color ambient_permeation_color = Color(255.0f / 255.0f, 204.0f / 255.0f, 0.0f / 255.0f, 51.0f / 255.0f);
 
-    void apply_properties_to_handle();
-
     ALFilter *filter = nullptr;
 
     float ambient_filter_gain_lf = 1.0f;
@@ -80,9 +90,6 @@ private:
     ALReverbEffect *effect = nullptr;
 
     VAVisualisation *visualisation = nullptr;
-
-    void create_emitter();
-    void remove_emitter();
 
     bool waiting_for_world = false;
 
@@ -96,12 +103,15 @@ private:
 
     void on_raytraced_by_another_emitter(::VAEmitter *other);
 
-    void on_emitter_removed();
+    void on_emitter_removed(::VAEmitter *handle);
 
 protected:
     static void _bind_methods();
 
 public:
+    // Drops any orphaned handles owned by this world, called from ~VAWorld so a late OnRemoved can't reach a freed VAWorld.
+    static void forget_orphaned_handles(VAWorld *world);
+
     VAEmitter();
     ~VAEmitter();
 
