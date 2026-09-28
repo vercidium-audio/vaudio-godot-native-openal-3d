@@ -137,6 +137,8 @@ public:
 
     bool is_raytraced() const;
 
+    int get_grouped_eax_index() const;
+
     Vector3 get_va_position() const;
 
     bool get_within_world_bounds() const;

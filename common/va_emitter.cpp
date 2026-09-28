@@ -30,6 +30,7 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_va_position"), &VAEmitter::get_va_position);
     ClassDB::bind_method(D_METHOD("get_within_world_bounds"), &VAEmitter::get_within_world_bounds);
     ClassDB::bind_method(D_METHOD("is_raytraced"), &VAEmitter::is_raytraced);
+    ClassDB::bind_method(D_METHOD("get_grouped_eax_index"), &VAEmitter::get_grouped_eax_index);
     ClassDB::bind_method(D_METHOD("get_eax_debug_info"), &VAEmitter::get_eax_debug_info);
 
     ClassDB::bind_method(D_METHOD("is_ambient_filter_ready"), &VAEmitter::is_ambient_filter_ready);
@@ -385,6 +386,11 @@ void VAEmitter::remove_emitter()
 bool VAEmitter::is_raytraced() const
 {
     return emitter && !vaEmitterGetInitialising(emitter);
+}
+
+int VAEmitter::get_grouped_eax_index() const
+{
+    return vaEmitterGetGroupedEAXIndex(emitter);
 }
 
 // get_va_position() is dimension-specific (Vector2 vs Vector3) - defined in each repo's own src/va_emitter.cpp.

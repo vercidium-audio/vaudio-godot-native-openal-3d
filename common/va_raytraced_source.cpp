@@ -21,6 +21,7 @@ void VARaytracedSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_muffling_gain_hf"), &VARaytracedSource::get_muffling_gain_hf);
     ClassDB::bind_method(D_METHOD("is_raytraced"), &VARaytracedSource::is_raytraced);
     ClassDB::bind_method(D_METHOD("is_raytraced_by_listener"), &VARaytracedSource::is_raytraced_by_listener);
+    ClassDB::bind_method(D_METHOD("get_grouped_eax_index"), &VARaytracedSource::get_grouped_eax_index);
 
     // Direct port of VASourceProperties.cs's groups (Reverb/Muffling/Ambience/Advanced) - a subset of VAEmitter's own property surface; Debug Rendering colors not ported, same as VAEmitter.
     ADD_GROUP("Reverb", "");
@@ -271,6 +272,11 @@ bool VARaytracedSource::is_raytraced_by_listener() const
     va_godot::VAEmitter *listener = va_world->get_listener();
 
     return listener && listener != emitter && listener->has_raytraced_target(emitter);
+}
+
+int VARaytracedSource::get_grouped_eax_index() const
+{
+    return emitter ? emitter->get_grouped_eax_index() : -1;
 }
 
 void VARaytracedSource::process_raytracing(double delta)

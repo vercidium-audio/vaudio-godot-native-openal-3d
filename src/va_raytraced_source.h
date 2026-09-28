@@ -79,6 +79,8 @@ public:
 
     bool is_raytraced_by_listener() const;
 
+    int get_grouped_eax_index() const;
+
     va_godot::VAEmitter *get_emitter() const
     {
         return emitter;
