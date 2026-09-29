@@ -103,5 +103,8 @@
 		<member name="scattering_seed" type="int" setter="set_scattering_seed" getter="get_scattering_seed">
 			The seed used to randomise scattering vectors. Randomised per source by default.
 		</member>
+		<member name="clamp_position" type="bool" setter="set_clamp_position" getter="get_clamp_position" default="true">
+			If [code]true[/code], keeps this source's position inside the world bounds so it's always raytraced. If [code]false[/code], a source outside the world isn't raytraced, and [member VAWorld.emitters_outside_the_world_are_muffled] decides whether it's fully muffled or unmuffled.
+		</member>
 	</members>
 </class>

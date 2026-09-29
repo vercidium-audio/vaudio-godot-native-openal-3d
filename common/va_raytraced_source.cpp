@@ -111,6 +111,10 @@ void VARaytracedSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_scattering_seed"), &VARaytracedSource::get_scattering_seed);
     ClassDB::bind_method(D_METHOD("set_scattering_seed", "value"), &VARaytracedSource::set_scattering_seed);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "scattering_seed"), "set_scattering_seed", "get_scattering_seed");
+
+    ClassDB::bind_method(D_METHOD("get_clamp_position"), &VARaytracedSource::get_clamp_position);
+    ClassDB::bind_method(D_METHOD("set_clamp_position", "value"), &VARaytracedSource::set_clamp_position);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "clamp_position"), "set_clamp_position", "get_clamp_position");
 }
 
 VARaytracedSource::VARaytracedSource()
@@ -257,6 +261,7 @@ void VARaytracedSource::apply_properties_to_emitter()
     emitter->set_trail_refresh_count(trail_refresh_count);
     emitter->set_refresh_distance_threshold(refresh_distance_threshold);
     emitter->set_scattering_seed(scattering_seed);
+    emitter->set_clamp_position(clamp_position);
 }
 
 bool VARaytracedSource::is_raytraced() const
@@ -616,5 +621,20 @@ void VARaytracedSource::set_scattering_seed(int value)
     if (emitter)
     {
         emitter->set_scattering_seed(scattering_seed);
+    }
+}
+
+bool VARaytracedSource::get_clamp_position() const
+{
+    return clamp_position;
+}
+
+void VARaytracedSource::set_clamp_position(bool value)
+{
+    clamp_position = value;
+
+    if (emitter)
+    {
+        emitter->set_clamp_position(clamp_position);
     }
 }

@@ -83,7 +83,7 @@ PropagateMode VAWorld::read_propagate_filter(Node *node, PropagateMode inherited
     return PropagateMode::All;
 }
 
-VAMaterialType VAWorld::get_material(Node *node)
+VAMaterialType VAWorld::get_material(Node *node, bool warn_unknown)
 {
     if (!node->has_meta(MaterialMetaKey()))
     {
@@ -110,7 +110,8 @@ VAMaterialType VAWorld::get_material(Node *node)
         }
     }
 
-    VA_WARN("Unknown material for node ", node->get_name(), ": ", material_string, ". Defaulting to Air");
+    if (warn_unknown)
+        VA_WARN("Unknown material for node ", node->get_name(), ": ", material_string, ". Defaulting to Air");
     return VAMaterialAir;
 }
 
@@ -211,7 +212,31 @@ void VAWorld::on_node_added(Node *node)
         node->remove_meta(PrimitiveMetaKey());
     }
 
-    add_primitive(node, VAMaterialAir, false, PropagateMode::All, false);
+    // node_added fires once per node rather than once per subtree, so a node inside an added subtree (e.g. an instanced scene whose root carries the material) has to pick up what its ancestors would have cascaded to it
+    VAMaterialType material = VAMaterialAir;
+    bool use_flat_transmission = false;
+    PropagateMode filter = PropagateMode::All;
+    resolve_inherited(node, material, use_flat_transmission, filter);
+
+    add_primitive(node, material, use_flat_transmission, filter, false);
+}
+
+// Applies each ancestor's material/transmission/propagate metadata outermost first, the same order a recursive add_primitive cascades them in. Unknown materials aren't warned about here - they already were when their own node was added.
+void VAWorld::resolve_inherited(Node *node, VAMaterialType &material, bool &use_flat_transmission, PropagateMode &filter)
+{
+    Node *parent = node->get_parent();
+    if (!parent)
+        return;
+
+    resolve_inherited(parent, material, use_flat_transmission, filter);
+
+    if (parent->has_meta(MaterialMetaKey()))
+        material = get_material(parent, false);
+
+    filter = read_propagate_filter(parent, filter);
+
+    if (parent->has_meta(UseFlatTransmissionMetaKey()))
+        use_flat_transmission = parent->get_meta(UseFlatTransmissionMetaKey());
 }
 
 // This fires for the new parent node AND each of its child nodes separately - child nodes are invoked first.

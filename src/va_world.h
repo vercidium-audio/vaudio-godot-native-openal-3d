@@ -107,7 +107,8 @@ private:
     // Reports unknown material metadata strings when in the editor, not used at runtime.
     void validate_materials_in_editor(Node *node);
 
-    VAMaterialType get_material(Node *node);
+    VAMaterialType get_material(Node *node, bool warn_unknown = true);
+    void resolve_inherited(Node *node, VAMaterialType &material, bool &use_flat_transmission, PropagateMode &filter);
 
     void add_primitive(Node *node, VAMaterialType material, bool use_flat_transmission, PropagateMode filter, bool recursive);
     void remove_primitive(Node *node, bool recursive);

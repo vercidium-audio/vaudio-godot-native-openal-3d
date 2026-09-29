@@ -49,6 +49,7 @@ private:
     int trail_refresh_count = 16;
     float refresh_distance_threshold = 1.0f;
     int scattering_seed = 0;
+    bool clamp_position = true;
 
     void apply_properties_to_emitter();
 
@@ -136,4 +137,6 @@ public:
     void set_refresh_distance_threshold(float value);
     int get_scattering_seed() const;
     void set_scattering_seed(int value);
+    bool get_clamp_position() const;
+    void set_clamp_position(bool value);
 };
