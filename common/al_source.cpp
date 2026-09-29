@@ -317,15 +317,18 @@ void ALSource::stop()
 
     for (auto &source : sources)
         source->stop();
+
+    // Release them now - a stopped looping source never reports finished, so _process would never clean it up
+    sources.clear();
 }
 
 bool ALSource::is_playing() const
 {
     for (auto &source : sources)
         if (!source->is_finished())
-            return false;
+            return true;
 
-    return true;
+    return false;
 }
 
 void ALSource::update_filter(float new_gain, float new_gain_hf, bool fullReverb)
