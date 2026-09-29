@@ -61,7 +61,8 @@ class VAWorld : public Node3D
 private:
     ::VAWorld *world = nullptr;
 
-    std::unordered_map<int, va_godot::VACustomMaterial *> custom_materials;
+    // Material id -> name. Names rather than node pointers, since a VACustomMaterial can be freed while the world keeps using its material
+    std::unordered_map<int, String> custom_materials;
 
     // The current VAListener. All listeners share one SDK emitter handle, and only this one points at it.
     va_godot::VAEmitter *listener = nullptr;

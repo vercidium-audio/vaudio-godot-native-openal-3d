@@ -3,7 +3,7 @@
 	<brief_description>
 	</brief_description>
 	<description>
-		Defines a custom acoustic material that can be assigned to geometry in a [VAWorld], controlling how sound absorbs, scatters, and transmits through it. Must be added as a child of (or alongside) the level's [VAWorld].
+		Defines a custom acoustic material that can be assigned to geometry in a [VAWorld], controlling how sound absorbs, scatters, and transmits through it. Must be added as a child of (or alongside) the level's [VAWorld]. It can't be removed while the [VAWorld] is running - doing so logs an error, and primitives keep using its last values until the scene is reloaded.
 	</description>
 	<tutorials>
 	</tutorials>

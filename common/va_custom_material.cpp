@@ -114,6 +114,40 @@ void VACustomMaterial::_enter_tree()
     registered = true;
 }
 
+void VACustomMaterial::_exit_tree()
+{
+    if (!registered)
+        return;
+
+    registered = false;
+    va_world_handle = nullptr;
+
+    VAWorld *va_world = find_va_world(this);
+
+    if (!va_world)
+        return;
+
+    // Children leave the tree before their VAWorld, so a scene unload looks the same as this node alone being removed until the end of the frame
+    callable_mp_static(&VACustomMaterial::report_if_removed_at_runtime).call_deferred(va_world->get_instance_id(), get_instance_id(), material_name);
+}
+
+void VACustomMaterial::report_if_removed_at_runtime(uint64_t world_id, uint64_t material_id, const String &material_name)
+{
+    VAWorld *va_world = Object::cast_to<VAWorld>(ObjectDB::get_instance(world_id));
+
+    // The world went too, e.g. a scene change
+    if (!va_world || !va_world->is_inside_tree())
+        return;
+
+    // Re-added (e.g. reparented), so it registered itself again
+    Node *material = Object::cast_to<Node>(ObjectDB::get_instance(material_id));
+
+    if (material && material->is_inside_tree())
+        return;
+
+    VA_ERROR("VACustomMaterial '", material_name, "' was removed while its VAWorld is still running. Custom materials can't be removed at runtime - primitives using it keep its last values until the scene is reloaded");
+}
+
 int VACustomMaterial::get_material_type() const
 {
     return material_type;

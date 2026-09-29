@@ -45,6 +45,9 @@ public:
 
     void _enter_tree() override;
 
+    // Puts the SDK's built-in values for material_type back into the world, so removing the node undoes its override
+    void _exit_tree() override;
+
     // Set the internal ID of the VA material
     void set_material_type(int value);
     // Get the internal ID of the VA material

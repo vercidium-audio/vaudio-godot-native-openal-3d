@@ -37,6 +37,9 @@ private:
     // Cached handle of the owning VAWorld
     ::VAWorld *va_world_handle = nullptr;
 
+    // Deferred from _exit_tree, once it's known whether the whole scene is unloading or just this node was removed
+    static void report_if_removed_at_runtime(uint64_t world_id, uint64_t material_id, const String &material_name);
+
 protected:
     static void _bind_methods();
 
@@ -45,6 +48,9 @@ public:
     ~VACustomMaterial();
 
     void _enter_tree() override;
+
+    // Custom materials can't be removed at runtime - logs an error if this node leaves the tree while its VAWorld stays
+    void _exit_tree() override;
 
     // Set the internal ID of the VA material
     void set_material_type(int value);

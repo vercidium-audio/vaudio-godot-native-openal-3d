@@ -158,6 +158,27 @@ void VADefaultMaterial::_enter_tree()
     set_color(color);
 }
 
+void VADefaultMaterial::_exit_tree()
+{
+    if (!registered)
+        return;
+
+    // Children exit the tree before their VAWorld parent, so the handle is still alive here. The node's own properties are left alone so re-adding it re-applies the same override
+    const MaterialDefaults &defaults = get_material_defaults(material_type);
+
+    log_if_material_setter_failed(vaWorldSetMaterialAbsorptionLF(va_world_handle, material_type, defaults.absorption_lf), "absorption_lf", material_type);
+    log_if_material_setter_failed(vaWorldSetMaterialAbsorptionHF(va_world_handle, material_type, defaults.absorption_hf), "absorption_hf", material_type);
+    log_if_material_setter_failed(vaWorldSetMaterialScattering(va_world_handle, material_type, defaults.scattering), "scattering", material_type);
+    log_if_material_setter_failed(vaWorldSetMaterialTransmissionLF(va_world_handle, material_type, defaults.transmission_lf), "transmission_lf", material_type);
+    log_if_material_setter_failed(vaWorldSetMaterialTransmissionHF(va_world_handle, material_type, defaults.transmission_hf), "transmission_hf", material_type);
+    log_if_material_setter_failed(vaWorldSetMaterialFlatTransmissionLF(va_world_handle, material_type, defaults.flat_transmission_lf), "flat_transmission_lf", material_type);
+    log_if_material_setter_failed(vaWorldSetMaterialFlatTransmissionHF(va_world_handle, material_type, defaults.flat_transmission_hf), "flat_transmission_hf", material_type);
+    log_if_material_setter_failed(vaWorldSetMaterialColor(va_world_handle, material_type, ToVAudio(defaults.color)), "color", material_type);
+
+    registered = false;
+    va_world_handle = nullptr;
+}
+
 int VADefaultMaterial::get_material_type() const
 {
     return material_type;

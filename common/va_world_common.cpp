@@ -55,7 +55,7 @@ bool VAWorld::register_custom_material(va_godot::VACustomMaterial *material)
             type = kvp.first + 1;
 
     material->set_material_type(type);
-    custom_materials[type] = material;
+    custom_materials[type] = material->get_material_name();
     return true;
 }
 

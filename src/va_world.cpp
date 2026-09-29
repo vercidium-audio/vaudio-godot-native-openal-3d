@@ -139,6 +139,7 @@ void VAWorld::_bind_methods()
 
     // Exports world settings/materials/primitives/emitters to a binary file (vaWorldExport) - callable from GDScript, e.g. wired to a UI button.
     ClassDB::bind_method(D_METHOD("export_to_file", "file_path"), &VAWorld::export_to_file);
+    ClassDB::bind_method(D_METHOD("sync_primitive", "node"), &VAWorld::sync_primitive);
 
     // Exposes the 23 built-in material names and their metadata key to GDScript so the "Vercidium Audio" editor plugin's material dropdown can't drift out of sync.
     ClassDB::bind_static_method("VAWorld", D_METHOD("get_builtin_material_names"), &VAWorld::get_builtin_material_names);

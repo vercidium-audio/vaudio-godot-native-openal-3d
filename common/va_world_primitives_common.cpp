@@ -96,7 +96,7 @@ VAMaterialType VAWorld::get_material(Node *node)
     // Match custom materials first - custom materials take priority over built-ins.
     for (const auto &kvp : custom_materials)
     {
-        if (kvp.second->get_material_name().to_lower() == lower)
+        if (kvp.second.to_lower() == lower)
         {
             return (VAMaterialType)kvp.first;
         }
