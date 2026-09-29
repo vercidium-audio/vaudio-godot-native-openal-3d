@@ -207,6 +207,7 @@ void VAWorld::on_reverb_updated_trampoline(::VAWorld *world)
     if (self)
     {
         self->on_reverb_updated();
+        self->raytrace_count++;
     }
 }
 

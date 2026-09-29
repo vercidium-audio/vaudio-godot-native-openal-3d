@@ -90,6 +90,7 @@ private:
     std::vector<::VAEmitter *> pending_emitter_destroys;
 
     bool pending_shutdown = false;
+    int raytrace_count = 0;
     bool rendering_enabled = true;
     bool sync_viewport = true;
 
@@ -194,6 +195,12 @@ public:
     float get_grouped_eax_gain_lf(int index) const;
     float get_grouped_eax_gain_hf(int index) const;
     float get_grouped_eax_decay_time(int index) const;
+
+    // Number of completed raytracing passes (OnReverbUpdated callbacks), so tests can wait for fresh results after changing the scene
+    int get_raytrace_count() const
+    {
+        return raytrace_count;
+    }
 
     bool get_pending_shutdown() const
     {

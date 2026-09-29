@@ -134,6 +134,9 @@ void VAWorld::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_grouped_eax_gain_hf", "index"), &VAWorld::get_grouped_eax_gain_hf);
     ClassDB::bind_method(D_METHOD("get_grouped_eax_decay_time", "index"), &VAWorld::get_grouped_eax_decay_time);
 
+    // No signal on purpose - it would fire inside vaWorldUpdate, and a handler that edits the world would re-enter it
+    ClassDB::bind_method(D_METHOD("get_raytrace_count"), &VAWorld::get_raytrace_count);
+
     // Exports world settings/materials/primitives/emitters to a binary file (vaWorldExport) - callable from GDScript, e.g. wired to a UI button.
     ClassDB::bind_method(D_METHOD("export_to_file", "file_path"), &VAWorld::export_to_file);
 

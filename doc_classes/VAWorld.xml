@@ -66,6 +66,12 @@
 				Returns the reverb decay time, in seconds, of the grouped EAX zone at [param index].
 			</description>
 		</method>
+		<method name="get_raytrace_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns how many raytracing passes this world has completed. Useful for waiting until a change to the scene has been raytraced, e.g. [code]var target = world.get_raytrace_count() + 2; while world.get_raytrace_count() < target: await get_tree().process_frame[/code].
+			</description>
+		</method>
 	</methods>
 	<members>
 		<member name="position" type="Vector3" setter="set_position" getter="get_position" default="Vector3(0, 0, 0)">
