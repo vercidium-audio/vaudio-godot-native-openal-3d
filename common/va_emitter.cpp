@@ -68,6 +68,10 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_affects_grouped_eax", "value"), &VAEmitter::set_affects_grouped_eax);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "affects_grouped_eax"), "set_affects_grouped_eax", "get_affects_grouped_eax");
 
+    ClassDB::bind_method(D_METHOD("get_keep_reverb_tail_alive"), &VAEmitter::get_keep_reverb_tail_alive);
+    ClassDB::bind_method(D_METHOD("set_keep_reverb_tail_alive", "value"), &VAEmitter::set_keep_reverb_tail_alive);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "keep_reverb_tail_alive"), "set_keep_reverb_tail_alive", "get_keep_reverb_tail_alive");
+
     ClassDB::bind_method(D_METHOD("get_has_relative_reverb"), &VAEmitter::get_has_relative_reverb);
     ClassDB::bind_method(D_METHOD("set_has_relative_reverb", "value"), &VAEmitter::set_has_relative_reverb);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "has_relative_reverb"), "set_has_relative_reverb", "get_has_relative_reverb");
@@ -336,6 +340,7 @@ void VAEmitter::apply_properties_to_handle()
     vaEmitterSetMaxEchogramTime(emitter, max_echogram_time);
     vaEmitterSetEchogramGranularity(emitter, echogram_granularity);
     vaEmitterSetAffectsGroupedEAX(emitter, affects_grouped_eax);
+    vaEmitterSetKeepReverbTailAlive(emitter, keep_reverb_tail_alive);
     vaEmitterSetHasRelativeReverb(emitter, has_relative_reverb);
     vaEmitterSetRelativeReverbInnerThreshold(emitter, relative_reverb_inner_threshold);
     vaEmitterSetRelativeReverbOuterThreshold(emitter, relative_reverb_outer_threshold);
@@ -722,6 +727,21 @@ void VAEmitter::set_affects_grouped_eax(bool value)
     if (emitter)
     {
         vaEmitterSetAffectsGroupedEAX(emitter, affects_grouped_eax);
+    }
+}
+
+bool VAEmitter::get_keep_reverb_tail_alive() const
+{
+    return keep_reverb_tail_alive;
+}
+
+void VAEmitter::set_keep_reverb_tail_alive(bool value)
+{
+    keep_reverb_tail_alive = value;
+
+    if (emitter)
+    {
+        vaEmitterSetKeepReverbTailAlive(emitter, keep_reverb_tail_alive);
     }
 }
 

@@ -47,6 +47,7 @@ private:
     int max_echogram_time = 5000;
     int echogram_granularity = 100;
     bool affects_grouped_eax = false;
+    bool keep_reverb_tail_alive = true;
     bool has_relative_reverb = false;
     float relative_reverb_inner_threshold = 0.6f;
     float relative_reverb_outer_threshold = 0.8f;
@@ -198,6 +199,8 @@ public:
     void set_echogram_granularity(int value);
     bool get_affects_grouped_eax() const;
     void set_affects_grouped_eax(bool value);
+    bool get_keep_reverb_tail_alive() const;
+    void set_keep_reverb_tail_alive(bool value);
     bool get_has_relative_reverb() const;
     void set_has_relative_reverb(bool value);
     float get_relative_reverb_inner_threshold() const;

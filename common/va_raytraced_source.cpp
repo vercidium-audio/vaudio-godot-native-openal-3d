@@ -54,6 +54,10 @@ void VARaytracedSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_affects_grouped_eax", "value"), &VARaytracedSource::set_affects_grouped_eax);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "affects_grouped_eax"), "set_affects_grouped_eax", "get_affects_grouped_eax");
 
+    ClassDB::bind_method(D_METHOD("get_keep_reverb_tail_alive"), &VARaytracedSource::get_keep_reverb_tail_alive);
+    ClassDB::bind_method(D_METHOD("set_keep_reverb_tail_alive", "value"), &VARaytracedSource::set_keep_reverb_tail_alive);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "keep_reverb_tail_alive"), "set_keep_reverb_tail_alive", "get_keep_reverb_tail_alive");
+
     ClassDB::bind_method(D_METHOD("get_use_listener_reverb"), &VARaytracedSource::get_use_listener_reverb);
     ClassDB::bind_method(D_METHOD("set_use_listener_reverb", "value"), &VARaytracedSource::set_use_listener_reverb);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_listener_reverb"), "set_use_listener_reverb", "get_use_listener_reverb");
@@ -245,6 +249,7 @@ void VARaytracedSource::apply_properties_to_emitter()
     emitter->set_max_echogram_time(max_echogram_time);
     emitter->set_echogram_granularity(echogram_granularity);
     emitter->set_affects_grouped_eax(affects_grouped_eax);
+    emitter->set_keep_reverb_tail_alive(keep_reverb_tail_alive);
     emitter->set_use_listener_reverb(use_listener_reverb);
 
     emitter->set_occlusion_energy_cap(occlusion_energy_cap);
@@ -415,6 +420,21 @@ void VARaytracedSource::set_affects_grouped_eax(bool value)
     if (emitter)
     {
         emitter->set_affects_grouped_eax(affects_grouped_eax);
+    }
+}
+
+bool VARaytracedSource::get_keep_reverb_tail_alive() const
+{
+    return keep_reverb_tail_alive;
+}
+
+void VARaytracedSource::set_keep_reverb_tail_alive(bool value)
+{
+    keep_reverb_tail_alive = value;
+
+    if (emitter)
+    {
+        emitter->set_keep_reverb_tail_alive(keep_reverb_tail_alive);
     }
 }
 
