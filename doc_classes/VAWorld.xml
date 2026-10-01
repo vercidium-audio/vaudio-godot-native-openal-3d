@@ -120,6 +120,9 @@
 		<member name="emitters_outside_the_world_are_muffled" type="bool" setter="set_emitters_outside_the_world_are_muffled" getter="get_emitters_outside_the_world_are_muffled" default="true">
 			If [code]true[/code], emitters outside the world bounds have zero occlusion/permeation energy (fully muffled). If [code]false[/code], they have maximum energy (unmuffled).
 		</member>
+		<member name="occlusion_rays_lose_energy_from_world_bounds" type="bool" setter="set_occlusion_rays_lose_energy_from_world_bounds" getter="get_occlusion_rays_lose_energy_from_world_bounds" default="false">
+			If [code]true[/code], occlusion rays lose energy when hitting the world bounds, based on the world bounds material. If [code]false[/code], occlusion rays bounce off the world bounds without losing energy, which makes sounds easier to discover.
+		</member>
 		<member name="maximum_concurrency_level" type="int" setter="set_maximum_concurrency_level" getter="get_maximum_concurrency_level">
 			The maximum number of threads that can run in parallel for this world. Set to 0 to default to the user's processor count minus one.
 		</member>

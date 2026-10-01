@@ -97,9 +97,12 @@ void VAWorld::_bind_methods()
 
     ClassDB::bind_method(D_METHOD("get_emitters_outside_the_world_are_muffled"), &VAWorld::get_emitters_outside_the_world_are_muffled);
     ClassDB::bind_method(D_METHOD("set_emitters_outside_the_world_are_muffled", "value"), &VAWorld::set_emitters_outside_the_world_are_muffled);
+    ClassDB::bind_method(D_METHOD("get_occlusion_rays_lose_energy_from_world_bounds"), &VAWorld::get_occlusion_rays_lose_energy_from_world_bounds);
+    ClassDB::bind_method(D_METHOD("set_occlusion_rays_lose_energy_from_world_bounds", "value"), &VAWorld::set_occlusion_rays_lose_energy_from_world_bounds);
 
     ADD_GROUP("Emitters", "");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "emitters_outside_the_world_are_muffled"), "set_emitters_outside_the_world_are_muffled", "get_emitters_outside_the_world_are_muffled");
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "occlusion_rays_lose_energy_from_world_bounds"), "set_occlusion_rays_lose_energy_from_world_bounds", "get_occlusion_rays_lose_energy_from_world_bounds");
 
     ClassDB::bind_method(D_METHOD("get_maximum_concurrency_level"), &VAWorld::get_maximum_concurrency_level);
     ClassDB::bind_method(D_METHOD("set_maximum_concurrency_level", "value"), &VAWorld::set_maximum_concurrency_level);
@@ -183,6 +186,7 @@ VAWorld::VAWorld()
     set_reference_frequency_lf(reference_frequency_lf);
     set_reference_frequency_hf(reference_frequency_hf);
     set_emitters_outside_the_world_are_muffled(emitters_outside_the_world_are_muffled);
+    set_occlusion_rays_lose_energy_from_world_bounds(occlusion_rays_lose_energy_from_world_bounds);
     set_maximum_concurrency_level(maximum_concurrency_level);
     set_work_item_count(work_item_count);
     set_rendering_enabled(rendering_enabled);

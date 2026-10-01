@@ -50,7 +50,7 @@
 			The maximum number of bounces per reverb ray. Reverb rays stop bouncing after reaching the edge of the world when the world's "is indoors" setting is false.
 		</member>
 		<member name="reverb_energy_cap" type="float" setter="set_reverb_energy_cap" getter="get_reverb_energy_cap" default="0.15">
-			The percentage of returning energy required for reverb to be at maximum volume.
+			The percentage of returning energy required for reverb to be at full volume.
 		</member>
 		<member name="max_volume" type="float" setter="set_max_volume" getter="get_max_volume" default="1.0">
 			The loudest volume that this source's sound will ever be played at.

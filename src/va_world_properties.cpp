@@ -217,6 +217,17 @@ void VAWorld::set_emitters_outside_the_world_are_muffled(bool value)
     vaWorldSetEmittersOutsideTheWorldAreMuffled(world, value);
 }
 
+void VAWorld::set_occlusion_rays_lose_energy_from_world_bounds(bool value)
+{
+    occlusion_rays_lose_energy_from_world_bounds = value;
+
+    if (!world)
+        return;
+
+    // No need to check result
+    vaWorldSetOcclusionRaysLoseEnergyFromWorldBounds(world, value);
+}
+
 void VAWorld::set_maximum_concurrency_level(int value)
 {
     maximum_concurrency_level = std::max(0, value);
