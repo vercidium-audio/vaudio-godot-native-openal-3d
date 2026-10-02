@@ -16,16 +16,10 @@
 #include "va_conversions.h"
 #include "va_debugger_plugin.h"
 #include "va_emitter.h"
-#include "va_custom_material.h"
 #include "va_engine_util.h"
-
-#include <algorithm>
 
 namespace va_godot
 {
-
-// Smallest id reserved for custom (non-built-in) materials - matches vaudio.h's VAMaterialType comment and vaudio-unreal's FirstCustomMaterialId.
-static constexpr int FirstCustomMaterialId = 1000;
 
 void VAWorld::_bind_methods()
 {
@@ -103,9 +97,12 @@ void VAWorld::_bind_methods()
 
     ClassDB::bind_method(D_METHOD("get_emitters_outside_the_world_are_muffled"), &VAWorld::get_emitters_outside_the_world_are_muffled);
     ClassDB::bind_method(D_METHOD("set_emitters_outside_the_world_are_muffled", "value"), &VAWorld::set_emitters_outside_the_world_are_muffled);
+    ClassDB::bind_method(D_METHOD("get_occlusion_rays_lose_energy_from_world_bounds"), &VAWorld::get_occlusion_rays_lose_energy_from_world_bounds);
+    ClassDB::bind_method(D_METHOD("set_occlusion_rays_lose_energy_from_world_bounds", "value"), &VAWorld::set_occlusion_rays_lose_energy_from_world_bounds);
 
     ADD_GROUP("Emitters", "");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "emitters_outside_the_world_are_muffled"), "set_emitters_outside_the_world_are_muffled", "get_emitters_outside_the_world_are_muffled");
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "occlusion_rays_lose_energy_from_world_bounds"), "set_occlusion_rays_lose_energy_from_world_bounds", "get_occlusion_rays_lose_energy_from_world_bounds");
 
     ClassDB::bind_method(D_METHOD("get_maximum_concurrency_level"), &VAWorld::get_maximum_concurrency_level);
     ClassDB::bind_method(D_METHOD("set_maximum_concurrency_level", "value"), &VAWorld::set_maximum_concurrency_level);
@@ -140,8 +137,12 @@ void VAWorld::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_grouped_eax_gain_hf", "index"), &VAWorld::get_grouped_eax_gain_hf);
     ClassDB::bind_method(D_METHOD("get_grouped_eax_decay_time", "index"), &VAWorld::get_grouped_eax_decay_time);
 
+    // No signal on purpose - it would fire inside vaWorldUpdate, and a handler that edits the world would re-enter it
+    ClassDB::bind_method(D_METHOD("get_raytrace_count"), &VAWorld::get_raytrace_count);
+
     // Exports world settings/materials/primitives/emitters to a binary file (vaWorldExport) - callable from GDScript, e.g. wired to a UI button.
     ClassDB::bind_method(D_METHOD("export_to_file", "file_path"), &VAWorld::export_to_file);
+    ClassDB::bind_method(D_METHOD("sync_primitive", "node"), &VAWorld::sync_primitive);
 
     // Exposes the 23 built-in material names and their metadata key to GDScript so the "Vercidium Audio" editor plugin's material dropdown can't drift out of sync.
     ClassDB::bind_static_method("VAWorld", D_METHOD("get_builtin_material_names"), &VAWorld::get_builtin_material_names);
@@ -185,6 +186,7 @@ VAWorld::VAWorld()
     set_reference_frequency_lf(reference_frequency_lf);
     set_reference_frequency_hf(reference_frequency_hf);
     set_emitters_outside_the_world_are_muffled(emitters_outside_the_world_are_muffled);
+    set_occlusion_rays_lose_energy_from_world_bounds(occlusion_rays_lose_energy_from_world_bounds);
     set_maximum_concurrency_level(maximum_concurrency_level);
     set_work_item_count(work_item_count);
     set_rendering_enabled(rendering_enabled);
@@ -193,33 +195,6 @@ VAWorld::VAWorld()
     listener_reverb_effect.create();
 
     set_process(true);
-}
-
-VAWorld::~VAWorld()
-{
-    if (world)
-    {
-        // Will block the main thread if the user hasn't set pendingShutdown=true first.
-        vaWorldWait(world);
-
-        for (::VAEmitter *emitter : pending_emitter_destroys)
-        {
-            VAResult result = vaEmitterDestroy(emitter);
-
-            // Should never fail as we've called vaWorldWait() above.
-            if (result != VA_SUCCESS)
-                VA_ERROR("Failed to destroy a pending emitter (VAResult=", VAResultToString(result), ")");
-        }
-        pending_emitter_destroys.clear();
-
-        VAResult result = vaWorldDestroy(world);
-
-        // Should never fail as we've called vaWorldWait() above.
-        if (result != VA_SUCCESS)
-            VA_ERROR("Failed to destroy the world (VAResult=", VAResultToString(result), ")");
-
-        world = nullptr;
-    }
 }
 
 // The bounds are always an axis-aligned box (vaWorldSetPosition/vaWorldSetSize take no rotation/scale), so hide the rest of Node3D's transform and only expose position.
@@ -356,143 +331,6 @@ void VAWorld::send_viewport_camera_to_running_game()
     debugger_plugin->sync_viewport_camera(camera->get_global_position(), camera->get_global_rotation(), camera->get_fov());
 }
 
-bool VAWorld::register_custom_material(va_godot::VACustomMaterial *material)
-{
-    // Get the lowest id not already claimed by other custom materials.
-    int type = FirstCustomMaterialId;
-
-    for (const auto &kvp : custom_materials)
-        if (kvp.first >= type)
-            type = kvp.first + 1;
-
-    material->set_material_type(type);
-    custom_materials[type] = material;
-    return true;
-}
-
-void VAWorld::register_emitter(va_godot::VAEmitter *emitter, bool is_main_listener)
-{
-    VAResult result = vaWorldAddEmitter(world, emitter->get_handle());
-
-    switch (result)
-    {
-        case VA_SUCCESS:
-            break;
-
-        case VA_ALREADY_EXISTS:
-            VA_ERROR_NAMED("Failed to register emitter '", emitter->get_name(), "' as it is already added to this VAWorld.");
-            break;
-
-        case VA_WORLD_CONFLICT:
-            VA_ERROR_NAMED("Failed to register emitter '", emitter->get_name(), "' as it is already added to a different VAWorld.");
-            break;
-
-        default:
-            VA_ERROR_NAMED_RESULT(result, "Failed to register emitter '", emitter->get_name(), "'.");
-            break;
-    }
-
-    if (is_main_listener)
-    {
-        if (!listener)
-        {
-            listener = emitter;
-
-            // Set up the sources that were created before the listener existed
-            wire_pending_targets();
-        }
-        else
-            VA_WARN_NAMED("This world can only have one VAListener node. Current listener: '", listener->get_name(), "' Second listener: '", emitter->get_name(), "'");
-
-        return;
-    }
-
-    // Keep track of all emitters
-    registered_emitters.push_back(emitter);
-
-    if (listener)
-    {
-        listener->add_target(emitter);
-        return;
-    }
-
-    // If this node was added before the VAlistener was created, we need to defer-process all sources/emitters later
-    if (!wire_pending_targets_queued)
-    {
-        wire_pending_targets_queued = true;
-        callable_mp(this, &VAWorld::wire_pending_targets).call_deferred();
-    }
-}
-
-void VAWorld::wire_pending_targets()
-{
-    wire_pending_targets_queued = false;
-
-    if (!listener)
-        return;
-
-    for (va_godot::VAEmitter *emitter : registered_emitters)
-    {
-        // Skip a source whose SDK handle has already been torn down (raytrace_once removal, pending destroy) but whose node is still briefly in registered_emitters.
-        if (emitter->get_handle())
-            listener->add_target(emitter);
-    }
-}
-
-void VAWorld::unregister_pending_target(va_godot::VAEmitter *emitter)
-{
-    registered_emitters.erase(std::remove(registered_emitters.begin(), registered_emitters.end(), emitter), registered_emitters.end());
-}
-
-void VAWorld::unregister_listener(va_godot::VAEmitter *emitter)
-{
-    if (listener == emitter)
-    {
-        listener = nullptr;
-
-        // This node may come back (e.g. scene reload), so let a future missing-listener state warn again.
-        warned_missing_listener = false;
-    }
-}
-
-void VAWorld::on_reverb_updated_trampoline(::VAWorld *world)
-{
-    VAWorld *self = static_cast<VAWorld *>(vaWorldGetUserData(world));
-
-    if (self)
-    {
-        self->on_reverb_updated();
-    }
-}
-
-static VAEAXReverbParams CopyReverbParams(const VAEAXReverb *eax)
-{
-    VAEAXReverbParams params;
-    params.density = 0.5f; // hardcoded per openal-soft issue #1229 (static when updated live), matching VAWorldReverb.cs's CopyReverb
-    params.diffusion = eax->diffusion;
-    params.gain = 1.0f; // gainLF and gainHF control the actual gain
-    params.gainHF = eax->gainHF;
-    params.gainLF = eax->gainLF;
-    params.decayTime = eax->decayTime;
-    params.decayHFRatio = eax->decayHFRatio;
-    params.decayLFRatio = eax->decayLFRatio;
-    params.reflectionsGain = eax->reflectionsGain;
-    params.reflectionsDelay = eax->reflectionsDelay;
-    params.lateReverbGain = eax->lateReverbGain;
-    params.lateReverbDelay = eax->lateReverbDelay;
-    params.echoTime = eax->echoTime;
-    params.echoDepth = eax->echoDepth;
-    params.modulationTime = eax->modulationTime;
-    params.modulationDepth = eax->modulationDepth;
-    params.airAbsorptionGainHF = eax->airAbsorptionGainHF;
-    params.hfReference = eax->hfReference;
-    params.lfReference = eax->lfReference;
-    params.roomRolloffFactor = eax->roomRolloffFactor;
-    params.decayHFLimit = eax->decayHFLimit;
-
-    return params;
-}
-
 void VAWorld::on_reverb_updated()
 {
     if (!listener || !listener->get_handle())
@@ -555,37 +393,6 @@ void VAWorld::on_reverb_updated()
 
         grouped_reverb_effects[i]->set_params(params);
     }
-}
-
-ALReverbEffect *VAWorld::get_reverb_effect(::VAEmitter *emitter)
-{
-    if (emitter && vaEmitterGetAffectsGroupedEAX(emitter))
-    {
-        int grouped_eax_index = vaEmitterGetGroupedEAXIndex(emitter);
-
-        if (grouped_eax_index >= 0)
-        {
-            if (grouped_eax_index >= (int)grouped_reverb_effects.size())
-            {
-                VA_WARN(
-                    "Emitter has a grouped EAX index of ", grouped_eax_index,
-                    " but only ", (int)grouped_reverb_effects.size(), " EAX presets are available.");
-                return &listener_reverb_effect;
-            }
-
-            return grouped_reverb_effects[grouped_eax_index].get();
-        }
-    }
-
-    if (emitter)
-    {
-        VAEmitter *self = static_cast<VAEmitter *>(vaEmitterGetUserData(emitter));
-
-        if (self && !self->get_use_listener_reverb())
-            return nullptr;
-    }
-
-    return &listener_reverb_effect;
 }
 
 } // namespace va_godot

@@ -32,6 +32,12 @@
 				How muffled this source currently is, as a high-frequency gain in the range [code]0..1[/code] ([code]1[/code] = not muffled at all). High frequencies drop first through obstacles, so [code]1.0 - get_muffling_gain_hf()[/code] is a good "how muffled" indicator. Returns [code]1.0[/code] until the listener has raytraced this source - guard with [method is_raytraced_by_listener].
 			</description>
 		</method>
+		<method name="get_grouped_eax_index" qualifiers="const">
+			<return type="int" />
+			<description>
+				Index of this source's reverb slot in the world's grouped EAX list (see [method VAWorld.get_grouped_eax_decay_time]). Returns [code]-1[/code] if [member affects_grouped_eax] is off, the source casts no reverb rays, or it hasn't been raytraced yet.
+			</description>
+		</method>
 	</methods>
 	<members>
 		<member name="raytrace_once" type="bool" setter="set_raytrace_once" getter="get_raytrace_once" default="true">
@@ -44,7 +50,7 @@
 			The maximum number of bounces per reverb ray. Reverb rays stop bouncing after reaching the edge of the world when the world's "is indoors" setting is false.
 		</member>
 		<member name="reverb_energy_cap" type="float" setter="set_reverb_energy_cap" getter="get_reverb_energy_cap" default="0.15">
-			The percentage of returning energy required for reverb to be at maximum volume.
+			The percentage of returning energy required for reverb to be at full volume.
 		</member>
 		<member name="max_volume" type="float" setter="set_max_volume" getter="get_max_volume" default="1.0">
 			The loudest volume that this source's sound will ever be played at.
@@ -96,6 +102,9 @@
 		</member>
 		<member name="scattering_seed" type="int" setter="set_scattering_seed" getter="get_scattering_seed">
 			The seed used to randomise scattering vectors. Randomised per source by default.
+		</member>
+		<member name="clamp_position" type="bool" setter="set_clamp_position" getter="get_clamp_position" default="true">
+			If [code]true[/code], keeps this source's position inside the world bounds so it's always raytraced. If [code]false[/code], a source outside the world isn't raytraced, and [member VAWorld.emitters_outside_the_world_are_muffled] decides whether it's fully muffled or unmuffled.
 		</member>
 	</members>
 </class>

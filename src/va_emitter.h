@@ -24,17 +24,31 @@ class VAEmitter : public Node3D
 {
     GDCLASS(VAEmitter, Node3D);
 
-private:
+protected:
     VAWorld *va_world = nullptr;
     ::VAEmitter *emitter = nullptr;
 
+    void create_emitter();
+    void remove_emitter();
+    void apply_properties_to_handle();
+
+    // Removes the handle from the world and detaches it from this node, even if its removal is still pending
+    void release_emitter();
+
+    // Invoked once a VAWorld is found / when leaving the tree. Listeners override these to go through VAWorld's shared listener handle instead of owning one.
+    virtual void attach_to_world();
+    virtual void detach_from_world();
+
+private:
     int reverb_ray_count = 0;
     int reverb_bounce_count = 0;
     float reverb_energy_cap = 0.15f;
+    float minimum_reverb_energy = 0.01f;
     float max_volume = 1.0f;
     int max_echogram_time = 5000;
     int echogram_granularity = 100;
     bool affects_grouped_eax = false;
+    bool keep_reverb_tail_alive = true;
     bool has_relative_reverb = false;
     float relative_reverb_inner_threshold = 0.6f;
     float relative_reverb_outer_threshold = 0.8f;
@@ -43,16 +57,20 @@ private:
     int occlusion_ray_count = 0;
     int occlusion_bounce_count = 0;
     float occlusion_energy_cap = 0.15f;
+    float minimum_occlusion_energy = 0.01f;
     int permeation_ray_count = 0;
     int permeation_bounce_count = 0;
     float permeation_energy_cap = 0.15f;
+    float minimum_permeation_energy = 0.01f;
 
     int ambient_occlusion_ray_count = 0;
     int ambient_occlusion_bounce_count = 0;
     float ambient_occlusion_energy_cap = 0.15f;
+    float minimum_ambient_occlusion_energy = 0.01f;
     int ambient_permeation_ray_count = 0;
     int ambient_permeation_bounce_count = 0;
     float ambient_permeation_energy_cap = 0.15f;
+    float minimum_ambient_permeation_energy = 0.01f;
 
     int type = 0;
     int trail_refresh_count = 16;
@@ -69,8 +87,6 @@ private:
     Color permeation_color = Color(255.0f / 255.0f, 127.0f / 255.0f, 42.0f / 255.0f, 51.0f / 255.0f);
     Color ambient_permeation_color = Color(255.0f / 255.0f, 204.0f / 255.0f, 0.0f / 255.0f, 51.0f / 255.0f);
 
-    void apply_properties_to_handle();
-
     ALFilter *filter = nullptr;
 
     float ambient_filter_gain_lf = 1.0f;
@@ -80,9 +96,6 @@ private:
     ALReverbEffect *effect = nullptr;
 
     VAVisualisation *visualisation = nullptr;
-
-    void create_emitter();
-    void remove_emitter();
 
     bool waiting_for_world = false;
 
@@ -96,12 +109,16 @@ private:
 
     void on_raytraced_by_another_emitter(::VAEmitter *other);
 
-    void on_emitter_removed();
+    void on_emitter_removed(::VAEmitter *handle);
 
 protected:
     static void _bind_methods();
+    void _validate_property(PropertyInfo &p_property) const;
 
 public:
+    // Drops any orphaned handles owned by this world, called from ~VAWorld so a late OnRemoved can't reach a freed VAWorld.
+    static void forget_orphaned_handles(VAWorld *world);
+
     VAEmitter();
     ~VAEmitter();
 
@@ -126,6 +143,8 @@ public:
     }
 
     bool is_raytraced() const;
+
+    int get_grouped_eax_index() const;
 
     Vector3 get_va_position() const;
 
@@ -178,6 +197,8 @@ public:
     void set_reverb_bounce_count(int value);
     float get_reverb_energy_cap() const;
     void set_reverb_energy_cap(float value);
+    float get_minimum_reverb_energy() const;
+    void set_minimum_reverb_energy(float value);
     float get_max_volume() const;
     void set_max_volume(float value);
     int get_max_echogram_time() const;
@@ -186,6 +207,8 @@ public:
     void set_echogram_granularity(int value);
     bool get_affects_grouped_eax() const;
     void set_affects_grouped_eax(bool value);
+    bool get_keep_reverb_tail_alive() const;
+    void set_keep_reverb_tail_alive(bool value);
     bool get_has_relative_reverb() const;
     void set_has_relative_reverb(bool value);
     float get_relative_reverb_inner_threshold() const;
@@ -201,12 +224,16 @@ public:
     void set_occlusion_bounce_count(int value);
     float get_occlusion_energy_cap() const;
     void set_occlusion_energy_cap(float value);
+    float get_minimum_occlusion_energy() const;
+    void set_minimum_occlusion_energy(float value);
     int get_permeation_ray_count() const;
     void set_permeation_ray_count(int value);
     int get_permeation_bounce_count() const;
     void set_permeation_bounce_count(int value);
     float get_permeation_energy_cap() const;
     void set_permeation_energy_cap(float value);
+    float get_minimum_permeation_energy() const;
+    void set_minimum_permeation_energy(float value);
 
     int get_ambient_occlusion_ray_count() const;
     void set_ambient_occlusion_ray_count(int value);
@@ -214,12 +241,16 @@ public:
     void set_ambient_occlusion_bounce_count(int value);
     float get_ambient_occlusion_energy_cap() const;
     void set_ambient_occlusion_energy_cap(float value);
+    float get_minimum_ambient_occlusion_energy() const;
+    void set_minimum_ambient_occlusion_energy(float value);
     int get_ambient_permeation_ray_count() const;
     void set_ambient_permeation_ray_count(int value);
     int get_ambient_permeation_bounce_count() const;
     void set_ambient_permeation_bounce_count(int value);
     float get_ambient_permeation_energy_cap() const;
     void set_ambient_permeation_energy_cap(float value);
+    float get_minimum_ambient_permeation_energy() const;
+    void set_minimum_ambient_permeation_energy(float value);
 
     int get_visualisation_ray_count() const;
     void set_visualisation_ray_count(int value);

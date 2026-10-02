@@ -28,11 +28,18 @@ extern "C"
 
 using namespace godot;
 
+// Metadata keys used to tag scene-tree nodes with vaudio material/primitive/propagate state. Defined once in common/va_world_primitives_common.cpp since they're dimension-agnostic; declared here (file scope, not namespaced, matching how they're called unqualified from within namespace va_godot) so each repo's own va_world_primitives.cpp (whose create_primitive/add_primitive/remove_primitive overloads differ per dimension) can still read/write the same metadata.
+const StringName &PrimitiveMetaKey();
+const StringName &MaterialMetaKey();
+const StringName &UseFlatTransmissionMetaKey();
+const StringName &PropagateMetaKey();
+
 namespace va_godot
 {
 
 class VACustomMaterial;
 class VAEmitter;
+class VAListener;
 
 // Controls which child nodes a material applies to. Does not affect child nodes that have their own material
 enum class PropagateMode
@@ -41,6 +48,9 @@ enum class PropagateMode
     Colliders,
     Visuals,
 };
+
+// Copies a raw ::VAEAXReverb's fields into an OpenAL-facing VAEAXReverbParams. Defined once in common/va_world_common.cpp since it's dimension-agnostic; declared here so each repo's own va_world.cpp (which computes the listener-relative pan differently) can still call it from on_reverb_updated().
+VAEAXReverbParams CopyReverbParams(const VAEAXReverb *eax);
 
 // Name collision: the vaudio C SDK's opaque handle type is also called "VAWorld" (global namespace); inside va_godot, 'VAWorld' means this class and '::VAWorld' the SDK handle.
 // This is a Node3D purely so the editor can draw a gizmo for the bounds_position/bounds_size AABB (see VAWorldGizmoPlugin) - the node's own transform is otherwise unused by vaudio.
@@ -51,9 +61,14 @@ class VAWorld : public Node3D
 private:
     ::VAWorld *world = nullptr;
 
-    std::unordered_map<int, va_godot::VACustomMaterial *> custom_materials;
+    // Material id -> name. Names rather than node pointers, since a VACustomMaterial can be freed while the world keeps using its material
+    std::unordered_map<int, String> custom_materials;
 
+    // The current VAListener. All listeners share one SDK emitter handle, and only this one points at it.
     va_godot::VAEmitter *listener = nullptr;
+
+    // Every VAListener attached to this world, current or not. The first is promoted when the current listener leaves the tree.
+    std::vector<va_godot::VAListener *> listeners;
 
     // Contains every non-listener emitter. When the listener is finally added, this list is processed
     std::vector<va_godot::VAEmitter *> registered_emitters;
@@ -76,6 +91,7 @@ private:
     std::vector<::VAEmitter *> pending_emitter_destroys;
 
     bool pending_shutdown = false;
+    int raytrace_count = 0;
     bool rendering_enabled = true;
     bool sync_viewport = true;
 
@@ -91,7 +107,8 @@ private:
     // Reports unknown material metadata strings when in the editor, not used at runtime.
     void validate_materials_in_editor(Node *node);
 
-    VAMaterialType get_material(Node *node);
+    VAMaterialType get_material(Node *node, bool warn_unknown = true);
+    void resolve_inherited(Node *node, VAMaterialType &material, bool &use_flat_transmission, PropagateMode &filter);
 
     void add_primitive(Node *node, VAMaterialType material, bool use_flat_transmission, PropagateMode filter, bool recursive);
     void remove_primitive(Node *node, bool recursive);
@@ -152,7 +169,15 @@ public:
 
     void unregister_pending_target(va_godot::VAEmitter *emitter);
 
-    void unregister_listener(va_godot::VAEmitter *emitter);
+    void register_listener(va_godot::VAListener *node);
+
+    void unregister_listener(va_godot::VAListener *node);
+
+    // Hands the shared listener handle over to node
+    void set_current_listener(va_godot::VAListener *node);
+
+    // If node is the current listener, hands the shared listener handle over to another attached listener (if any)
+    void release_current_listener(va_godot::VAListener *node);
 
     bool export_to_file(const String &file_path);
 
@@ -172,6 +197,12 @@ public:
     float get_grouped_eax_gain_lf(int index) const;
     float get_grouped_eax_gain_hf(int index) const;
     float get_grouped_eax_decay_time(int index) const;
+
+    // Number of completed raytracing passes (OnReverbUpdated callbacks), so tests can wait for fresh results after changing the scene
+    int get_raytrace_count() const
+    {
+        return raytrace_count;
+    }
 
     bool get_pending_shutdown() const
     {
@@ -317,6 +348,12 @@ public:
     }
     void set_emitters_outside_the_world_are_muffled(bool value);
 
+    bool get_occlusion_rays_lose_energy_from_world_bounds() const
+    {
+        return occlusion_rays_lose_energy_from_world_bounds;
+    }
+    void set_occlusion_rays_lose_energy_from_world_bounds(bool value);
+
     int get_maximum_concurrency_level() const
     {
         return maximum_concurrency_level;
@@ -353,6 +390,7 @@ private:
     float reference_frequency_lf = 300.0f;
     float reference_frequency_hf = 4000.0f;
     bool emitters_outside_the_world_are_muffled = true;
+    bool occlusion_rays_lose_energy_from_world_bounds = false;
     int maximum_concurrency_level = 0;
     int work_item_count = 128;
 };

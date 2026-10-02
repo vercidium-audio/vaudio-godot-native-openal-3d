@@ -66,6 +66,19 @@
 				Returns the reverb decay time, in seconds, of the grouped EAX zone at [param index].
 			</description>
 		</method>
+		<method name="get_raytrace_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns how many raytracing passes this world has completed. Useful for waiting until a change to the scene has been raytraced, e.g. [code]var target = world.get_raytrace_count() + 2; while world.get_raytrace_count() < target: await get_tree().process_frame[/code].
+			</description>
+		</method>
+		<method name="sync_primitive">
+			<return type="void" />
+			<param index="0" name="node" type="Node" />
+			<description>
+				Call this after changing [param node]'s material, flat transmission or propagate metadata at runtime - it isn't picked up otherwise. Re-creates every primitive under [param node]'s top-level scene node (usually the whole scene), so avoid calling it every frame.
+			</description>
+		</method>
 	</methods>
 	<members>
 		<member name="position" type="Vector3" setter="set_position" getter="get_position" default="Vector3(0, 0, 0)">
@@ -106,6 +119,9 @@
 		</member>
 		<member name="emitters_outside_the_world_are_muffled" type="bool" setter="set_emitters_outside_the_world_are_muffled" getter="get_emitters_outside_the_world_are_muffled" default="true">
 			If [code]true[/code], emitters outside the world bounds have zero occlusion/permeation energy (fully muffled). If [code]false[/code], they have maximum energy (unmuffled).
+		</member>
+		<member name="occlusion_rays_lose_energy_from_world_bounds" type="bool" setter="set_occlusion_rays_lose_energy_from_world_bounds" getter="get_occlusion_rays_lose_energy_from_world_bounds" default="false">
+			If [code]true[/code], occlusion rays lose energy when hitting the world bounds, based on the world bounds material. If [code]false[/code], occlusion rays bounce off the world bounds without losing energy, which makes sounds easier to discover.
 		</member>
 		<member name="maximum_concurrency_level" type="int" setter="set_maximum_concurrency_level" getter="get_maximum_concurrency_level">
 			The maximum number of threads that can run in parallel for this world. Set to 0 to default to the user's processor count minus one.

@@ -3,7 +3,7 @@
 	<brief_description>
 	</brief_description>
 	<description>
-		Overrides the acoustic properties of one of the SDK's built-in materials for the level's [VAWorld]. Must be added as a child of (or alongside) the level's [VAWorld].
+		Overrides the acoustic properties of one of the SDK's built-in materials for the level's [VAWorld]. Must be added as a child of (or alongside) the level's [VAWorld]. Removing the node restores the material's built-in values.
 	</description>
 	<tutorials>
 	</tutorials>

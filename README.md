@@ -1,13 +1,13 @@
 # Vercidium Audio (Native)
 
-Raytraced audio GDExtension with realistic muffling, reverb, ambience and visualisation for non-Mono Godot 4, using OpenAL Soft as the audio backend.
+3D raytraced audio C++ GDExtension with realistic muffling, reverb, ambience and visualisation for Godot 4, using OpenAL Soft as the audio backend.
 
 > [!WARNING]
-> This repository contains the source code for the plugin. For releases, see [vaudio-godot-native-openal-3d-release](https://github.com/vercidium-audio/vaudio-godot-native-openal-3d-release).
+> This repository contains the source code for the plugin. For releases, see the [Releases page](https://github.com/vercidium-audio/vaudio-godot-native-openal-3d/releases).
 
 For Mono Godot (C#), please use [this plugin](https://github.com/vercidium-audio/vaudio-godot-mono-openal-3d/releases).
 
-This repository requires Vercidium Audio v1.9.0 and OpenAL Soft to run. Windows, Linux and macOS are supported.
+This repository requires Vercidium Audio v1.10.0 and OpenAL Soft to run. Windows, Linux and macOS are supported.
 - Download the Vercidium Audio SDK from [vercidium.com](https://vercidium.com)
 - Download OpenAL Soft from [github.com/kcat/openal-soft](https://github.com/kcat/openal-soft/releases/tag/1.25.2)
 
@@ -22,14 +22,13 @@ This repository requires Vercidium Audio v1.9.0 and OpenAL Soft to run. Windows,
 - Dynamic scene updates - automatically handles moving objects
 
 ## References
-- [Release repo](https://github.com/vercidium-audio/vaudio-godot-native-openal-3d-release)
 - [Vercidium Audio documentation](https://vercidium.com/docs)
 
 ## Building
 
 On Windows, run `build.bat`. On Linux/macOS, run `build-unix.sh` (auto-detects the host - Linux builds an x86_64 `.so`, macOS builds an arm64 `.dylib`).
 
-To automatically copy the plugin to your game, add your game's path to `.env`, e.g. `VAUDIO_RELEASE_DIR=your-godot-game\addons\vaudio-godot-native-openal-3d-release`
+To automatically copy the plugin to your game, add your game's path to `.env`, e.g. `VAUDIO_RELEASE_DIR=your-godot-game\addons\vaudio-godot-native-openal-3d`
 
 ## Licencing
 
