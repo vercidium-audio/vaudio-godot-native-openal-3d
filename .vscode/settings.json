@@ -2,6 +2,5 @@
     "files.exclude": {
         "**/*.obj": true,
         "extern": true
-    },
-    "cmake.sourceDirectory": "C:/Users/verc/projects/vaudio-godot-native-openal-3d/extern/godot-cpp"
+    }
 }
