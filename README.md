@@ -3,7 +3,7 @@
 3D raytraced audio C++ GDExtension with realistic muffling, reverb, ambience and visualisation for Godot 4, using OpenAL Soft as the audio backend.
 
 > [!WARNING]
-> This repository contains the source code for the plugin. For releases, see the [Releases page](https://github.com/vercidium-audio/vaudio-godot-native-openal-3d-source/releases).
+> This repository contains the source code for the plugin. For releases, see the [Releases page](https://github.com/vercidium-audio/vaudio-godot-native-openal-3d/releases).
 
 For Mono Godot (C#), please use [this plugin](https://github.com/vercidium-audio/vaudio-godot-mono-openal-3d/releases).
 
