@@ -38,6 +38,10 @@ void VARaytracedSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_reverb_energy_cap", "value"), &VARaytracedSource::set_reverb_energy_cap);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "reverb_energy_cap", PROPERTY_HINT_RANGE, "0.0,1.0"), "set_reverb_energy_cap", "get_reverb_energy_cap");
 
+    ClassDB::bind_method(D_METHOD("get_minimum_reverb_energy"), &VARaytracedSource::get_minimum_reverb_energy);
+    ClassDB::bind_method(D_METHOD("set_minimum_reverb_energy", "value"), &VARaytracedSource::set_minimum_reverb_energy);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum_reverb_energy", PROPERTY_HINT_RANGE, "0.0,1.0,0.001"), "set_minimum_reverb_energy", "get_minimum_reverb_energy");
+
     ClassDB::bind_method(D_METHOD("get_max_volume"), &VARaytracedSource::get_max_volume);
     ClassDB::bind_method(D_METHOD("set_max_volume", "value"), &VARaytracedSource::set_max_volume);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_volume", PROPERTY_HINT_RANGE, "0.0,1.0"), "set_max_volume", "get_max_volume");
@@ -86,6 +90,10 @@ void VARaytracedSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_ambient_occlusion_energy_cap", "value"), &VARaytracedSource::set_ambient_occlusion_energy_cap);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "ambient_occlusion_energy_cap", PROPERTY_HINT_RANGE, "0.0,1.0,0.001,or_greater"), "set_ambient_occlusion_energy_cap", "get_ambient_occlusion_energy_cap");
 
+    ClassDB::bind_method(D_METHOD("get_minimum_ambient_occlusion_energy"), &VARaytracedSource::get_minimum_ambient_occlusion_energy);
+    ClassDB::bind_method(D_METHOD("set_minimum_ambient_occlusion_energy", "value"), &VARaytracedSource::set_minimum_ambient_occlusion_energy);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum_ambient_occlusion_energy", PROPERTY_HINT_RANGE, "0.0,1.0,0.001"), "set_minimum_ambient_occlusion_energy", "get_minimum_ambient_occlusion_energy");
+
     ClassDB::bind_method(D_METHOD("get_ambient_permeation_ray_count"), &VARaytracedSource::get_ambient_permeation_ray_count);
     ClassDB::bind_method(D_METHOD("set_ambient_permeation_ray_count", "value"), &VARaytracedSource::set_ambient_permeation_ray_count);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "ambient_permeation_ray_count"), "set_ambient_permeation_ray_count", "get_ambient_permeation_ray_count");
@@ -97,6 +105,10 @@ void VARaytracedSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_ambient_permeation_energy_cap"), &VARaytracedSource::get_ambient_permeation_energy_cap);
     ClassDB::bind_method(D_METHOD("set_ambient_permeation_energy_cap", "value"), &VARaytracedSource::set_ambient_permeation_energy_cap);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "ambient_permeation_energy_cap", PROPERTY_HINT_RANGE, "0.0,1.0,0.001,or_greater"), "set_ambient_permeation_energy_cap", "get_ambient_permeation_energy_cap");
+
+    ClassDB::bind_method(D_METHOD("get_minimum_ambient_permeation_energy"), &VARaytracedSource::get_minimum_ambient_permeation_energy);
+    ClassDB::bind_method(D_METHOD("set_minimum_ambient_permeation_energy", "value"), &VARaytracedSource::set_minimum_ambient_permeation_energy);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum_ambient_permeation_energy", PROPERTY_HINT_RANGE, "0.0,1.0,0.001"), "set_minimum_ambient_permeation_energy", "get_minimum_ambient_permeation_energy");
 
     ADD_GROUP("Advanced", "");
 
@@ -245,6 +257,7 @@ void VARaytracedSource::apply_properties_to_emitter()
     emitter->set_reverb_ray_count(reverb_ray_count);
     emitter->set_reverb_bounce_count(reverb_bounce_count);
     emitter->set_reverb_energy_cap(reverb_energy_cap);
+    emitter->set_minimum_reverb_energy(minimum_reverb_energy);
     emitter->set_max_volume(max_volume);
     emitter->set_max_echogram_time(max_echogram_time);
     emitter->set_echogram_granularity(echogram_granularity);
@@ -258,9 +271,11 @@ void VARaytracedSource::apply_properties_to_emitter()
     emitter->set_ambient_occlusion_ray_count(ambient_occlusion_ray_count);
     emitter->set_ambient_occlusion_bounce_count(ambient_occlusion_bounce_count);
     emitter->set_ambient_occlusion_energy_cap(ambient_occlusion_energy_cap);
+    emitter->set_minimum_ambient_occlusion_energy(minimum_ambient_occlusion_energy);
     emitter->set_ambient_permeation_ray_count(ambient_permeation_ray_count);
     emitter->set_ambient_permeation_bounce_count(ambient_permeation_bounce_count);
     emitter->set_ambient_permeation_energy_cap(ambient_permeation_energy_cap);
+    emitter->set_minimum_ambient_permeation_energy(minimum_ambient_permeation_energy);
 
     emitter->set_type(type);
     emitter->set_trail_refresh_count(trail_refresh_count);
@@ -360,6 +375,21 @@ void VARaytracedSource::set_reverb_energy_cap(float value)
     if (emitter)
     {
         emitter->set_reverb_energy_cap(reverb_energy_cap);
+    }
+}
+
+float VARaytracedSource::get_minimum_reverb_energy() const
+{
+    return minimum_reverb_energy;
+}
+
+void VARaytracedSource::set_minimum_reverb_energy(float value)
+{
+    minimum_reverb_energy = CLAMP(value, 0.0f, 1.0f);
+
+    if (emitter)
+    {
+        emitter->set_minimum_reverb_energy(minimum_reverb_energy);
     }
 }
 
@@ -528,6 +558,21 @@ void VARaytracedSource::set_ambient_occlusion_energy_cap(float value)
     }
 }
 
+float VARaytracedSource::get_minimum_ambient_occlusion_energy() const
+{
+    return minimum_ambient_occlusion_energy;
+}
+
+void VARaytracedSource::set_minimum_ambient_occlusion_energy(float value)
+{
+    minimum_ambient_occlusion_energy = CLAMP(value, 0.0f, 1.0f);
+
+    if (emitter)
+    {
+        emitter->set_minimum_ambient_occlusion_energy(minimum_ambient_occlusion_energy);
+    }
+}
+
 int VARaytracedSource::get_ambient_permeation_ray_count() const
 {
     return ambient_permeation_ray_count;
@@ -570,6 +615,21 @@ void VARaytracedSource::set_ambient_permeation_energy_cap(float value)
     if (emitter)
     {
         emitter->set_ambient_permeation_energy_cap(ambient_permeation_energy_cap);
+    }
+}
+
+float VARaytracedSource::get_minimum_ambient_permeation_energy() const
+{
+    return minimum_ambient_permeation_energy;
+}
+
+void VARaytracedSource::set_minimum_ambient_permeation_energy(float value)
+{
+    minimum_ambient_permeation_energy = CLAMP(value, 0.0f, 1.0f);
+
+    if (emitter)
+    {
+        emitter->set_minimum_ambient_permeation_energy(minimum_ambient_permeation_energy);
     }
 }
 

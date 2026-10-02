@@ -29,6 +29,7 @@ private:
     int reverb_ray_count = 0;
     int reverb_bounce_count = 0;
     float reverb_energy_cap = 0.15f;
+    float minimum_reverb_energy = 0.01f;
     float max_volume = 1.0f;
     int max_echogram_time = 5000;
     int echogram_granularity = 100;
@@ -42,9 +43,11 @@ private:
     int ambient_occlusion_ray_count = 0;
     int ambient_occlusion_bounce_count = 0;
     float ambient_occlusion_energy_cap = 0.15f;
+    float minimum_ambient_occlusion_energy = 0.01f;
     int ambient_permeation_ray_count = 0;
     int ambient_permeation_bounce_count = 0;
     float ambient_permeation_energy_cap = 0.15f;
+    float minimum_ambient_permeation_energy = 0.01f;
 
     int type = 0;
     int trail_refresh_count = 16;
@@ -101,6 +104,8 @@ public:
     void set_reverb_bounce_count(int value);
     float get_reverb_energy_cap() const;
     void set_reverb_energy_cap(float value);
+    float get_minimum_reverb_energy() const;
+    void set_minimum_reverb_energy(float value);
     float get_max_volume() const;
     void set_max_volume(float value);
     int get_max_echogram_time() const;
@@ -125,12 +130,16 @@ public:
     void set_ambient_occlusion_bounce_count(int value);
     float get_ambient_occlusion_energy_cap() const;
     void set_ambient_occlusion_energy_cap(float value);
+    float get_minimum_ambient_occlusion_energy() const;
+    void set_minimum_ambient_occlusion_energy(float value);
     int get_ambient_permeation_ray_count() const;
     void set_ambient_permeation_ray_count(int value);
     int get_ambient_permeation_bounce_count() const;
     void set_ambient_permeation_bounce_count(int value);
     float get_ambient_permeation_energy_cap() const;
     void set_ambient_permeation_energy_cap(float value);
+    float get_minimum_ambient_permeation_energy() const;
+    void set_minimum_ambient_permeation_energy(float value);
 
     int get_type() const;
     void set_type(int value);

@@ -9,6 +9,7 @@
 #include "openal/al_reverb.h"
 #include "va_conversions.h"
 #include "va_engine_util.h"
+#include "va_listener.h"
 #include "va_world.h"
 #include "va_world_lookup.h"
 
@@ -51,6 +52,10 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_reverb_energy_cap"), &VAEmitter::get_reverb_energy_cap);
     ClassDB::bind_method(D_METHOD("set_reverb_energy_cap", "value"), &VAEmitter::set_reverb_energy_cap);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "reverb_energy_cap", PROPERTY_HINT_RANGE, "0.001,1.0"), "set_reverb_energy_cap", "get_reverb_energy_cap");
+
+    ClassDB::bind_method(D_METHOD("get_minimum_reverb_energy"), &VAEmitter::get_minimum_reverb_energy);
+    ClassDB::bind_method(D_METHOD("set_minimum_reverb_energy", "value"), &VAEmitter::set_minimum_reverb_energy);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum_reverb_energy", PROPERTY_HINT_RANGE, "0.0,1.0,0.001"), "set_minimum_reverb_energy", "get_minimum_reverb_energy");
 
     ClassDB::bind_method(D_METHOD("get_max_volume"), &VAEmitter::get_max_volume);
     ClassDB::bind_method(D_METHOD("set_max_volume", "value"), &VAEmitter::set_max_volume);
@@ -102,6 +107,10 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_occlusion_energy_cap", "value"), &VAEmitter::set_occlusion_energy_cap);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "occlusion_energy_cap", PROPERTY_HINT_RANGE, "0.0,1.0,0.001,or_greater"), "set_occlusion_energy_cap", "get_occlusion_energy_cap");
 
+    ClassDB::bind_method(D_METHOD("get_minimum_occlusion_energy"), &VAEmitter::get_minimum_occlusion_energy);
+    ClassDB::bind_method(D_METHOD("set_minimum_occlusion_energy", "value"), &VAEmitter::set_minimum_occlusion_energy);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum_occlusion_energy", PROPERTY_HINT_RANGE, "0.0,1.0,0.001"), "set_minimum_occlusion_energy", "get_minimum_occlusion_energy");
+
     ClassDB::bind_method(D_METHOD("get_permeation_ray_count"), &VAEmitter::get_permeation_ray_count);
     ClassDB::bind_method(D_METHOD("set_permeation_ray_count", "value"), &VAEmitter::set_permeation_ray_count);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "permeation_ray_count"), "set_permeation_ray_count", "get_permeation_ray_count");
@@ -113,6 +122,10 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_permeation_energy_cap"), &VAEmitter::get_permeation_energy_cap);
     ClassDB::bind_method(D_METHOD("set_permeation_energy_cap", "value"), &VAEmitter::set_permeation_energy_cap);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "permeation_energy_cap", PROPERTY_HINT_RANGE, "0.0,1.0,0.001,or_greater"), "set_permeation_energy_cap", "get_permeation_energy_cap");
+
+    ClassDB::bind_method(D_METHOD("get_minimum_permeation_energy"), &VAEmitter::get_minimum_permeation_energy);
+    ClassDB::bind_method(D_METHOD("set_minimum_permeation_energy", "value"), &VAEmitter::set_minimum_permeation_energy);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum_permeation_energy", PROPERTY_HINT_RANGE, "0.0,1.0,0.001"), "set_minimum_permeation_energy", "get_minimum_permeation_energy");
 
     ADD_GROUP("Ambience", "");
 
@@ -128,6 +141,10 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_ambient_occlusion_energy_cap", "value"), &VAEmitter::set_ambient_occlusion_energy_cap);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "ambient_occlusion_energy_cap", PROPERTY_HINT_RANGE, "0.0,1.0,0.001,or_greater"), "set_ambient_occlusion_energy_cap", "get_ambient_occlusion_energy_cap");
 
+    ClassDB::bind_method(D_METHOD("get_minimum_ambient_occlusion_energy"), &VAEmitter::get_minimum_ambient_occlusion_energy);
+    ClassDB::bind_method(D_METHOD("set_minimum_ambient_occlusion_energy", "value"), &VAEmitter::set_minimum_ambient_occlusion_energy);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum_ambient_occlusion_energy", PROPERTY_HINT_RANGE, "0.0,1.0,0.001"), "set_minimum_ambient_occlusion_energy", "get_minimum_ambient_occlusion_energy");
+
     ClassDB::bind_method(D_METHOD("get_ambient_permeation_ray_count"), &VAEmitter::get_ambient_permeation_ray_count);
     ClassDB::bind_method(D_METHOD("set_ambient_permeation_ray_count", "value"), &VAEmitter::set_ambient_permeation_ray_count);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "ambient_permeation_ray_count"), "set_ambient_permeation_ray_count", "get_ambient_permeation_ray_count");
@@ -139,6 +156,10 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_ambient_permeation_energy_cap"), &VAEmitter::get_ambient_permeation_energy_cap);
     ClassDB::bind_method(D_METHOD("set_ambient_permeation_energy_cap", "value"), &VAEmitter::set_ambient_permeation_energy_cap);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "ambient_permeation_energy_cap", PROPERTY_HINT_RANGE, "0.0,1.0,0.001,or_greater"), "set_ambient_permeation_energy_cap", "get_ambient_permeation_energy_cap");
+
+    ClassDB::bind_method(D_METHOD("get_minimum_ambient_permeation_energy"), &VAEmitter::get_minimum_ambient_permeation_energy);
+    ClassDB::bind_method(D_METHOD("set_minimum_ambient_permeation_energy", "value"), &VAEmitter::set_minimum_ambient_permeation_energy);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum_ambient_permeation_energy", PROPERTY_HINT_RANGE, "0.0,1.0,0.001"), "set_minimum_ambient_permeation_energy", "get_minimum_ambient_permeation_energy");
 
     ADD_GROUP("Advanced", "");
 
@@ -187,6 +208,19 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_ambient_permeation_color"), &VAEmitter::get_ambient_permeation_color);
     ClassDB::bind_method(D_METHOD("set_ambient_permeation_color", "value"), &VAEmitter::set_ambient_permeation_color);
     ADD_PROPERTY(PropertyInfo(Variant::COLOR, "ambient_permeation_color"), "set_ambient_permeation_color", "get_ambient_permeation_color");
+}
+
+// Occlusion/permeation rays are only cast by the listener, so their thresholds are only customisable there
+void VAEmitter::_validate_property(PropertyInfo &p_property) const
+{
+    if (Object::cast_to<VAListener>(this))
+        return;
+
+    if (p_property.name == StringName("minimum_occlusion_energy") ||
+        p_property.name == StringName("minimum_permeation_energy"))
+    {
+        p_property.usage = PROPERTY_USAGE_NO_EDITOR;
+    }
 }
 
 VAEmitter::VAEmitter()
@@ -336,6 +370,7 @@ void VAEmitter::apply_properties_to_handle()
     vaEmitterSetReverbRayCount(emitter, reverb_ray_count);
     vaEmitterSetReverbBounceCount(emitter, reverb_bounce_count);
     vaEmitterSetReverbEnergyCap(emitter, reverb_energy_cap);
+    vaEmitterSetMinimumReverbEnergy(emitter, minimum_reverb_energy);
     vaEmitterSetMaxVolume(emitter, max_volume);
     vaEmitterSetMaxEchogramTime(emitter, max_echogram_time);
     vaEmitterSetEchogramGranularity(emitter, echogram_granularity);
@@ -348,16 +383,20 @@ void VAEmitter::apply_properties_to_handle()
     vaEmitterSetOcclusionRayCount(emitter, occlusion_ray_count);
     vaEmitterSetOcclusionBounceCount(emitter, occlusion_bounce_count);
     vaEmitterSetOcclusionEnergyCap(emitter, occlusion_energy_cap);
+    vaEmitterSetMinimumOcclusionEnergy(emitter, minimum_occlusion_energy);
     vaEmitterSetPermeationRayCount(emitter, permeation_ray_count);
     vaEmitterSetPermeationBounceCount(emitter, permeation_bounce_count);
     vaEmitterSetPermeationEnergyCap(emitter, permeation_energy_cap);
+    vaEmitterSetMinimumPermeationEnergy(emitter, minimum_permeation_energy);
 
     vaEmitterSetAmbientOcclusionRayCount(emitter, ambient_occlusion_ray_count);
     vaEmitterSetAmbientOcclusionBounceCount(emitter, ambient_occlusion_bounce_count);
     vaEmitterSetAmbientOcclusionEnergyCap(emitter, ambient_occlusion_energy_cap);
+    vaEmitterSetMinimumAmbientOcclusionEnergy(emitter, minimum_ambient_occlusion_energy);
     vaEmitterSetAmbientPermeationRayCount(emitter, ambient_permeation_ray_count);
     vaEmitterSetAmbientPermeationBounceCount(emitter, ambient_permeation_bounce_count);
     vaEmitterSetAmbientPermeationEnergyCap(emitter, ambient_permeation_energy_cap);
+    vaEmitterSetMinimumAmbientPermeationEnergy(emitter, minimum_ambient_permeation_energy);
 
     vaEmitterSetType(emitter, type);
     vaEmitterSetTrailRefreshCount(emitter, trail_refresh_count);
@@ -670,6 +709,21 @@ void VAEmitter::set_reverb_energy_cap(float value)
     }
 }
 
+float VAEmitter::get_minimum_reverb_energy() const
+{
+    return minimum_reverb_energy;
+}
+
+void VAEmitter::set_minimum_reverb_energy(float value)
+{
+    minimum_reverb_energy = CLAMP(value, 0.0f, 1.0f);
+
+    if (emitter)
+    {
+        vaEmitterSetMinimumReverbEnergy(emitter, minimum_reverb_energy);
+    }
+}
+
 float VAEmitter::get_max_volume() const
 {
     return max_volume;
@@ -845,6 +899,21 @@ void VAEmitter::set_occlusion_energy_cap(float value)
     }
 }
 
+float VAEmitter::get_minimum_occlusion_energy() const
+{
+    return minimum_occlusion_energy;
+}
+
+void VAEmitter::set_minimum_occlusion_energy(float value)
+{
+    minimum_occlusion_energy = CLAMP(value, 0.0f, 1.0f);
+
+    if (emitter)
+    {
+        vaEmitterSetMinimumOcclusionEnergy(emitter, minimum_occlusion_energy);
+    }
+}
+
 int VAEmitter::get_permeation_ray_count() const
 {
     return permeation_ray_count;
@@ -887,6 +956,21 @@ void VAEmitter::set_permeation_energy_cap(float value)
     if (emitter)
     {
         vaEmitterSetPermeationEnergyCap(emitter, permeation_energy_cap);
+    }
+}
+
+float VAEmitter::get_minimum_permeation_energy() const
+{
+    return minimum_permeation_energy;
+}
+
+void VAEmitter::set_minimum_permeation_energy(float value)
+{
+    minimum_permeation_energy = CLAMP(value, 0.0f, 1.0f);
+
+    if (emitter)
+    {
+        vaEmitterSetMinimumPermeationEnergy(emitter, minimum_permeation_energy);
     }
 }
 
@@ -935,6 +1019,21 @@ void VAEmitter::set_ambient_occlusion_energy_cap(float value)
     }
 }
 
+float VAEmitter::get_minimum_ambient_occlusion_energy() const
+{
+    return minimum_ambient_occlusion_energy;
+}
+
+void VAEmitter::set_minimum_ambient_occlusion_energy(float value)
+{
+    minimum_ambient_occlusion_energy = CLAMP(value, 0.0f, 1.0f);
+
+    if (emitter)
+    {
+        vaEmitterSetMinimumAmbientOcclusionEnergy(emitter, minimum_ambient_occlusion_energy);
+    }
+}
+
 int VAEmitter::get_ambient_permeation_ray_count() const
 {
     return ambient_permeation_ray_count;
@@ -975,6 +1074,21 @@ void VAEmitter::set_ambient_permeation_energy_cap(float value)
     if (emitter)
     {
         vaEmitterSetAmbientPermeationEnergyCap(emitter, ambient_permeation_energy_cap);
+    }
+}
+
+float VAEmitter::get_minimum_ambient_permeation_energy() const
+{
+    return minimum_ambient_permeation_energy;
+}
+
+void VAEmitter::set_minimum_ambient_permeation_energy(float value)
+{
+    minimum_ambient_permeation_energy = CLAMP(value, 0.0f, 1.0f);
+
+    if (emitter)
+    {
+        vaEmitterSetMinimumAmbientPermeationEnergy(emitter, minimum_ambient_permeation_energy);
     }
 }
 
