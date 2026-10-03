@@ -116,8 +116,8 @@ protected:
     void _validate_property(PropertyInfo &p_property) const;
 
 public:
-    // Drops any orphaned handles owned by this world, called from ~VAWorld so a late OnRemoved can't reach a freed VAWorld.
-    static void forget_orphaned_handles(VAWorld *world);
+    // Destroys the orphaned handles owned by this world, called from ~VAWorld after vaWorldDestroy has unlinked them (e.g. ones still waiting on a reverb tail), so a late OnRemoved can't reach a freed VAWorld
+    static void destroy_orphaned_handles(VAWorld *world);
 
     VAEmitter();
     ~VAEmitter();

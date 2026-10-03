@@ -88,8 +88,6 @@ private:
 
     bool is_shutting_down = false;
 
-    std::vector<::VAEmitter *> pending_emitter_destroys;
-
     bool pending_shutdown = false;
     int raytrace_count = 0;
     bool rendering_enabled = true;
@@ -184,11 +182,6 @@ public:
     va_godot::VAEmitter *get_listener() const
     {
         return listener;
-    }
-
-    void defer_emitter_destroy(::VAEmitter *emitter)
-    {
-        pending_emitter_destroys.push_back(emitter);
     }
 
     ALReverbEffect *get_reverb_effect(::VAEmitter *emitter);

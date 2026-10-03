@@ -23,18 +23,7 @@ VAWorld::~VAWorld()
         // Will block the main thread if the user hasn't set pendingShutdown=true first.
         vaWorldWait(world);
 
-        for (::VAEmitter *emitter : pending_emitter_destroys)
-        {
-            VAResult result = vaEmitterDestroy(emitter);
-
-            // Should never fail as we've called vaWorldWait() above.
-            if (result != VA_SUCCESS)
-                VA_ERROR("Failed to destroy a pending emitter (VAResult=", VAResultToString(result), ")");
-        }
-        pending_emitter_destroys.clear();
-
-        VAEmitter::forget_orphaned_handles(this);
-
+        // Invokes OnRemoved, which destroys them, for the emitters whose removal was waiting on raytracing results
         VAResult result = vaWorldDestroy(world);
 
         // Should never fail as we've called vaWorldWait() above.
@@ -42,6 +31,9 @@ VAWorld::~VAWorld()
             VA_ERROR("Failed to destroy the world (VAResult=", VAResultToString(result), ")");
 
         world = nullptr;
+
+        // vaWorldDestroy unlinked the emitters still waiting on a reverb tail, so they can be freed now
+        VAEmitter::destroy_orphaned_handles(this);
     }
 }
 
