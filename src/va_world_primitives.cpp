@@ -1035,7 +1035,10 @@ void VAWorld::remove_primitive(Node *node, bool recursive)
         {
             if (ref->watcher)
             {
+                // queue_free() only deletes the watcher at the end of the frame, and the node may still move before then (e.g. rebuild_primitives), so stop it calling into the primitive destroyed below
+                ref->watcher->set_on_transform_changed(nullptr);
                 ref->watcher->queue_free();
+                ref->watcher = nullptr;
             }
 
             // vaWorldRemovePrimitive_ failing with VA_NOT_ADDED_TO_WORLD means our bookkeeping disagrees with the SDK about this primitive's membership - still proceed to Destroy so we don't leak it, but surface the mismatch.

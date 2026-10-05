@@ -606,10 +606,18 @@ void VAEmitter::on_raytraced_by_another_emitter(::VAEmitter *other)
     }
 }
 
+static void destroy_handle(::VAEmitter *handle)
+{
+    VAResult result = vaEmitterDestroy(handle);
+
+    if (result != VA_SUCCESS)
+        VA_ERROR("Failed to destroy a removed emitter (VAResult=", VAResultToString(result), ")");
+}
+
 void VAEmitter::on_emitter_removed(::VAEmitter *handle)
 {
-    // Deliberately not vaEmitterDestroy here - VAWorld owns final destruction, deferred until vaWorldWait() has fully drained.
-    va_world->defer_emitter_destroy(handle);
+    // The SDK only invokes OnRemoved once the raytracing threads no longer read the emitter, so it's safe to free now
+    destroy_handle(handle);
 
     // Only clear it if it's still this node's handle
     if (emitter == handle)
@@ -646,17 +654,20 @@ void VAEmitter::on_removed_trampoline(::VAEmitter *emitter)
 
     if (it != orphaned_handles.end())
     {
-        it->second->defer_emitter_destroy(emitter);
         orphaned_handles.erase(it);
+        destroy_handle(emitter);
     }
 }
 
-void VAEmitter::forget_orphaned_handles(VAWorld *world)
+void VAEmitter::destroy_orphaned_handles(VAWorld *world)
 {
     for (auto it = orphaned_handles.begin(); it != orphaned_handles.end();)
     {
         if (it->second == world)
+        {
+            destroy_handle(it->first);
             it = orphaned_handles.erase(it);
+        }
         else
             ++it;
     }
