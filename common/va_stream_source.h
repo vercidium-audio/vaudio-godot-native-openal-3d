@@ -19,6 +19,9 @@ private:
 
     bool stream_open = false;
 
+    // Latched once the emitter is first ready to play, so a raytrace_once stream keeps accepting data after its emitter leaves the world
+    bool stream_ready = false;
+
     std::vector<uint8_t> drained_chunk;
 
     void drain_used_chunks();

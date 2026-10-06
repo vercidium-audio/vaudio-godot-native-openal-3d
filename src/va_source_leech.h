@@ -42,7 +42,10 @@ public:
 
     bool is_raytraced() const;
 
-    // Matches VASource's Play() override: if the parent emitter hasn't produced raytracing results yet, returns false without playing.
+    // See VAEmitter::is_ready_to_play
+    bool is_ready_to_play() const;
+
+    // Matches VASource's Play() override: returns false without playing until the parent emitter is ready to play.
     bool play() override;
 
     // Current muffling filter state (direct/dry path only); 1.0/1.0 until the listener has raytraced the parent emitter at least once.

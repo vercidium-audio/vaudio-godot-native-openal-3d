@@ -31,6 +31,7 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_va_position"), &VAEmitter::get_va_position);
     ClassDB::bind_method(D_METHOD("get_within_world_bounds"), &VAEmitter::get_within_world_bounds);
     ClassDB::bind_method(D_METHOD("is_raytraced"), &VAEmitter::is_raytraced);
+    ClassDB::bind_method(D_METHOD("is_ready_to_play"), &VAEmitter::is_ready_to_play);
     ClassDB::bind_method(D_METHOD("get_grouped_eax_index"), &VAEmitter::get_grouped_eax_index);
     ClassDB::bind_method(D_METHOD("get_eax_debug_info"), &VAEmitter::get_eax_debug_info);
 
@@ -337,6 +338,7 @@ void VAEmitter::retry_find_va_world(Node *node)
 void VAEmitter::create_emitter()
 {
     emitter = vaEmitterCreate();
+    raytrace_once_removed = false;
     vaEmitterSetUserData(emitter, this);
     vaEmitterSetName(emitter, String(get_name()).utf8().get_data());
     vaEmitterSetPosition(emitter, ToVAudio(get_global_position()));
@@ -430,6 +432,23 @@ void VAEmitter::remove_emitter()
 bool VAEmitter::is_raytraced() const
 {
     return emitter && !vaEmitterGetInitialising(emitter);
+}
+
+bool VAEmitter::is_ready_to_play() const
+{
+    if (!emitter || !va_world)
+        return false;
+
+    VAEmitter *listener = va_world->get_listener();
+
+    if (!listener || listener == this || !vaEmitterHasRaytracedTarget(listener->get_handle(), emitter))
+        return false;
+
+    // Its grouped EAX slot, and so its reverb effect, isn't known until it casts its own reverb rays
+    if (vaEmitterGetAffectsGroupedEAX(emitter) && vaEmitterGetReverbEnabled(emitter))
+        return vaEmitterGetEAX(emitter) != nullptr;
+
+    return true;
 }
 
 int VAEmitter::get_grouped_eax_index() const
@@ -551,6 +570,13 @@ void VAEmitter::_process(double delta)
     {
         apply_raytracing_results();
     }
+
+    // Once ready, cast rays no more. A parent VARaytracedSource processes before this node, so it has already played
+    if (raytrace_once && !raytrace_once_removed && is_ready_to_play())
+    {
+        raytrace_once_removed = true;
+        remove_emitter();
+    }
 }
 
 // VAEmitter.cs's ApplyRaytracingResults port: resolves which reverb slot this emitter uses (even for the listener itself), then for
@@ -598,12 +624,6 @@ void VAEmitter::on_raytraced_by_another_emitter(::VAEmitter *other)
     }
 
     apply_raytracing_results();
-
-    // Matches VAEmitter.cs's OnRaytracedByAnotherEmitter: once raytraced once, cast rays no more - remove it from the world.
-    if (raytrace_once)
-    {
-        remove_emitter();
-    }
 }
 
 static void destroy_handle(::VAEmitter *handle)

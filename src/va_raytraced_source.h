@@ -84,6 +84,9 @@ public:
 
     bool is_raytraced_by_listener() const;
 
+    // See VAEmitter::is_ready_to_play
+    bool is_ready_to_play() const;
+
     int get_grouped_eax_index() const;
 
     va_godot::VAEmitter *get_emitter() const

@@ -79,6 +79,7 @@ private:
     bool clamp_position = true;
 
     bool raytrace_once = false;
+    bool raytrace_once_removed = false;
 
     bool random_trail_color = false;
     Color trail_color = Color(1.0f, 1.0f, 1.0f, 25.0f / 255.0f);
@@ -143,6 +144,9 @@ public:
     }
 
     bool is_raytraced() const;
+
+    // True once the listener has raytraced this emitter and, if it casts reverb rays and affects grouped EAX, it has cast its own reverb rays too. Sources don't play until then
+    bool is_ready_to_play() const;
 
     int get_grouped_eax_index() const;
 

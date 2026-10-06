@@ -51,6 +51,7 @@ bool VAStreamSource::open_stream(int format, int frequency)
 
     get_sources().push_back(std::move(source));
     stream_open = true;
+    stream_ready = false;
     return true;
 }
 
@@ -70,6 +71,17 @@ void VAStreamSource::push_audio_data(const uint8_t *data, int num_bytes)
     if (num_bytes == 0)
     {
         return;
+    }
+
+    // Data that arrives before the muffling and reverb results is dropped, so the stream never plays unmuffled or without reverb
+    if (!stream_ready)
+    {
+        if (!is_ready_to_play())
+        {
+            return;
+        }
+
+        stream_ready = true;
     }
 
     stream_buffer.enqueue(data, num_bytes);
@@ -112,6 +124,12 @@ void VAStreamSource::_process(double delta)
 {
     VARaytracedSource::_process(delta);
     process_raytracing(delta);
+
+    // Latched here too, since a raytrace_once emitter leaves the world later this frame
+    if (stream_open && !stream_ready && is_ready_to_play())
+    {
+        stream_ready = true;
+    }
 
     drain_used_chunks();
 }
