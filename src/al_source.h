@@ -80,7 +80,7 @@ public:
 
     virtual bool play();
 
-    void stop();
+    virtual void stop();
 
     bool is_playing() const;
 

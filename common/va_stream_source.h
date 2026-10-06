@@ -45,6 +45,9 @@ public:
 
     void close_stream();
 
+    // Closes the stream too, else pushed data would queue forever with no source playing it
+    void stop() override;
+
     bool is_stream_open() const
     {
         return stream_open;

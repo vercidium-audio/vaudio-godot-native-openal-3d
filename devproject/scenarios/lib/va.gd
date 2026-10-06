@@ -69,3 +69,18 @@ static func is_playing(source: Node) -> bool:
 
 static func make_current(listener: Node) -> void:
 	listener.make_current()
+
+static func open_stream(source: Node, format: int, frequency: int) -> bool:
+	return source.open_stream(format, frequency)
+
+static func push_audio_data(source: Node, data: PackedByteArray) -> void:
+	source.push_audio_data(data)
+
+static func close_stream(source: Node) -> void:
+	source.close_stream()
+
+static func is_stream_open(source: Node) -> bool:
+	return source.is_stream_open()
+
+static func stop(source: Node) -> void:
+	source.stop()

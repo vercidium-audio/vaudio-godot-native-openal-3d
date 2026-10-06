@@ -94,9 +94,15 @@ void VAStreamSource::close_stream()
         return;
     }
 
-    stop();
+    ALSource::stop();
     stream_buffer.destroy();
     stream_open = false;
+}
+
+void VAStreamSource::stop()
+{
+    close_stream();
+    ALSource::stop();
 }
 
 void VAStreamSource::_validate_property(PropertyInfo &p_property) const
