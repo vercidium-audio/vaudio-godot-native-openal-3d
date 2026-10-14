@@ -3,7 +3,7 @@
 	<brief_description>
 	</brief_description>
 	<description>
-		Renders an emitter's visualisation rays as fading diamond sprites, one per ray bounce. Must be added as a direct child of a [VAEmitter] (or a node that inherits from it, such as [VASource] or [VAListener]) - it registers itself against that parent and drives its ray_count/bounce_count/update_frequency_ms properties. Every update_frequency_ms milliseconds, the parent emitter reports new ray bounce positions and normals, which are drawn as diamonds that fade in, hold, then fade out over fade_in_ms/duration_ms/fade_out_ms.
+		Renders an emitter's visualisation rays as fading diamond sprites, one per ray bounce. Must be added as a direct child of a [VAEmitter] (or a node that inherits from it, such as [VASource] or [VAListener]) - it registers itself against that parent and drives its ray_count/bounce_count/update_frequency_ms properties. Every update_frequency_ms milliseconds, the parent emitter reports new ray bounce positions and normals, which are drawn as diamonds that fade in, hold, then fade out over fade_in_ms/duration_ms/fade_out_ms. On a [VAListener], it only renders while that listener is current.
 	</description>
 	<tutorials>
 	</tutorials>

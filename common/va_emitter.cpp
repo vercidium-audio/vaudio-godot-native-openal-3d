@@ -279,6 +279,8 @@ void VAEmitter::detach_from_world()
 
 void VAEmitter::release_emitter()
 {
+    teardown_visualisation();
+
     remove_emitter();
 
     // Removal is still pending (reverb tail, or removed from within a callback), so this node may be freed or create a new handle before OnRemoved fires. Hand the handle to VAWorld so the callback never reaches this node.
@@ -365,6 +367,9 @@ void VAEmitter::create_emitter()
     apply_properties_to_handle();
 
     va_world->register_emitter(this, is_main_listener());
+
+    // A visualisation that entered the tree while this emitter had no handle
+    initialize_visualisation();
 }
 
 void VAEmitter::apply_properties_to_handle()
@@ -641,7 +646,10 @@ void VAEmitter::on_emitter_removed(::VAEmitter *handle)
 
     // Only clear it if it's still this node's handle
     if (emitter == handle)
+    {
         emitter = nullptr;
+        teardown_visualisation();
+    }
 }
 
 void VAEmitter::on_raytracing_complete_trampoline(::VAEmitter *emitter)

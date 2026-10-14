@@ -128,11 +128,10 @@ void VAVisualisation::_exit_tree()
         waiting_for_world = false;
     }
 
-    if (emitter && emitter->get_handle())
-    {
-        vaEmitterSetVisualisationCallback(emitter->get_handle(), nullptr);
+    teardown_visualisation();
+
+    if (emitter && emitter->get_visualisation() == this)
         emitter->set_visualisation(nullptr);
-    }
 
     emitter = nullptr;
 }
@@ -171,17 +170,41 @@ void VAVisualisation::find_emitter()
         return;
     }
 
-    if (!emitter->get_handle())
-    {
-        // Parent VAEmitter exists but hasn't created its SDK handle yet - treat as "no emitter yet" and retry via node_added.
-        emitter = nullptr;
+    // The emitter starts this visualisation itself if it has no handle yet
+    emitter->set_visualisation(this);
+    initialize_visualisation();
+}
+
+void VAVisualisation::initialize_visualisation()
+{
+    // Every listener shares one handle, which only the current listener holds. The emitter calls this again when it becomes current
+    if (callback_registered || !emitter || !emitter->get_handle())
         return;
-    }
 
     apply_properties_to_emitter();
-
-    emitter->set_visualisation(this);
     vaEmitterSetVisualisationCallback(emitter->get_handle(), &VAVisualisation::visualisation_callback_trampoline);
+    callback_registered = true;
+}
+
+void VAVisualisation::teardown_visualisation()
+{
+    if (!callback_registered)
+        return;
+
+    // The handle is already gone if the emitter released it first. It keeps casting visualisation rays until its ray count is cleared, even with no callback
+    if (emitter && emitter->get_handle())
+    {
+        vaEmitterSetVisualisationCallback(emitter->get_handle(), nullptr);
+        vaEmitterSetVisualisationRayCount(emitter->get_handle(), 0);
+    }
+
+    callback_registered = false;
+
+    if (multimesh.is_valid())
+    {
+        multimesh->set_visible_instance_count(0);
+        next_instance = 0;
+    }
 }
 
 void VAVisualisation::retry_find_emitter(Node *node)

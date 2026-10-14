@@ -49,6 +49,9 @@ private:
 
     bool waiting_for_world = false;
 
+    // True while this node receives its emitter's visualisation data
+    bool callback_registered = false;
+
     void find_emitter();
     void retry_find_emitter(Node *node);
     void create_multimesh();
@@ -74,6 +77,12 @@ public:
     void _exit_tree() override;
     void _ready() override;
     void _process(double delta) override;
+
+    // Called on entering the tree, or by the emitter once it has a handle: when it finds a VAWorld that entered the tree later, or when a listener becomes current. No-op once initialised
+    void initialize_visualisation();
+
+    // Called on exiting the tree, or by the emitter before it lets go of its handle: when it leaves the VAWorld, or when a listener stops being current. initialize_visualisation can be called again afterwards
+    void teardown_visualisation();
 
     int get_ray_count() const;
     void set_ray_count(int value);

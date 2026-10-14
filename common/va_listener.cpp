@@ -89,10 +89,15 @@ void VAListener::activate(::VAEmitter *shared_handle)
     vaEmitterSetPosition(emitter, ToVAudio(get_global_position()));
 
     apply_properties_to_handle();
+
+    initialize_visualisation();
 }
 
 void VAListener::deactivate()
 {
+    // The next current listener takes the handle, so its visualisation callback and ray count are cleared first
+    teardown_visualisation();
+
     current = false;
     emitter = nullptr;
 }

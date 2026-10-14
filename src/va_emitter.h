@@ -195,6 +195,12 @@ public:
         visualisation = value;
     }
 
+    // Starts the VAVisualisation attached to this emitter, once this emitter holds a handle
+    void initialize_visualisation();
+
+    // Stops it. Call before this emitter lets go of its handle
+    void teardown_visualisation();
+
     int get_reverb_ray_count() const;
     void set_reverb_ray_count(int value);
     int get_reverb_bounce_count() const;
