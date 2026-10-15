@@ -386,7 +386,8 @@ void VAWorld::on_reverb_updated()
         {
             // Rotate the raytraced world-space direction into the listener's local space so OpenAL's listener-relative reflections/late-reverb pan vectors point the right way regardless of listener facing.
             Vector3 listener_rotation = listener->get_global_rotation();
-            VAVector pan_vector = vaWorldCalculateListenerRelativePan(world, *relative_direction, listener_rotation.x, listener_rotation.y);
+            VAVector pan_vector = {};
+            vaWorldCalculateListenerRelativePan(world, *relative_direction, listener_rotation.x, listener_rotation.y, &pan_vector);
             Vector3 pan = FromVAudio(pan_vector);
 
             params.reflectionsPan[0] = pan.x;

@@ -53,14 +53,18 @@ namespace
 
             for (int i = 0; i < VAMaterialTypeCount; i++)
             {
-                defaults[i].absorption_lf = vaWorldGetMaterialAbsorptionLF(world, i);
-                defaults[i].absorption_hf = vaWorldGetMaterialAbsorptionHF(world, i);
-                defaults[i].scattering = vaWorldGetMaterialScattering(world, i);
-                defaults[i].transmission_lf = vaWorldGetMaterialTransmissionLF(world, i);
-                defaults[i].transmission_hf = vaWorldGetMaterialTransmissionHF(world, i);
-                defaults[i].flat_transmission_lf = vaWorldGetMaterialFlatTransmissionLF(world, i);
-                defaults[i].flat_transmission_hf = vaWorldGetMaterialFlatTransmissionHF(world, i);
-                defaults[i].color = FromVAudio(vaWorldGetMaterialColor(world, i));
+                // Materials that don't exist (e.g. Air) are left zeroed
+                vaWorldGetMaterialAbsorptionLF(world, i, &defaults[i].absorption_lf);
+                vaWorldGetMaterialAbsorptionHF(world, i, &defaults[i].absorption_hf);
+                vaWorldGetMaterialScattering(world, i, &defaults[i].scattering);
+                vaWorldGetMaterialTransmissionLF(world, i, &defaults[i].transmission_lf);
+                vaWorldGetMaterialTransmissionHF(world, i, &defaults[i].transmission_hf);
+                vaWorldGetMaterialFlatTransmissionLF(world, i, &defaults[i].flat_transmission_lf);
+                vaWorldGetMaterialFlatTransmissionHF(world, i, &defaults[i].flat_transmission_hf);
+
+                VAColor color = {};
+                vaWorldGetMaterialColor(world, i, &color);
+                defaults[i].color = FromVAudio(color);
             }
 
             VAResult destroy_result = vaWorldDestroy(world);

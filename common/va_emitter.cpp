@@ -446,7 +446,7 @@ bool VAEmitter::is_ready_to_play() const
 
     VAEmitter *listener = va_world->get_listener();
 
-    if (!listener || listener == this || !vaEmitterHasRaytracedTarget(listener->get_handle(), emitter))
+    if (!listener || listener == this || vaEmitterHasRaytracedTarget(listener->get_handle(), emitter) != VA_TRUE)
         return false;
 
     // Its grouped EAX slot, and so its reverb effect, isn't known until it casts its own reverb rays
@@ -554,12 +554,25 @@ void VAEmitter::add_target(VAEmitter *target)
 
 bool VAEmitter::has_raytraced_target(VAEmitter *target) const
 {
-    return vaEmitterHasRaytracedTarget(emitter, target->get_handle());
+    return vaEmitterHasRaytracedTarget(emitter, target->get_handle()) == VA_TRUE;
 }
 
 VALowPassFilter VAEmitter::get_target_filter(VAEmitter *target) const
 {
-    return *vaEmitterGetTargetFilter(emitter, target->get_handle());
+    VALowPassFilter *filter = nullptr;
+    VAResult result = vaEmitterGetTargetFilter(emitter, target->get_handle(), &filter);
+
+    if (result != VA_SUCCESS)
+    {
+        VA_ERROR_RESULT(result, "Failed to get the target filter for '", target->get_name(), "'");
+
+        VALowPassFilter unmuffled = {};
+        unmuffled.gainLF = 1.0f;
+        unmuffled.gainHF = 1.0f;
+        return unmuffled;
+    }
+
+    return *filter;
 }
 
 void VAEmitter::_process(double delta)
