@@ -21,6 +21,8 @@ namespace va_godot
 // Handles whose node left the tree while removal was still pending, mapped to the VAWorld that destroys them once OnRemoved fires. Main thread only.
 static std::unordered_map<::VAEmitter *, VAWorld *> orphaned_handles;
 
+static void destroy_handle(::VAEmitter *handle);
+
 void VAEmitter::_bind_methods()
 {
     ClassDB::bind_method(D_METHOD("get_raytrace_once"), &VAEmitter::get_raytrace_once);
@@ -251,9 +253,9 @@ void VAEmitter::_enter_tree()
         return;
     }
 
-    va_world = find_va_world(this);
+    VAWorld *found = find_va_world(this);
 
-    if (!va_world)
+    if (!found)
     {
         // No VAWorld anywhere in the tree yet - stay dormant and retry on every future node addition instead of erroring out permanently, see retry_find_va_world.
         waiting_for_world = true;
@@ -261,7 +263,70 @@ void VAEmitter::_enter_tree()
         return;
     }
 
+    on_va_world_found(found);
+}
+
+void VAEmitter::on_va_world_found(VAWorld *world)
+{
+    if (detach_pending)
+    {
+        // Re-entered the same VAWorld before the end of the frame (e.g. a reparent), so keep the handle
+        if (world->get_instance_id() == va_world_id)
+        {
+            detach_pending = false;
+            return;
+        }
+
+        release_from_world();
+    }
+
+    va_world = world;
+    va_world_id = world->get_instance_id();
+
     attach_to_world();
+}
+
+void VAEmitter::defer_release()
+{
+    detach_pending = true;
+    callable_mp(this, &VAEmitter::release_if_pending).call_deferred();
+}
+
+void VAEmitter::release_if_pending()
+{
+    if (detach_pending)
+        release_from_world();
+}
+
+void VAEmitter::release_from_world()
+{
+    detach_pending = false;
+
+    if (ObjectDB::get_instance(va_world_id))
+    {
+        detach_from_world();
+
+        // A raytrace_once emitter may have started its own removal earlier and still be waiting on its reverb tail
+        if (emitter)
+            release_emitter();
+    }
+    else if (emitter)
+    {
+        // The VAWorld was freed first (e.g. a scene change), and vaWorldDestroy unlinked this handle from it
+        teardown_visualisation();
+        destroy_handle(emitter);
+        emitter = nullptr;
+    }
+
+    va_world = nullptr;
+    va_world_id = 0;
+}
+
+void VAEmitter::_notification(int p_what)
+{
+    // Freed before the end of the frame it left the tree in
+    if (p_what == NOTIFICATION_PREDELETE && detach_pending)
+        release_from_world();
 }
 
 void VAEmitter::attach_to_world()
@@ -309,24 +374,22 @@ void VAEmitter::_exit_tree()
             "' left the tree without ever finding a VAWorld - no emitter was created for it. Make sure this node's scene was added under a VAWorld while it was in the tree.");
     }
 
-    if (!va_world)
+    if (!va_world || detach_pending)
         return;
 
-    detach_from_world();
-
-    // A raytrace_once emitter may have started its own removal earlier and still be waiting on its reverb tail
-    if (emitter)
-        release_emitter();
-
-    va_world = nullptr;
+    // A reparent re-enters the tree straight away, so keep the handle until the end of the frame in case it comes back to the same VAWorld. A raytrace_once handle that has started its removal can't be reused, and a listener hands the shared handle over to the next listener straight away
+    if (is_queued_for_deletion() || raytrace_once_removed || is_main_listener())
+        release_from_world();
+    else
+        defer_release();
 }
 
-// Re-attempts find_va_world each time a node is added anywhere in the tree; once a VAWorld becomes reachable, disconnects and initialises normally via create_emitter().
+// Re-attempts find_va_world each time a node is added anywhere in the tree; once a VAWorld becomes reachable, disconnects and initialises normally via on_va_world_found().
 void VAEmitter::retry_find_va_world(Node *node)
 {
-    va_world = find_va_world(this);
+    VAWorld *found = find_va_world(this);
 
-    if (!va_world)
+    if (!found)
     {
         return;
     }
@@ -334,7 +397,7 @@ void VAEmitter::retry_find_va_world(Node *node)
     get_tree()->disconnect("node_added", callable_mp(this, &VAEmitter::retry_find_va_world));
     waiting_for_world = false;
 
-    attach_to_world();
+    on_va_world_found(found);
 }
 
 void VAEmitter::create_emitter()

@@ -186,7 +186,9 @@ void VARaytracedSource::_enter_tree()
         return;
     }
 
-    create_emitter();
+    // After a reparent the child VAEmitter is still here, and keeps its handle or re-attaches itself to the new world
+    if (!emitter)
+        create_emitter();
 }
 
 void VARaytracedSource::_exit_tree()
@@ -208,13 +210,7 @@ void VARaytracedSource::_exit_tree()
             "was added under a VAWorld while it was in the tree.");
     }
 
-    if (emitter)
-    {
-        // remove_child alone only detaches - VAEmitter is exclusively owned by this node, so it must also be freed here or it leaks (confirmed via a headless run reporting a leaked ObjectDB instance before this fix).
-        remove_child(emitter);
-        memdelete(emitter);
-        emitter = nullptr;
-    }
+    // The child VAEmitter is kept, so a reparent within the same VAWorld keeps its handle. It's freed along with this node
 }
 
 // Re-attempts find_va_world each time a node is added anywhere in the tree - see VAEmitter::retry_find_va_world's identical pattern.
@@ -230,7 +226,8 @@ void VARaytracedSource::retry_find_va_world(Node *node)
     get_tree()->disconnect("node_added", callable_mp(this, &VARaytracedSource::retry_find_va_world));
     waiting_for_world = false;
 
-    create_emitter();
+    if (!emitter)
+        create_emitter();
 }
 
 // Matches VASource.cs's CreateEmitter: a private child VAEmitter, never the listener, that never casts its own

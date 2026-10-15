@@ -100,7 +100,17 @@ private:
 
     bool waiting_for_world = false;
 
+    // Set from leaving the tree until the end of that frame. If this node re-enters the same VAWorld before then (e.g. a reparent), it keeps its handle
+    bool detach_pending = false;
+
+    // Checked before releasing, as the VAWorld may have been freed while this node was out of the tree
+    uint64_t va_world_id = 0;
+
     void retry_find_va_world(Node *node);
+    void on_va_world_found(VAWorld *world);
+    void defer_release();
+    void release_if_pending();
+    void release_from_world();
 
     void apply_raytracing_results();
 
@@ -115,6 +125,7 @@ private:
 protected:
     static void _bind_methods();
     void _validate_property(PropertyInfo &p_property) const;
+    void _notification(int p_what);
 
 public:
     // Destroys the orphaned handles owned by this world, called from ~VAWorld after vaWorldDestroy has unlinked them (e.g. ones still waiting on a reverb tail), so a late OnRemoved can't reach a freed VAWorld
