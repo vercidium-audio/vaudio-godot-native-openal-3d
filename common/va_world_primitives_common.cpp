@@ -149,19 +149,35 @@ void VAWorld::sync_primitive(Node *node)
     add_primitive(sync_root, VAMaterialAir, false, PropagateMode::All, true);
 }
 
-void VAWorld::validate_materials_in_editor(Node *node)
+static void collect_editor_material_nodes(Node *node, PackedStringArray &custom_names, TypedArray<Node> &material_nodes)
 {
-    // get_material already pushes a warning for an unrecognized string - just need to trigger it for every node carrying the metadata.
+    if (VACustomMaterial *material = Object::cast_to<VACustomMaterial>(node))
+        custom_names.push_back(material->get_material_name());
+
     if (node->has_meta(MaterialMetaKey()))
-    {
-        get_material(node);
-    }
+        material_nodes.push_back(node);
 
     TypedArray<Node> children = node->get_children();
     for (int i = 0; i < children.size(); i++)
-    {
-        validate_materials_in_editor(Object::cast_to<Node>(children[i]));
-    }
+        collect_editor_material_nodes(Object::cast_to<Node>(children[i]), custom_names, material_nodes);
+}
+
+void VAWorld::validate_materials_in_editor(Node *node)
+{
+    PackedStringArray custom_names;
+    TypedArray<Node> material_nodes;
+    collect_editor_material_nodes(node, custom_names, material_nodes);
+
+    // VACustomMaterial skips registration in the editor, so seed custom_materials with the names found in the tree - otherwise every node using a custom material warns as unknown. The ids are placeholders, nothing in the editor reads them.
+    custom_materials.clear();
+    for (int i = 0; i < custom_names.size(); i++)
+        custom_materials[i] = custom_names[i];
+
+    // get_material already pushes a warning for an unrecognized string - just need to trigger it for every node carrying the metadata.
+    for (int i = 0; i < material_nodes.size(); i++)
+        get_material(Object::cast_to<Node>(material_nodes[i]));
+
+    custom_materials.clear();
 }
 
 void VAWorld::init_scene()
