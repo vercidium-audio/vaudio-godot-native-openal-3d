@@ -45,6 +45,21 @@ void VAWorld::set_bounds_color(Color value)
     update_gizmos();
 }
 
+void VAWorld::set_world_name(const String &value)
+{
+    world_name = value;
+    apply_world_name();
+}
+
+void VAWorld::apply_world_name()
+{
+    if (!world)
+        return;
+
+    String name = world_name.is_empty() ? String(get_name()) : world_name;
+    vaWorldSetName(world, name.utf8().get_data());
+}
+
 void VAWorld::set_epsilon(float value)
 {
     epsilon = value;

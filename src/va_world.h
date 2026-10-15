@@ -251,6 +251,12 @@ public:
     }
     void set_bounds_color(Color value);
 
+    String get_world_name() const
+    {
+        return world_name;
+    }
+    void set_world_name(const String &value);
+
     float get_epsilon() const
     {
         return epsilon;
@@ -367,6 +373,9 @@ public:
 private:
     Vector3 bounds_size = Vector3(200, 100, 200);
     Color bounds_color = Color(0.0f, 0.0f, 0.0f, 0.25f);
+    // Empty means the node's own name is used
+    String world_name;
+    void apply_world_name();
     float epsilon = 0.01f;
     // A node only inherits a cascading material if its visual render layer / body collision layer is in these masks. A node with its own material is always included. 0xFFFFF = all 20 layers.
     uint32_t render_layers = 0xFFFFF;
