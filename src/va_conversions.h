@@ -181,21 +181,6 @@ inline std::vector<VAVector> ConvertConcavePolygonToVAudio(const Ref<ConcavePoly
     return vertices;
 }
 
-// ConvexPolygonShape3D has no direct triangle list of its own - triangulate via its debug mesh, same as the Mono plugin's ConvertConvexPolygonToVector3FList.
-inline std::vector<VAVector> ConvertConvexPolygonToVAudio(const Ref<ConvexPolygonShape3D> &shape, VAVector &out_min, VAVector &out_max)
-{
-    Ref<Mesh> debug_mesh = shape->get_debug_mesh();
-
-    if (debug_mesh.is_null())
-    {
-        out_min = ToVAudio(Vector3());
-        out_max = ToVAudio(Vector3());
-        return std::vector<VAVector>();
-    }
-
-    return ConvertMeshToVAudio(debug_mesh, out_min, out_max);
-}
-
 // HeightMapShape3D is centered at the origin, spanning -width/2..+width/2 and -depth/2..+depth/2 - triangulate each 2x2 cell of the grid into two CW-wound triangles.
 inline std::vector<VAVector> ConvertHeightMapToVAudio(const Ref<HeightMapShape3D> &shape, VAVector &out_min, VAVector &out_max)
 {
