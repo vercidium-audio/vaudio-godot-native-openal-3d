@@ -33,6 +33,13 @@ protected:
     std::vector<ALBuffer> decoded_buffers;
     std::vector<Ref<AudioStream>> decoded_streams;
 
+    // Buffers dropped from decoded_buffers while a source was still playing them, deleted once nothing uses them - alDeleteBuffers fails on an attached buffer
+    std::vector<ALBuffer> retired_buffers;
+
+    void retire_buffer(ALBuffer &&buffer);
+
+    void release_retired_buffers();
+
     std::vector<Ref<AudioStream>> pending_streams;
 
     WorkerThreadPool::TaskID decode_task_id = WorkerThreadPool::INVALID_TASK_ID;
@@ -148,6 +155,8 @@ public:
 
     void set_streams(const TypedArray<AudioStream> &value)
     {
+        // Matches AudioStreamPlayer.set_stream(), which stops whatever was playing
+        stop();
         streams = value;
     }
 
@@ -161,7 +170,7 @@ public:
     {
         TypedArray<AudioStream> value_array;
         value_array.push_back(value);
-        streams = value_array;
+        set_streams(value_array);
     }
 
     // Script-only alias for `pitch` matching AudioStreamPlayer3D's `pitch_scale`.

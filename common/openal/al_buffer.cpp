@@ -28,8 +28,16 @@ ALBuffer::~ALBuffer()
 
     if (handle != 0 && manager)
     {
+        manager->al_get_error()();
+
         ALuint handles[1] = {handle};
         manager->al_delete_buffers()(1, handles);
+
+        // Fails if a source still has this buffer attached, which leaks it
+        ALenum error = manager->al_get_error()();
+
+        if (error != AL_NO_ERROR)
+            VA_ERROR("alDeleteBuffers failed: ", ALErrorToString(error));
     }
 
     handle = 0;

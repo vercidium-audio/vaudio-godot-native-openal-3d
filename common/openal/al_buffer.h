@@ -36,13 +36,12 @@ public:
     {
         if (this != &other)
         {
-            handle = other.handle;
+            // Swapped rather than overwritten, so our old handle is deleted when `other` is destroyed instead of leaking (e.g. when vector::erase shifts elements down)
+            std::swap(handle, other.handle);
             sample_rate = other.sample_rate;
             duration_seconds = other.duration_seconds;
             pending_pcm_data = std::move(other.pending_pcm_data);
             pending_frames_pulled = other.pending_frames_pulled;
-
-            other.handle = 0;
         }
 
         return *this;

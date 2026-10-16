@@ -82,5 +82,8 @@ static func close_stream(source: Node) -> void:
 static func is_stream_open(source: Node) -> bool:
 	return source.is_stream_open()
 
+static func play(source: Node) -> bool:
+	return source.play()
+
 static func stop(source: Node) -> void:
 	source.stop()
