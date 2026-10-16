@@ -132,6 +132,25 @@ private:
     void create_primitive(MeshInstance3D *mesh_instance, VAMaterialType material, bool use_flat_transmission);
 
     void update_collision_shape_primitive(CollisionShape3D *collision_shape, VAPrimitiveRef *ref);
+    void on_collision_shape_changed(CollisionShape3D *collision_shape);
+
+    // A VAMesh built once per Godot Mesh/Shape3D resource and shared by every mesh primitive created from it. Stored on the world rather than as resource metadata, since a VAMesh can only belong to one world
+    struct SharedMesh
+    {
+        ::VAMesh *mesh = nullptr;
+        Ref<Resource> resource;
+        int reference_count = 0;
+    };
+
+    // Keyed by the resource's instance id. Runtime edits to a Mesh resource (e.g. ArrayMesh surfaces) aren't detected, so nodes keep its old triangles until they're re-added
+    std::unordered_map<uint64_t, SharedMesh *> shared_meshes;
+
+    // read_triangles is only called if the resource doesn't have a shared mesh yet. Returns nullptr if it has no triangles or creation failed
+    VAMeshPrimitive *create_shared_mesh_primitive(const Ref<Resource> &resource, std::function<std::vector<VAVector>(VAVector &, VAVector &)> read_triangles, VAMaterialType material, const VAMatrix &transform, Node *node, SharedMesh *&out_shared_mesh);
+    void release_shared_mesh(SharedMesh *shared_mesh);
+
+    // Stops new primitives reusing this shared mesh, e.g. after its Shape3D changed. Existing primitives keep it until they're removed
+    void invalidate_shared_mesh(SharedMesh *shared_mesh);
 
 protected:
     static void _bind_methods();
