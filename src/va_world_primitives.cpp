@@ -679,7 +679,7 @@ void VAWorld::create_primitive(CollisionShape3D *collision_shape, VAMaterialType
     VAPrimitiveRef *ref = memnew(VAPrimitiveRef);
     ref->primitive = prim;
     ref->kind = kind;
-    ref->shared_mesh = shared_mesh;
+    ref->shared_geometry = shared_mesh;
 
     TransformWatcher *watcher = memnew(TransformWatcher);
     watcher->set_on_transform_changed([this, collision_shape, ref]()
@@ -711,7 +711,7 @@ void VAWorld::on_collision_shape_changed(CollisionShape3D *collision_shape)
     if (ref->kind == VAPrimitiveKind::Mesh)
     {
         VAMaterialType material = vaMeshPrimitiveGetMaterial((VAMeshPrimitive *)ref->primitive);
-        invalidate_shared_mesh((SharedMesh *)ref->shared_mesh);
+        invalidate_shared_mesh((SharedMesh *)ref->shared_geometry);
         remove_primitive(collision_shape, false);
         create_primitive(collision_shape, material);
     }
@@ -777,7 +777,7 @@ void VAWorld::create_primitive(MeshInstance3D *mesh_instance, VAMaterialType mat
         }
     });
 
-    ref->shared_mesh = shared_mesh;
+    ref->shared_geometry = shared_mesh;
     mesh_instance->set_meta(PrimitiveMetaKey(), ref);
 }
 
@@ -1241,8 +1241,8 @@ void VAWorld::remove_primitive(Node *node, bool recursive)
                     }
 
                     // Must come after the primitive is destroyed, as vaMeshDestroy fails while a primitive still uses the mesh
-                    release_shared_mesh((SharedMesh *)ref->shared_mesh);
-                    ref->shared_mesh = nullptr;
+                    release_shared_mesh((SharedMesh *)ref->shared_geometry);
+                    ref->shared_geometry = nullptr;
                     break;
                 }
             }

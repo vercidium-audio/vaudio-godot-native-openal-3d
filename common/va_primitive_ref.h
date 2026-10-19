@@ -32,6 +32,6 @@ public:
     Ref<Resource> shape_resource;
     Callable shape_callable;
 
-    // 3D only - the VAWorld::SharedMesh this mesh primitive was created from, released in remove_primitive
-    void *shared_mesh = nullptr;
+    // The VAWorld::SharedMesh (3D) or VAWorld::SharedPolygon (2D) this primitive was created from, released in remove_primitive
+    void *shared_geometry = nullptr;
 };
