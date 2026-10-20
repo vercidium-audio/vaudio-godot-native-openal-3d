@@ -121,11 +121,14 @@ void VAWorld::_bind_methods()
     
     ClassDB::bind_method(D_METHOD("get_rendering_enabled"), &VAWorld::get_rendering_enabled);
     ClassDB::bind_method(D_METHOD("set_rendering_enabled", "value"), &VAWorld::set_rendering_enabled);
+    ClassDB::bind_method(D_METHOD("get_visualisation_scale"), &VAWorld::get_visualisation_scale);
+    ClassDB::bind_method(D_METHOD("set_visualisation_scale", "value"), &VAWorld::set_visualisation_scale);
     ClassDB::bind_method(D_METHOD("get_sync_viewport"), &VAWorld::get_sync_viewport);
     ClassDB::bind_method(D_METHOD("set_sync_viewport", "value"), &VAWorld::set_sync_viewport);
 
     ADD_GROUP("Rendering", "");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rendering_enabled"), "set_rendering_enabled", "get_rendering_enabled");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "visualisation_scale", PROPERTY_HINT_RANGE, "0.0,10.0,0.01,or_greater"), "set_visualisation_scale", "get_visualisation_scale");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "sync_viewport"), "set_sync_viewport", "get_sync_viewport");
 
     // Read-only timing stats (milliseconds) - no ADD_PROPERTY, called directly from GDScript like methods (world.get_main_thread_time()).
@@ -193,6 +196,7 @@ VAWorld::VAWorld()
     set_maximum_concurrency_level(maximum_concurrency_level);
     set_work_item_count(work_item_count);
     set_rendering_enabled(rendering_enabled);
+    set_visualisation_scale(visualisation_scale);
 
     // ALManager is initialized at GDExtension module-init time, so it's safe to create AL objects here.
     listener_reverb_effect.create();
