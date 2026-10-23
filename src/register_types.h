@@ -14,6 +14,9 @@ void uninitialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel
 // Rebuilds audio/vaudio/output_device's Project Settings dropdown from ALManager::get_available_devices() - see the definition in register_types.cpp.
 void refresh_output_device_hint();
 
+// Rebuilds audio/vaudio/hrtf's Project Settings dropdown from ALManager::get_available_hrtfs(). Defined once in common/register_types_common.cpp.
+void refresh_hrtf_hint();
+
 // Receiving end of VADebuggerPlugin::sync_viewport_camera - defined per-repo in register_types.cpp since the camera-sync payload shape/native calls differ per dimension. Declared here (rather than static) so the shared on_debugger_message in common/register_types_common.cpp can dispatch to it.
 bool on_sync_viewport_camera(const Array &data);
 

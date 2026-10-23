@@ -241,6 +241,27 @@ void refresh_output_device_hint()
     settings->add_property_info(output_device_info);
 }
 
+void refresh_hrtf_hint()
+{
+    ProjectSettings *settings = ProjectSettings::get_singleton();
+
+    PackedStringArray hrtfs = ALManager::get_singleton() ? ALManager::get_singleton()->get_available_hrtfs() : PackedStringArray();
+    hrtfs.insert(0, DEFAULT_HRTF_LABEL);
+
+    // Keep a selected HRTF that isn't installed on this machine in the list, rather than the dropdown silently showing a different entry
+    String current = settings->get_setting("audio/vaudio/hrtf");
+
+    if (!hrtfs.has(current))
+        hrtfs.push_back(current);
+
+    Dictionary hrtf_info;
+    hrtf_info["name"] = "audio/vaudio/hrtf";
+    hrtf_info["type"] = Variant::STRING;
+    hrtf_info["hint"] = PROPERTY_HINT_ENUM;
+    hrtf_info["hint_string"] = String(",").join(hrtfs);
+    settings->add_property_info(hrtf_info);
+}
+
 // Registers this plugin's own audio/vaudio/* entries under Project Settings - device_name/max_reverb_sends/sample_rate/
 // hrtf_enabled must exist here so ALManager::initialize() can read them before it opens the one-and-only device, below.
 void register_project_settings()
@@ -312,4 +333,24 @@ void register_project_settings()
         settings->set_setting("audio/vaudio/hrtf_enabled", true);
 
     settings->set_initial_value("audio/vaudio/hrtf_enabled", true);
+
+    // hrtf: same DEFAULT_*_LABEL storage as output_device. The dropdown is filled by refresh_hrtf_hint() once ALManager has a device to enumerate HRTFs from
+    if (!settings->has_setting("audio/vaudio/hrtf"))
+        settings->set_setting("audio/vaudio/hrtf", DEFAULT_HRTF_LABEL);
+
+    settings->set_initial_value("audio/vaudio/hrtf", DEFAULT_HRTF_LABEL);
+
+    refresh_hrtf_hint();
+
+    // hrtf_folder: .mhr files in here are listed alongside OpenAL Soft's built-in HRTF, and are bundled into exports by VAHRTFExportPlugin
+    if (!settings->has_setting("audio/vaudio/hrtf_folder"))
+        settings->set_setting("audio/vaudio/hrtf_folder", "res://hrtf");
+
+    settings->set_initial_value("audio/vaudio/hrtf_folder", "res://hrtf");
+
+    Dictionary hrtf_folder_info;
+    hrtf_folder_info["name"] = "audio/vaudio/hrtf_folder";
+    hrtf_folder_info["type"] = Variant::STRING;
+    hrtf_folder_info["hint"] = PROPERTY_HINT_DIR;
+    settings->add_property_info(hrtf_folder_info);
 }

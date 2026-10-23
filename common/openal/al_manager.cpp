@@ -1,5 +1,7 @@
 #include "al_manager.h"
 
+#include <godot_cpp/classes/dir_access.hpp>
+#include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
@@ -28,6 +30,13 @@ void ALManager::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_available_devices"), &ALManager::get_available_devices);
     ClassDB::bind_method(D_METHOD("get_available_capture_devices"), &ALManager::get_available_capture_devices);
     ClassDB::bind_method(D_METHOD("set_output_device", "device_name"), &ALManager::set_output_device);
+
+    ClassDB::bind_method(D_METHOD("get_available_hrtfs"), &ALManager::get_available_hrtfs);
+    ClassDB::bind_method(D_METHOD("set_hrtf", "name"), &ALManager::set_hrtf);
+    ClassDB::bind_method(D_METHOD("get_hrtf"), &ALManager::get_hrtf);
+    ClassDB::bind_method(D_METHOD("get_active_hrtf"), &ALManager::get_active_hrtf);
+    ClassDB::bind_method(D_METHOD("set_hrtf_enabled", "value"), &ALManager::set_hrtf_enabled);
+    ClassDB::bind_method(D_METHOD("get_hrtf_enabled"), &ALManager::get_hrtf_enabled);
 
     ClassDB::bind_method(D_METHOD("set_master_volume", "value"), &ALManager::set_master_volume);
 
@@ -267,18 +276,84 @@ void ALManager::unload_library()
     }
 }
 
-bool ALManager::open_device_and_context()
+static void set_environment_variable(const char *name, const String &value)
 {
-    const ALCchar *requested_device = device_name.empty() ? nullptr : device_name.c_str();
-    device = alcOpenDevice_(requested_device);
+#ifdef _WIN32
+    CharWideString wide_name = String(name).wide_string();
+    CharWideString wide_value = value.wide_string();
 
-    if (!device)
+    SetEnvironmentVariableW(wide_name.get_data(), wide_value.get_data());
+
+    // soft_oal.dll reads the environment through the shared UCRT's _wgetenv, which keeps its own copy that SetEnvironmentVariableW doesn't update (and this module's static CRT has a separate copy again)
+    using wputenv_s_fn = errno_t(__cdecl *)(const wchar_t *, const wchar_t *);
+
+    if (HMODULE ucrt = LoadLibraryA("ucrtbase.dll"))
     {
-        VA_ERROR("alcOpenDevice failed for device '", String::utf8(device_name.c_str()), "'");
-        return false;
+        if (wputenv_s_fn wputenv_s = reinterpret_cast<wputenv_s_fn>(GetProcAddress(ucrt, "_wputenv_s")))
+            wputenv_s(wide_name.get_data(), wide_value.get_data());
+    }
+#else
+    setenv(name, value.utf8().get_data(), 1);
+#endif
+}
+
+// OpenAL Soft searches ALSOFT_LOCAL_PATH for .mhr files every time it enumerates HRTFs, so pointing it at the project's HRTF folder makes those files show up alongside its built-in HRTF
+void ALManager::prepare_hrtf_folder()
+{
+    OS *os = OS::get_singleton();
+
+    // Don't override a path the user set themselves
+    if (os->has_environment("ALSOFT_LOCAL_PATH"))
+        return;
+
+    String folder = ProjectSettings::get_singleton()->get_setting("audio/vaudio/hrtf_folder");
+
+    if (folder.is_empty())
+        return;
+
+    // Outside of exported builds the folder is a real directory, so OpenAL Soft can search it directly - even if it's created or filled after startup
+    if (!os->has_feature("template"))
+    {
+        set_environment_variable("ALSOFT_LOCAL_PATH", ProjectSettings::get_singleton()->globalize_path(folder));
+        return;
     }
 
-    ALCint attributes[11];
+    if (!DirAccess::dir_exists_absolute(folder))
+        return;
+
+    PackedStringArray mhr_files;
+    PackedStringArray files = DirAccess::get_files_at(folder);
+
+    for (int i = 0; i < files.size(); i++)
+    {
+        if (files[i].get_extension().to_lower() == "mhr")
+            mhr_files.push_back(files[i]);
+    }
+
+    if (mhr_files.is_empty())
+        return;
+
+    // OpenAL Soft can't open files inside an exported .pck, so copy them out to a real folder first
+    String local_path = "user://vaudio/hrtf";
+    DirAccess::make_dir_recursive_absolute(local_path);
+
+    // Clear out HRTFs left behind by older builds of this game
+    PackedStringArray old_files = DirAccess::get_files_at(local_path);
+
+    for (int i = 0; i < old_files.size(); i++)
+        DirAccess::remove_absolute(local_path.path_join(old_files[i]));
+
+    for (int i = 0; i < mhr_files.size(); i++)
+    {
+        if (DirAccess::copy_absolute(folder.path_join(mhr_files[i]), local_path.path_join(mhr_files[i])) != OK)
+            VA_WARN("Failed to copy HRTF file '", mhr_files[i], "' to ", local_path);
+    }
+
+    set_environment_variable("ALSOFT_LOCAL_PATH", ProjectSettings::get_singleton()->globalize_path(local_path));
+}
+
+void ALManager::build_attributes(ALCint *attributes)
+{
     int count = 0;
 
     if (max_auxiliary_sends > 0)
@@ -308,7 +383,63 @@ bool ALManager::open_device_and_context()
     attributes[count++] = ALC_HRTF_SOFT;
     attributes[count++] = hrtf_enabled ? ALC_TRUE : ALC_FALSE;
 
+    int hrtf_index = find_hrtf_index();
+
+    if (hrtf_index >= 0)
+    {
+        attributes[count++] = ALC_HRTF_ID_SOFT;
+        attributes[count++] = hrtf_index;
+    }
+
     attributes[count++] = 0;
+}
+
+int ALManager::find_hrtf_index()
+{
+    if (hrtf_name.empty() || !device || !alcGetStringiSOFT_)
+        return -1;
+
+    // Querying the count re-enumerates OpenAL Soft's HRTF list, so these indices match what ALC_HRTF_ID_SOFT is resolved against
+    ALCint count = 0;
+    alcGetIntegerv_(device, ALC_NUM_HRTF_SPECIFIERS_SOFT, 1, &count);
+
+    for (int i = 0; i < count; i++)
+    {
+        const ALCchar *name = alcGetStringiSOFT_(device, ALC_HRTF_SPECIFIER_SOFT, i);
+
+        if (name && hrtf_name == name)
+            return i;
+    }
+
+    VA_WARN("HRTF '", String::utf8(hrtf_name.c_str()), "' was not found, using the default HRTF instead");
+    return -1;
+}
+
+bool ALManager::open_device_and_context()
+{
+    const ALCchar *requested_device = device_name.empty() ? nullptr : device_name.c_str();
+    device = alcOpenDevice_(requested_device);
+
+    if (!device)
+    {
+        VA_ERROR("alcOpenDevice failed for device '", String::utf8(device_name.c_str()), "'");
+        return false;
+    }
+
+    // Resolved before the context is created, since build_attributes() needs alcGetStringiSOFT to map hrtf_name to an ALC_HRTF_ID_SOFT index
+    if (alcIsExtensionPresent_(device, "ALC_SOFT_HRTF") == ALC_FALSE)
+    {
+        alcGetStringiSOFT_ = nullptr;
+        alcResetDeviceSOFT_ = nullptr;
+    }
+    else
+    {
+        alcGetStringiSOFT_ = reinterpret_cast<alcGetStringiSOFTFn>(alcGetProcAddress_(device, "alcGetStringiSOFT"));
+        alcResetDeviceSOFT_ = reinterpret_cast<alcResetDeviceSOFTFn>(alcGetProcAddress_(device, "alcResetDeviceSOFT"));
+    }
+
+    ALCint attributes[13];
+    build_attributes(attributes);
 
     context = alcCreateContext_(device, attributes);
 
@@ -373,6 +504,14 @@ void ALManager::read_settings_from_project_settings()
     max_stereo_sources = settings->get_setting("audio/vaudio/max_stereo_sources");
     sample_rate = settings->get_setting("audio/vaudio/sample_rate");
     hrtf_enabled = settings->get_setting("audio/vaudio/hrtf_enabled");
+
+    // Same DEFAULT_*_LABEL translation as output_device above
+    String hrtf_setting = settings->get_setting("audio/vaudio/hrtf");
+
+    if (hrtf_setting == String(DEFAULT_HRTF_LABEL))
+        hrtf_setting = String();
+
+    hrtf_name = hrtf_setting.utf8().get_data();
 }
 
 bool ALManager::initialize()
@@ -383,6 +522,8 @@ bool ALManager::initialize()
     }
 
     read_settings_from_project_settings();
+
+    prepare_hrtf_folder();
 
     if (!load_library())
     {
@@ -403,7 +544,8 @@ bool ALManager::initialize()
 
     VA_LOG("ALManager initialized - device '", device_name.empty() ? "(default)" : device_name.c_str(),
         "', max_reverb_sends ", max_auxiliary_sends, ", max_mono_sources ", max_mono_sources,
-        ", max_stereo_sources ", max_stereo_sources, ", sample_rate ", sample_rate, ", hrtf_enabled ", hrtf_enabled);
+        ", max_stereo_sources ", max_stereo_sources, ", sample_rate ", sample_rate, ", hrtf_enabled ", hrtf_enabled,
+        ", hrtf '", get_active_hrtf(), "'");
 
     singleton = this;
     return true;
@@ -457,37 +599,8 @@ bool ALManager::reinitialize(const String &new_device_name, int new_max_auxiliar
     {
         const ALCchar *requested_device = device_name.empty() ? nullptr : device_name.c_str();
 
-        ALCint attributes[11];
-        int count = 0;
-
-        if (max_auxiliary_sends > 0)
-        {
-            attributes[count++] = ALC_MAX_AUXILIARY_SENDS;
-            attributes[count++] = max_auxiliary_sends;
-        }
-
-        if (max_mono_sources > 0)
-        {
-            attributes[count++] = ALC_MONO_SOURCES;
-            attributes[count++] = max_mono_sources;
-        }
-
-        if (max_stereo_sources > 0)
-        {
-            attributes[count++] = ALC_STEREO_SOURCES;
-            attributes[count++] = max_stereo_sources;
-        }
-
-        if (sample_rate > 0)
-        {
-            attributes[count++] = ALC_FREQUENCY;
-            attributes[count++] = sample_rate;
-        }
-
-        attributes[count++] = ALC_HRTF_SOFT;
-        attributes[count++] = hrtf_enabled ? ALC_TRUE : ALC_FALSE;
-
-        attributes[count++] = 0;
+        ALCint attributes[13];
+        build_attributes(attributes);
 
         if (alcReopenDeviceSOFT_(device, requested_device, attributes) == ALC_TRUE)
         {
@@ -565,6 +678,87 @@ PackedStringArray ALManager::get_available_capture_devices()
     }
 
     return devices;
+}
+
+PackedStringArray ALManager::get_available_hrtfs()
+{
+    PackedStringArray hrtfs;
+
+    if (!device || !alcGetStringiSOFT_)
+        return hrtfs;
+
+    ALCint count = 0;
+    alcGetIntegerv_(device, ALC_NUM_HRTF_SPECIFIERS_SOFT, 1, &count);
+
+    for (int i = 0; i < count; i++)
+    {
+        if (const ALCchar *name = alcGetStringiSOFT_(device, ALC_HRTF_SPECIFIER_SOFT, i))
+            hrtfs.push_back(String::utf8(name));
+    }
+
+    return hrtfs;
+}
+
+String ALManager::get_active_hrtf()
+{
+    if (!device || !alcGetStringiSOFT_)
+        return String();
+
+    ALCint status = ALC_HRTF_DISABLED_SOFT;
+    alcGetIntegerv_(device, ALC_HRTF_STATUS_SOFT, 1, &status);
+
+    if (status != ALC_HRTF_ENABLED_SOFT && status != ALC_HRTF_REQUIRED_SOFT)
+        return String();
+
+    const ALCchar *name = alcGetString_(device, ALC_HRTF_SPECIFIER_SOFT);
+    return name ? String::utf8(name) : String();
+}
+
+bool ALManager::set_hrtf(const String &name)
+{
+    std::string new_name = name == String(DEFAULT_HRTF_LABEL) ? std::string() : std::string(name.utf8().get_data());
+
+    if (new_name == hrtf_name && is_initialized())
+        return true;
+
+    hrtf_name = new_name;
+    return reset_device();
+}
+
+bool ALManager::set_hrtf_enabled(bool value)
+{
+    if (value == hrtf_enabled && is_initialized())
+        return true;
+
+    hrtf_enabled = value;
+    return reset_device();
+}
+
+// Applies the current attributes (HRTF etc.) to the open device. alcResetDeviceSOFT keeps every AL object valid, the full recreation fallback doesn't
+bool ALManager::reset_device()
+{
+    if (!library)
+        return false;
+
+    if (alcResetDeviceSOFT_ && is_initialized())
+    {
+        ALCint attributes[13];
+        build_attributes(attributes);
+
+        if (alcResetDeviceSOFT_(device, attributes) == ALC_TRUE)
+            return true;
+
+        VA_WARN("Failed to reset the OpenAL device (ALC error ", (int)alcGetError_(device), ") - falling back to full device recreation");
+    }
+
+    close_device();
+
+    bool ok = open_device_and_context();
+
+    if (ok)
+        singleton = this;
+
+    return ok;
 }
 
 void ALManager::shutdown()

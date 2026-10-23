@@ -325,6 +325,7 @@ void VAConversionPlugin::_bind_methods()
 void VAConversionPlugin::refresh_output_device_setting()
 {
     refresh_output_device_hint();
+    refresh_hrtf_hint();
 }
 
 void VAConversionPlugin::_enter_tree()
@@ -337,6 +338,9 @@ void VAConversionPlugin::_enter_tree()
 
     debugger_plugin.instantiate();
     add_debugger_plugin(debugger_plugin);
+
+    hrtf_export_plugin.instantiate();
+    add_export_plugin(hrtf_export_plugin);
 
     debugger_bridge = memnew(VADebuggerBridge);
     debugger_bridge->set_debugger_plugin(debugger_plugin.ptr());
@@ -392,4 +396,7 @@ void VAConversionPlugin::_exit_tree()
 
     remove_debugger_plugin(debugger_plugin);
     debugger_plugin.unref();
+
+    remove_export_plugin(hrtf_export_plugin);
+    hrtf_export_plugin.unref();
 }

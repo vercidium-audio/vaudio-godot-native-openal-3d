@@ -23,6 +23,7 @@
 #include "va_default_material.h"
 #include "va_emitter.h"
 #include "va_engine_util.h"
+#include "va_hrtf_export_plugin.h"
 #include "va_input_stream_source.h"
 #include "va_listener.h"
 #include "va_custom_material.h"
@@ -89,6 +90,7 @@ void initialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel p
         ClassDB::register_class<va_godot::VANodeGizmoPlugin>();
         ClassDB::register_class<va_godot::VADebuggerPlugin>();
         ClassDB::register_class<va_godot::VADebuggerBridge>();
+        ClassDB::register_class<va_godot::VAHRTFExportPlugin>();
         ClassDB::register_class<va_godot::VAConversionPlugin>();
         EditorPlugins::add_by_type<va_godot::VAConversionPlugin>();
 
@@ -132,7 +134,13 @@ void initialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel p
     al_manager = memnew(ALManager);
 
     if (al_manager->initialize())
+    {
         Engine::get_singleton()->register_singleton("ALManager", al_manager);
+
+        // register_project_settings() ran before there was a device to enumerate from, so these dropdowns only had their default entry
+        refresh_output_device_hint();
+        refresh_hrtf_hint();
+    }
 
     // Only the running game needs to receive VADebuggerPlugin's messages - there's no running game to sync in the editor process itself.
     if (!IS_EDITOR_HINT() && EngineDebugger::get_singleton() && EngineDebugger::get_singleton()->is_active())
