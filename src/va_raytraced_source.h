@@ -53,7 +53,7 @@ private:
     int trail_refresh_count = 16;
     float refresh_distance_threshold = 1.0f;
     int scattering_seed = 0;
-    bool clamp_position = true;
+    bool clamp_position = false;
 
     void apply_properties_to_emitter();
 
