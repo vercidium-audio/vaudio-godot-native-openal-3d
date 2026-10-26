@@ -30,7 +30,8 @@ scons platform="$PLATFORM" arch="$ARCH" target=editor $EXTRA_SCONS_ARGS
 scons platform="$PLATFORM" arch="$ARCH" target=template_debug $EXTRA_SCONS_ARGS
 scons platform="$PLATFORM" arch="$ARCH" target=template_release $EXTRA_SCONS_ARGS
 
-BIN_DIR="addons/vaudio-godot-native-openal-3d/bin"
+ADDON_DIR="addons/vaudio-godot-native-openal-3d"
+BIN_DIR="$ADDON_DIR/bin"
 EDITOR_LIB="libvaudiogodotnativeopenal3d.${PLATFORM}.editor.${ARCH}${LIBEXT}"
 DEBUG_LIB="libvaudiogodotnativeopenal3d.${PLATFORM}.template_debug.${ARCH}${LIBEXT}"
 RELEASE_LIB="libvaudiogodotnativeopenal3d.${PLATFORM}.template_release.${ARCH}${LIBEXT}"
@@ -62,6 +63,7 @@ copy_to() {
         [ -f "$BIN_DIR/$lib" ] && cp -f "$BIN_DIR/$lib" "$dest/"
     done
     [ -f "$BIN_DIR/vaudio-debug-window" ] && cp -f "$BIN_DIR/vaudio-debug-window" "$dest/"
+    cp -f "$ADDON_DIR/plugin.cfg" "$ADDON_DIR/plugin.gd" "$1/"
 }
 
 if [ -n "${VAUDIO_RELEASE_DIR:-}" ]; then copy_to "$VAUDIO_RELEASE_DIR"; else echo "VAUDIO_RELEASE_DIR not set - skipping copy to release repo"; fi

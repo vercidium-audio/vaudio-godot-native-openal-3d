@@ -2,7 +2,6 @@
 
 #include <gdextension_interface.h>
 
-#include <godot_cpp/classes/editor_plugin_registration.hpp>
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/engine_debugger.hpp>
 #include <godot_cpp/classes/scene_tree.hpp>
@@ -32,6 +31,7 @@
 #include "va_node_gizmo.h"
 #include "va_primitive_ref.h"
 #include "va_raytraced_source.h"
+#include "va_sdk_check.h"
 #include "va_source.h"
 #include "va_source_ambient.h"
 #include "va_source_leech.h"
@@ -47,6 +47,9 @@ using namespace godot;
 // Process-wide OpenAL device/context owner, registered as the "ALManager" Engine singleton. Heap-allocated with
 // `memnew` rather than a plain `static ALManager`, since constructing a GDCLASS Object at CRT static-init time (before GDExtensionBinding exists) would crash.
 static ALManager *al_manager = nullptr;
+
+// False when vaudionative.dll is missing - nothing gets registered, so the user sees one readable error instead of a crash
+static bool sdk_loaded = false;
 
 // Receiving end of VADebuggerPlugin::sync_viewport_camera. Unlike sync_primitive/sync_material_properties this isn't addressed to a specific node - it's applied to the first VAWorld found in the running scene.
 bool on_sync_viewport_camera(const Array &data)
@@ -79,6 +82,13 @@ bool on_sync_viewport_camera(const Array &data)
 
 void initialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel p_level)
 {
+    // SCENE is initialized before EDITOR, so this gates both
+    if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE)
+        sdk_loaded = va_godot::load_vaudio_sdk();
+
+    if (!sdk_loaded)
+        return;
+
     if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR)
     {
         // Editor-only classes, registered at the Editor level rather than alongside the Scene-level classes below.
@@ -91,10 +101,8 @@ void initialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel p
         ClassDB::register_class<va_godot::VADebuggerPlugin>();
         ClassDB::register_class<va_godot::VADebuggerBridge>();
         ClassDB::register_class<va_godot::VAHRTFExportPlugin>();
+        // Not auto-added via EditorPlugins::add_by_type - plugin.gd adds it as a child, so it can be toggled in the Plugins tab
         ClassDB::register_class<va_godot::VAConversionPlugin>();
-        EditorPlugins::add_by_type<va_godot::VAConversionPlugin>();
-
-        VA_LOG("Vercidium Audio (vaudio) plugin enabled");
         return;
     }
 
@@ -149,13 +157,7 @@ void initialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel p
 
 void uninitialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel p_level)
 {
-    if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR)
-    {
-        EditorPlugins::remove_by_type<va_godot::VAConversionPlugin>();
-        return;
-    }
-
-    if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE)
+    if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE || !sdk_loaded)
     {
         return;
     }

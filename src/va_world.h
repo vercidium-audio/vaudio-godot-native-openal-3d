@@ -19,6 +19,7 @@ extern "C"
 
 #include "openal/al_reverb.h"
 #include "va_conversions.h"
+#include "va_debug_window_check.h"
 #include "va_engine_util.h"
 #include "va_primitive_ref.h"
 
@@ -240,7 +241,7 @@ public:
         rendering_enabled = value;
 
         if (world)
-            vaWorldSetRenderingEnabled(world, value);
+            va_godot::error_if_debug_window_missing(vaWorldSetRenderingEnabled(world, value));
     }
 
     float get_visualisation_scale() const

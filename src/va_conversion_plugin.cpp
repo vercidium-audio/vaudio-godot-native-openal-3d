@@ -330,6 +330,8 @@ void VAConversionPlugin::refresh_output_device_setting()
 
 void VAConversionPlugin::_enter_tree()
 {
+    VA_LOG("Vercidium Audio (vaudio) plugin enabled");
+
     context_menu_plugin.instantiate();
     add_context_menu_plugin(EditorContextMenuPlugin::CONTEXT_SLOT_SCENE_TREE, context_menu_plugin);
 

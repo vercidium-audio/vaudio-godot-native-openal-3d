@@ -46,6 +46,11 @@ else:
 env.Append(LIBPATH=[vaudio_libdir])
 env.Append(LIBS=[vaudio_link_lib])
 
+# Delay-load vaudionative.dll so a missing SDK doesn't stop the extension loading - common/va_sdk_check.cpp loads it at init and logs a readable error instead
+if platform == "windows":
+    env.Append(LINKFLAGS=["/DELAYLOAD:vaudionative.dll"])
+    env.Append(LIBS=["delayimp"])
+
 # godot-cpp already adds an $ORIGIN rpath on Linux; add the @loader_path equivalent on macOS so the libvaudionative / libopenal copies SConstruct drops beside the plugin are found at load time. build-unix.sh additionally rewrites libvaudionative's recorded path to @loader_path (it's linked with no -install_name).
 if platform == "macos":
     env.Append(LINKFLAGS=["-Wl,-rpath,@loader_path"])
