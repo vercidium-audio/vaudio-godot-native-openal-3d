@@ -691,7 +691,11 @@ void VAWorld::create_primitive(CollisionShape3D *collision_shape, VAMaterialType
 
     // Editing the shape resource (size, radius, points etc) doesn't move the node, so the watcher won't see it
     ref->shape_resource = shape;
-    ref->shape_callable = callable_mp(this, &VAWorld::on_collision_shape_changed).bind(collision_shape);
+    ref->on_shape_changed = [this, collision_shape]()
+    {
+        on_collision_shape_changed(collision_shape);
+    };
+    ref->shape_callable = callable_mp(ref, &VAPrimitiveRef::shape_changed);
     shape->connect("changed", ref->shape_callable);
 
     collision_shape->set_meta(PrimitiveMetaKey(), ref);

@@ -49,6 +49,9 @@ private:
     float ambient_permeation_energy_cap = 0.15f;
     float minimum_ambient_permeation_energy = 0.01f;
 
+    bool clustering_enabled = false;
+    float clustering_distance = 10.0f;
+
     int type = 0;
     int trail_refresh_count = 16;
     float refresh_distance_threshold = 1.0f;
@@ -143,6 +146,11 @@ public:
     void set_ambient_permeation_energy_cap(float value);
     float get_minimum_ambient_permeation_energy() const;
     void set_minimum_ambient_permeation_energy(float value);
+
+    bool get_clustering_enabled() const;
+    void set_clustering_enabled(bool value);
+    float get_clustering_distance() const;
+    void set_clustering_distance(float value);
 
     int get_type() const;
     void set_type(int value);

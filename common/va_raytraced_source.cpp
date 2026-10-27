@@ -111,6 +111,16 @@ void VARaytracedSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_minimum_ambient_permeation_energy", "value"), &VARaytracedSource::set_minimum_ambient_permeation_energy);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum_ambient_permeation_energy", PROPERTY_HINT_RANGE, "0.0,1.0,0.001"), "set_minimum_ambient_permeation_energy", "get_minimum_ambient_permeation_energy");
 
+    ADD_GROUP("Clustering", "");
+
+    ClassDB::bind_method(D_METHOD("get_clustering_enabled"), &VARaytracedSource::get_clustering_enabled);
+    ClassDB::bind_method(D_METHOD("set_clustering_enabled", "value"), &VARaytracedSource::set_clustering_enabled);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "clustering_enabled"), "set_clustering_enabled", "get_clustering_enabled");
+
+    ClassDB::bind_method(D_METHOD("get_clustering_distance"), &VARaytracedSource::get_clustering_distance);
+    ClassDB::bind_method(D_METHOD("set_clustering_distance", "value"), &VARaytracedSource::set_clustering_distance);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "clustering_distance", PROPERTY_HINT_RANGE, "0.01,100.0,0.01,or_greater"), "set_clustering_distance", "get_clustering_distance");
+
     ADD_GROUP("Advanced", "");
 
     ClassDB::bind_method(D_METHOD("get_type"), &VARaytracedSource::get_type);
@@ -274,6 +284,9 @@ void VARaytracedSource::apply_properties_to_emitter()
     emitter->set_ambient_permeation_bounce_count(ambient_permeation_bounce_count);
     emitter->set_ambient_permeation_energy_cap(ambient_permeation_energy_cap);
     emitter->set_minimum_ambient_permeation_energy(minimum_ambient_permeation_energy);
+
+    emitter->set_clustering_enabled(clustering_enabled);
+    emitter->set_clustering_distance(clustering_distance);
 
     emitter->set_type(type);
     emitter->set_trail_refresh_count(trail_refresh_count);
@@ -634,6 +647,32 @@ void VARaytracedSource::set_minimum_ambient_permeation_energy(float value)
     {
         emitter->set_minimum_ambient_permeation_energy(minimum_ambient_permeation_energy);
     }
+}
+
+bool VARaytracedSource::get_clustering_enabled() const
+{
+    return clustering_enabled;
+}
+
+void VARaytracedSource::set_clustering_enabled(bool value)
+{
+    clustering_enabled = value;
+
+    if (emitter)
+        emitter->set_clustering_enabled(clustering_enabled);
+}
+
+float VARaytracedSource::get_clustering_distance() const
+{
+    return clustering_distance;
+}
+
+void VARaytracedSource::set_clustering_distance(float value)
+{
+    clustering_distance = MAX(0.01f, value);
+
+    if (emitter)
+        emitter->set_clustering_distance(clustering_distance);
 }
 
 int VARaytracedSource::get_type() const

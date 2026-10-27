@@ -164,6 +164,24 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_minimum_ambient_permeation_energy", "value"), &VAEmitter::set_minimum_ambient_permeation_energy);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum_ambient_permeation_energy", PROPERTY_HINT_RANGE, "0.0,1.0,0.001"), "set_minimum_ambient_permeation_energy", "get_minimum_ambient_permeation_energy");
 
+    ADD_GROUP("Clustering", "");
+
+    ClassDB::bind_method(D_METHOD("get_clustering_enabled"), &VAEmitter::get_clustering_enabled);
+    ClassDB::bind_method(D_METHOD("set_clustering_enabled", "value"), &VAEmitter::set_clustering_enabled);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "clustering_enabled"), "set_clustering_enabled", "get_clustering_enabled");
+
+    ClassDB::bind_method(D_METHOD("get_clustering_distance"), &VAEmitter::get_clustering_distance);
+    ClassDB::bind_method(D_METHOD("set_clustering_distance", "value"), &VAEmitter::set_clustering_distance);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "clustering_distance", PROPERTY_HINT_RANGE, "0.01,100.0,0.01,or_greater"), "set_clustering_distance", "get_clustering_distance");
+
+    ClassDB::bind_method(D_METHOD("get_target_clustering_enabled"), &VAEmitter::get_target_clustering_enabled);
+    ClassDB::bind_method(D_METHOD("set_target_clustering_enabled", "value"), &VAEmitter::set_target_clustering_enabled);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "target_clustering_enabled"), "set_target_clustering_enabled", "get_target_clustering_enabled");
+
+    ClassDB::bind_method(D_METHOD("get_target_clustering_distance"), &VAEmitter::get_target_clustering_distance);
+    ClassDB::bind_method(D_METHOD("set_target_clustering_distance", "value"), &VAEmitter::set_target_clustering_distance);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "target_clustering_distance", PROPERTY_HINT_RANGE, "0.01,100.0,0.01,or_greater"), "set_target_clustering_distance", "get_target_clustering_distance");
+
     ADD_GROUP("Advanced", "");
 
     ClassDB::bind_method(D_METHOD("get_type"), &VAEmitter::get_type);
@@ -213,14 +231,16 @@ void VAEmitter::_bind_methods()
     ADD_PROPERTY(PropertyInfo(Variant::COLOR, "ambient_permeation_color"), "set_ambient_permeation_color", "get_ambient_permeation_color");
 }
 
-// Occlusion/permeation rays are only cast by the listener, so their thresholds are only customisable there
+// Occlusion/permeation rays are only cast by the listener, so their thresholds and target clustering are only customisable there
 void VAEmitter::_validate_property(PropertyInfo &p_property) const
 {
     if (Object::cast_to<VAListener>(this))
         return;
 
     if (p_property.name == StringName("minimum_occlusion_energy") ||
-        p_property.name == StringName("minimum_permeation_energy"))
+        p_property.name == StringName("minimum_permeation_energy") ||
+        p_property.name == StringName("target_clustering_enabled") ||
+        p_property.name == StringName("target_clustering_distance"))
     {
         p_property.usage = PROPERTY_USAGE_NO_EDITOR;
     }
@@ -467,6 +487,11 @@ void VAEmitter::apply_properties_to_handle()
     vaEmitterSetAmbientPermeationBounceCount(emitter, ambient_permeation_bounce_count);
     vaEmitterSetAmbientPermeationEnergyCap(emitter, ambient_permeation_energy_cap);
     vaEmitterSetMinimumAmbientPermeationEnergy(emitter, minimum_ambient_permeation_energy);
+
+    vaEmitterSetClusteringEnabled(emitter, clustering_enabled);
+    vaEmitterSetClusteringDistance(emitter, clustering_distance);
+    vaEmitterSetTargetClusteringEnabled(emitter, target_clustering_enabled);
+    vaEmitterSetTargetClusteringDistance(emitter, target_clustering_distance);
 
     vaEmitterSetType(emitter, type);
     vaEmitterSetTrailRefreshCount(emitter, trail_refresh_count);
@@ -1205,6 +1230,58 @@ void VAEmitter::set_minimum_ambient_permeation_energy(float value)
     {
         vaEmitterSetMinimumAmbientPermeationEnergy(emitter, minimum_ambient_permeation_energy);
     }
+}
+
+bool VAEmitter::get_clustering_enabled() const
+{
+    return clustering_enabled;
+}
+
+void VAEmitter::set_clustering_enabled(bool value)
+{
+    clustering_enabled = value;
+
+    if (emitter)
+        vaEmitterSetClusteringEnabled(emitter, clustering_enabled);
+}
+
+float VAEmitter::get_clustering_distance() const
+{
+    return clustering_distance;
+}
+
+void VAEmitter::set_clustering_distance(float value)
+{
+    clustering_distance = MAX(0.01f, value);
+
+    if (emitter)
+        vaEmitterSetClusteringDistance(emitter, clustering_distance);
+}
+
+bool VAEmitter::get_target_clustering_enabled() const
+{
+    return target_clustering_enabled;
+}
+
+void VAEmitter::set_target_clustering_enabled(bool value)
+{
+    target_clustering_enabled = value;
+
+    if (emitter)
+        vaEmitterSetTargetClusteringEnabled(emitter, target_clustering_enabled);
+}
+
+float VAEmitter::get_target_clustering_distance() const
+{
+    return target_clustering_distance;
+}
+
+void VAEmitter::set_target_clustering_distance(float value)
+{
+    target_clustering_distance = MAX(0.01f, value);
+
+    if (emitter)
+        vaEmitterSetTargetClusteringDistance(emitter, target_clustering_distance);
 }
 
 int VAEmitter::get_type() const
