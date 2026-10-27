@@ -82,13 +82,13 @@
 		<member name="clustering_enabled" type="bool" setter="set_clustering_enabled" getter="get_clustering_enabled" default="false">
 			If [code]true[/code], this emitter can share its rays with other nearby emitters that also have clustering enabled. Emitters in a cluster share the same reverb, EAX and ambience results.
 		</member>
-		<member name="clustering_distance" type="float" setter="set_clustering_distance" getter="get_clustering_distance" default="10.0">
+		<member name="clustering_distance" type="float" setter="set_clustering_distance" getter="get_clustering_distance" default="5.0">
 			The maximum distance between this emitter and the centre of a cluster, for it to share that cluster's rays. If two emitters have different distances, the smaller one is used.
 		</member>
 		<member name="target_clustering_enabled" type="bool" setter="set_target_clustering_enabled" getter="get_target_clustering_enabled" default="false">
 			If [code]true[/code], the listener groups nearby sources into clusters, and casts occlusion and permeation rays towards each cluster's sources in round robin. Sources in a cluster get the same low pass filter. Only shown on [VAListener].
 		</member>
-		<member name="target_clustering_distance" type="float" setter="set_target_clustering_distance" getter="get_target_clustering_distance" default="10.0">
+		<member name="target_clustering_distance" type="float" setter="set_target_clustering_distance" getter="get_target_clustering_distance" default="5.0">
 			The maximum distance between two sources for them to be in the same target cluster. Only shown on [VAListener].
 		</member>
 		<member name="visualisation_ray_count" type="int" setter="set_visualisation_ray_count" getter="get_visualisation_ray_count">

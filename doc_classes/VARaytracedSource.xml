@@ -94,7 +94,7 @@
 		<member name="clustering_enabled" type="bool" setter="set_clustering_enabled" getter="get_clustering_enabled" default="false">
 			If [code]true[/code], this source can share its rays with other nearby sources that also have clustering enabled. Sources in a cluster share the same reverb, EAX and ambience results.
 		</member>
-		<member name="clustering_distance" type="float" setter="set_clustering_distance" getter="get_clustering_distance" default="10.0">
+		<member name="clustering_distance" type="float" setter="set_clustering_distance" getter="get_clustering_distance" default="5.0">
 			The maximum distance between this source and the centre of a cluster, for it to share that cluster's rays. If two sources have different distances, the smaller one is used.
 		</member>
 		<member name="type" type="int" setter="set_type" getter="get_type" default="0">

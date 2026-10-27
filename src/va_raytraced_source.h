@@ -50,7 +50,7 @@ private:
     float minimum_ambient_permeation_energy = 0.01f;
 
     bool clustering_enabled = false;
-    float clustering_distance = 10.0f;
+    float clustering_distance = 5.0f;
 
     int type = 0;
     int trail_refresh_count = 16;
