@@ -14,7 +14,8 @@ if errorlevel 1 exit /b 1
 scons target=template_release
 if errorlevel 1 exit /b 1
 
-set BIN_DIR=addons\vaudio-godot-native-openal-3d\bin
+set ADDON_DIR=addons\vaudio-godot-native-openal-3d
+set BIN_DIR=%ADDON_DIR%\bin
 
 if not "%VAUDIO_RELEASE_DIR%"=="" (
     echo Copying build output to %VAUDIO_RELEASE_DIR%
@@ -22,6 +23,8 @@ if not "%VAUDIO_RELEASE_DIR%"=="" (
     copy /y "%BIN_DIR%\libvaudiogodotnativeopenal3d.windows.template_debug.x86_64.dll" "%VAUDIO_RELEASE_DIR%\bin\" >nul
     copy /y "%BIN_DIR%\libvaudiogodotnativeopenal3d.windows.template_release.x86_64.dll" "%VAUDIO_RELEASE_DIR%\bin\" >nul
     if exist "%BIN_DIR%\vaudio-debug-window.exe" copy /y "%BIN_DIR%\vaudio-debug-window.exe" "%VAUDIO_RELEASE_DIR%\bin\" >nul
+    copy /y "%ADDON_DIR%\plugin.cfg" "%VAUDIO_RELEASE_DIR%\" >nul
+    copy /y "%ADDON_DIR%\plugin.gd" "%VAUDIO_RELEASE_DIR%\" >nul
 ) else (
     echo VAUDIO_RELEASE_DIR not set - skipping copy to release repo
 )
@@ -32,6 +35,8 @@ if not "%VAUDIO_DEMO_ADDON_DIR%"=="" (
     copy /y "%BIN_DIR%\libvaudiogodotnativeopenal3d.windows.template_debug.x86_64.dll" "%VAUDIO_DEMO_ADDON_DIR%\bin\" >nul
     copy /y "%BIN_DIR%\libvaudiogodotnativeopenal3d.windows.template_release.x86_64.dll" "%VAUDIO_DEMO_ADDON_DIR%\bin\" >nul
     if exist "%BIN_DIR%\vaudio-debug-window.exe" copy /y "%BIN_DIR%\vaudio-debug-window.exe" "%VAUDIO_DEMO_ADDON_DIR%\bin\" >nul
+    copy /y "%ADDON_DIR%\plugin.cfg" "%VAUDIO_DEMO_ADDON_DIR%\" >nul
+    copy /y "%ADDON_DIR%\plugin.gd" "%VAUDIO_DEMO_ADDON_DIR%\" >nul
 ) else (
     echo VAUDIO_DEMO_ADDON_DIR not set - skipping copy to demo project addon
 )

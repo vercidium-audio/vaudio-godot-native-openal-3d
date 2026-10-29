@@ -72,6 +72,9 @@ ALSource::~ALSource()
     // A decode task holds a raw pointer to decoding_buffer via userdata - must not let it run after this node is destroyed.
     if (decode_task_id != WorkerThreadPool::INVALID_TASK_ID)
         WorkerThreadPool::get_singleton()->wait_for_task_completion(decode_task_id);
+
+    // Delete the AL sources before the members holding their buffers are destroyed - alDeleteBuffers fails with AL_INVALID_OPERATION on a buffer still attached to a source, leaking it and leaving a sticky AL error behind
+    sources.clear();
 }
 
 void ALSource::_ready()
@@ -91,6 +94,44 @@ void ALSource::_process(double delta)
         std::remove_if(sources.begin(), sources.end(), [](const std::unique_ptr<ALSourceHandle> &source)
                         { return source->is_finished(); }),
         sources.end());
+
+    release_retired_buffers();
+}
+
+void ALSource::retire_buffer(ALBuffer &&buffer)
+{
+    for (auto &source : sources)
+    {
+        if (source->get_buffer() == buffer.get_handle())
+        {
+            retired_buffers.push_back(std::move(buffer));
+            return;
+        }
+    }
+
+    // Unused, so it's deleted here when `buffer` goes out of scope in the caller
+}
+
+void ALSource::release_retired_buffers()
+{
+    for (size_t i = 0; i < retired_buffers.size();)
+    {
+        bool in_use = false;
+
+        for (auto &source : sources)
+        {
+            if (source->get_buffer() == retired_buffers[i].get_handle())
+            {
+                in_use = true;
+                break;
+            }
+        }
+
+        if (in_use)
+            i++;
+        else
+            retired_buffers.erase(retired_buffers.begin() + i);
+    }
 }
 
 void ALSource::decode_stream_task(void *userdata)
@@ -103,6 +144,9 @@ bool ALSource::ensure_stream_decode_started()
 {
     if (streams.is_empty())
     {
+        for (ALBuffer &buffer : decoded_buffers)
+            retire_buffer(std::move(buffer));
+
         decoded_buffers.clear();
         decoded_streams.clear();
         pending_streams.clear();
@@ -130,6 +174,7 @@ bool ALSource::ensure_stream_decode_started()
         else
         {
             decoded_streams.erase(decoded_streams.begin() + i);
+            retire_buffer(std::move(decoded_buffers[i]));
             decoded_buffers.erase(decoded_buffers.begin() + i);
         }
     }
@@ -320,6 +365,7 @@ void ALSource::stop()
 
     // Release them now - a stopped looping source never reports finished, so _process would never clean it up
     sources.clear();
+    release_retired_buffers();
 }
 
 bool ALSource::is_playing() const

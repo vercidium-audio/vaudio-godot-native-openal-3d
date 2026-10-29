@@ -14,6 +14,7 @@ void VASourceLeech::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_muffling_gain_lf"), &VASourceLeech::get_muffling_gain_lf);
     ClassDB::bind_method(D_METHOD("get_muffling_gain_hf"), &VASourceLeech::get_muffling_gain_hf);
     ClassDB::bind_method(D_METHOD("is_raytraced"), &VASourceLeech::is_raytraced);
+    ClassDB::bind_method(D_METHOD("is_ready_to_play"), &VASourceLeech::is_ready_to_play);
 }
 
 VASourceLeech::VASourceLeech()
@@ -68,9 +69,15 @@ bool VASourceLeech::is_raytraced() const
     return emitter && emitter->is_raytraced();
 }
 
+bool VASourceLeech::is_ready_to_play() const
+{
+    return emitter && emitter->is_ready_to_play();
+}
+
 bool VASourceLeech::play()
 {
-    if (!is_raytraced())
+    // Wait for the parent emitter's muffling and reverb results, so the sound never starts unmuffled or without reverb
+    if (!is_ready_to_play())
     {
         return false;
     }
@@ -89,7 +96,7 @@ void VASourceLeech::_process(double delta)
         return;
     }
 
-    if (!played && get_autoplay())
+    if (!played && get_autoplay() && is_ready_to_play())
     {
         play();
     }

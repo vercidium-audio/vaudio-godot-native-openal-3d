@@ -14,6 +14,7 @@
 #include "openal/al_manager.h"
 #include "va_conversion_plugin.h"
 #include "va_conversions.h"
+#include "va_debug_window_check.h"
 #include "va_debugger_plugin.h"
 #include "va_emitter.h"
 #include "va_engine_util.h"
@@ -30,6 +31,8 @@ void VAWorld::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_bounds_size", "value"), &VAWorld::set_bounds_size);
     ClassDB::bind_method(D_METHOD("get_bounds_color"), &VAWorld::get_bounds_color);
     ClassDB::bind_method(D_METHOD("set_bounds_color", "value"), &VAWorld::set_bounds_color);
+    ClassDB::bind_method(D_METHOD("get_world_name"), &VAWorld::get_world_name);
+    ClassDB::bind_method(D_METHOD("set_world_name", "value"), &VAWorld::set_world_name);
     ClassDB::bind_method(D_METHOD("get_epsilon"), &VAWorld::get_epsilon);
     ClassDB::bind_method(D_METHOD("set_epsilon", "value"), &VAWorld::set_epsilon);
     ClassDB::bind_method(D_METHOD("get_render_layers"), &VAWorld::get_render_layers);
@@ -44,6 +47,7 @@ void VAWorld::_bind_methods()
 
     ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "bounds_size", PROPERTY_HINT_RANGE, "1,1000,1,or_greater"), "set_bounds_size", "get_bounds_size");
     ADD_PROPERTY(PropertyInfo(Variant::COLOR, "bounds_color"), "set_bounds_color", "get_bounds_color");
+    ADD_PROPERTY(PropertyInfo(Variant::STRING, "world_name"), "set_world_name", "get_world_name");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "epsilon"), "set_epsilon", "get_epsilon");
 
     ADD_GROUP("Layers", "");
@@ -118,11 +122,14 @@ void VAWorld::_bind_methods()
     
     ClassDB::bind_method(D_METHOD("get_rendering_enabled"), &VAWorld::get_rendering_enabled);
     ClassDB::bind_method(D_METHOD("set_rendering_enabled", "value"), &VAWorld::set_rendering_enabled);
+    ClassDB::bind_method(D_METHOD("get_visualisation_scale"), &VAWorld::get_visualisation_scale);
+    ClassDB::bind_method(D_METHOD("set_visualisation_scale", "value"), &VAWorld::set_visualisation_scale);
     ClassDB::bind_method(D_METHOD("get_sync_viewport"), &VAWorld::get_sync_viewport);
     ClassDB::bind_method(D_METHOD("set_sync_viewport", "value"), &VAWorld::set_sync_viewport);
 
     ADD_GROUP("Rendering", "");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rendering_enabled"), "set_rendering_enabled", "get_rendering_enabled");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "visualisation_scale", PROPERTY_HINT_RANGE, "0.0,10.0,0.01,or_greater"), "set_visualisation_scale", "get_visualisation_scale");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "sync_viewport"), "set_sync_viewport", "get_sync_viewport");
 
     // Read-only timing stats (milliseconds) - no ADD_PROPERTY, called directly from GDScript like methods (world.get_main_thread_time()).
@@ -164,6 +171,7 @@ VAWorld::VAWorld()
     }
 
     world = vaWorldCreate();
+    warn_if_debug_window_not_executable();
 
     // These three calls are guaranteed to pass, no need to check result.
     vaWorldSetCoordinateSystem(world, VACoordinateSystemGodot);
@@ -190,6 +198,7 @@ VAWorld::VAWorld()
     set_maximum_concurrency_level(maximum_concurrency_level);
     set_work_item_count(work_item_count);
     set_rendering_enabled(rendering_enabled);
+    set_visualisation_scale(visualisation_scale);
 
     // ALManager is initialized at GDExtension module-init time, so it's safe to create AL objects here.
     listener_reverb_effect.create();
@@ -245,6 +254,9 @@ void VAWorld::_ready()
 
         return;
     }
+
+    // The node name isn't known in the constructor, so the fallback name is applied here
+    apply_world_name();
 
     // Wait a frame to ensure all children/siblings have been added to the scene.
     callable_mp(this, &VAWorld::init_scene).call_deferred();
@@ -380,7 +392,8 @@ void VAWorld::on_reverb_updated()
         {
             // Rotate the raytraced world-space direction into the listener's local space so OpenAL's listener-relative reflections/late-reverb pan vectors point the right way regardless of listener facing.
             Vector3 listener_rotation = listener->get_global_rotation();
-            VAVector pan_vector = vaWorldCalculateListenerRelativePan(world, *relative_direction, listener_rotation.x, listener_rotation.y);
+            VAVector pan_vector = {};
+            vaWorldCalculateListenerRelativePan(world, *relative_direction, listener_rotation.x, listener_rotation.y, &pan_vector);
             Vector3 pan = FromVAudio(pan_vector);
 
             params.reflectionsPan[0] = pan.x;

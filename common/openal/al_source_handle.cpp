@@ -55,6 +55,7 @@ void ALSourceHandle::destroy()
 
 void ALSourceHandle::set_buffer(ALuint buffer_handle)
 {
+    buffer = buffer_handle;
     ALManager::get_singleton()->al_sourcei()(handle, AL_BUFFER, (ALint)buffer_handle);
 }
 

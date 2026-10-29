@@ -21,6 +21,8 @@ namespace va_godot
 // Handles whose node left the tree while removal was still pending, mapped to the VAWorld that destroys them once OnRemoved fires. Main thread only.
 static std::unordered_map<::VAEmitter *, VAWorld *> orphaned_handles;
 
+static void destroy_handle(::VAEmitter *handle);
+
 void VAEmitter::_bind_methods()
 {
     ClassDB::bind_method(D_METHOD("get_raytrace_once"), &VAEmitter::get_raytrace_once);
@@ -31,6 +33,7 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_va_position"), &VAEmitter::get_va_position);
     ClassDB::bind_method(D_METHOD("get_within_world_bounds"), &VAEmitter::get_within_world_bounds);
     ClassDB::bind_method(D_METHOD("is_raytraced"), &VAEmitter::is_raytraced);
+    ClassDB::bind_method(D_METHOD("is_ready_to_play"), &VAEmitter::is_ready_to_play);
     ClassDB::bind_method(D_METHOD("get_grouped_eax_index"), &VAEmitter::get_grouped_eax_index);
     ClassDB::bind_method(D_METHOD("get_eax_debug_info"), &VAEmitter::get_eax_debug_info);
 
@@ -161,6 +164,24 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_minimum_ambient_permeation_energy", "value"), &VAEmitter::set_minimum_ambient_permeation_energy);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum_ambient_permeation_energy", PROPERTY_HINT_RANGE, "0.0,1.0,0.001"), "set_minimum_ambient_permeation_energy", "get_minimum_ambient_permeation_energy");
 
+    ADD_GROUP("Clustering", "");
+
+    ClassDB::bind_method(D_METHOD("get_clustering_enabled"), &VAEmitter::get_clustering_enabled);
+    ClassDB::bind_method(D_METHOD("set_clustering_enabled", "value"), &VAEmitter::set_clustering_enabled);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "clustering_enabled"), "set_clustering_enabled", "get_clustering_enabled");
+
+    ClassDB::bind_method(D_METHOD("get_clustering_distance"), &VAEmitter::get_clustering_distance);
+    ClassDB::bind_method(D_METHOD("set_clustering_distance", "value"), &VAEmitter::set_clustering_distance);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "clustering_distance", PROPERTY_HINT_RANGE, "0.01,100.0,0.01,or_greater"), "set_clustering_distance", "get_clustering_distance");
+
+    ClassDB::bind_method(D_METHOD("get_target_clustering_enabled"), &VAEmitter::get_target_clustering_enabled);
+    ClassDB::bind_method(D_METHOD("set_target_clustering_enabled", "value"), &VAEmitter::set_target_clustering_enabled);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "target_clustering_enabled"), "set_target_clustering_enabled", "get_target_clustering_enabled");
+
+    ClassDB::bind_method(D_METHOD("get_target_clustering_distance"), &VAEmitter::get_target_clustering_distance);
+    ClassDB::bind_method(D_METHOD("set_target_clustering_distance", "value"), &VAEmitter::set_target_clustering_distance);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "target_clustering_distance", PROPERTY_HINT_RANGE, "0.01,100.0,0.01,or_greater"), "set_target_clustering_distance", "get_target_clustering_distance");
+
     ADD_GROUP("Advanced", "");
 
     ClassDB::bind_method(D_METHOD("get_type"), &VAEmitter::get_type);
@@ -210,14 +231,16 @@ void VAEmitter::_bind_methods()
     ADD_PROPERTY(PropertyInfo(Variant::COLOR, "ambient_permeation_color"), "set_ambient_permeation_color", "get_ambient_permeation_color");
 }
 
-// Occlusion/permeation rays are only cast by the listener, so their thresholds are only customisable there
+// Occlusion/permeation rays are only cast by the listener, so their thresholds and target clustering are only customisable there
 void VAEmitter::_validate_property(PropertyInfo &p_property) const
 {
     if (Object::cast_to<VAListener>(this))
         return;
 
     if (p_property.name == StringName("minimum_occlusion_energy") ||
-        p_property.name == StringName("minimum_permeation_energy"))
+        p_property.name == StringName("minimum_permeation_energy") ||
+        p_property.name == StringName("target_clustering_enabled") ||
+        p_property.name == StringName("target_clustering_distance"))
     {
         p_property.usage = PROPERTY_USAGE_NO_EDITOR;
     }
@@ -250,9 +273,9 @@ void VAEmitter::_enter_tree()
         return;
     }
 
-    va_world = find_va_world(this);
+    VAWorld *found = find_va_world(this);
 
-    if (!va_world)
+    if (!found)
     {
         // No VAWorld anywhere in the tree yet - stay dormant and retry on every future node addition instead of erroring out permanently, see retry_find_va_world.
         waiting_for_world = true;
@@ -260,7 +283,70 @@ void VAEmitter::_enter_tree()
         return;
     }
 
+    on_va_world_found(found);
+}
+
+void VAEmitter::on_va_world_found(VAWorld *world)
+{
+    if (detach_pending)
+    {
+        // Re-entered the same VAWorld before the end of the frame (e.g. a reparent), so keep the handle
+        if (world->get_instance_id() == va_world_id)
+        {
+            detach_pending = false;
+            return;
+        }
+
+        release_from_world();
+    }
+
+    va_world = world;
+    va_world_id = world->get_instance_id();
+
     attach_to_world();
+}
+
+void VAEmitter::defer_release()
+{
+    detach_pending = true;
+    callable_mp(this, &VAEmitter::release_if_pending).call_deferred();
+}
+
+void VAEmitter::release_if_pending()
+{
+    if (detach_pending)
+        release_from_world();
+}
+
+void VAEmitter::release_from_world()
+{
+    detach_pending = false;
+
+    if (ObjectDB::get_instance(va_world_id))
+    {
+        detach_from_world();
+
+        // A raytrace_once emitter may have started its own removal earlier and still be waiting on its reverb tail
+        if (emitter)
+            release_emitter();
+    }
+    else if (emitter)
+    {
+        // The VAWorld was freed first (e.g. a scene change), and vaWorldDestroy unlinked this handle from it
+        teardown_visualisation();
+        destroy_handle(emitter);
+        emitter = nullptr;
+    }
+
+    va_world = nullptr;
+    va_world_id = 0;
+}
+
+void VAEmitter::_notification(int p_what)
+{
+    // Freed before the end of the frame it left the tree in
+    if (p_what == NOTIFICATION_PREDELETE && detach_pending)
+        release_from_world();
 }
 
 void VAEmitter::attach_to_world()
@@ -278,6 +364,8 @@ void VAEmitter::detach_from_world()
 
 void VAEmitter::release_emitter()
 {
+    teardown_visualisation();
+
     remove_emitter();
 
     // Removal is still pending (reverb tail, or removed from within a callback), so this node may be freed or create a new handle before OnRemoved fires. Hand the handle to VAWorld so the callback never reaches this node.
@@ -306,24 +394,22 @@ void VAEmitter::_exit_tree()
             "' left the tree without ever finding a VAWorld - no emitter was created for it. Make sure this node's scene was added under a VAWorld while it was in the tree.");
     }
 
-    if (!va_world)
+    if (!va_world || detach_pending)
         return;
 
-    detach_from_world();
-
-    // A raytrace_once emitter may have started its own removal earlier and still be waiting on its reverb tail
-    if (emitter)
-        release_emitter();
-
-    va_world = nullptr;
+    // A reparent re-enters the tree straight away, so keep the handle until the end of the frame in case it comes back to the same VAWorld. A raytrace_once handle that has started its removal can't be reused, and a listener hands the shared handle over to the next listener straight away
+    if (is_queued_for_deletion() || raytrace_once_removed || is_main_listener())
+        release_from_world();
+    else
+        defer_release();
 }
 
-// Re-attempts find_va_world each time a node is added anywhere in the tree; once a VAWorld becomes reachable, disconnects and initialises normally via create_emitter().
+// Re-attempts find_va_world each time a node is added anywhere in the tree; once a VAWorld becomes reachable, disconnects and initialises normally via on_va_world_found().
 void VAEmitter::retry_find_va_world(Node *node)
 {
-    va_world = find_va_world(this);
+    VAWorld *found = find_va_world(this);
 
-    if (!va_world)
+    if (!found)
     {
         return;
     }
@@ -331,12 +417,13 @@ void VAEmitter::retry_find_va_world(Node *node)
     get_tree()->disconnect("node_added", callable_mp(this, &VAEmitter::retry_find_va_world));
     waiting_for_world = false;
 
-    attach_to_world();
+    on_va_world_found(found);
 }
 
 void VAEmitter::create_emitter()
 {
     emitter = vaEmitterCreate();
+    raytrace_once_removed = false;
     vaEmitterSetUserData(emitter, this);
     vaEmitterSetName(emitter, String(get_name()).utf8().get_data());
     vaEmitterSetPosition(emitter, ToVAudio(get_global_position()));
@@ -363,6 +450,9 @@ void VAEmitter::create_emitter()
     apply_properties_to_handle();
 
     va_world->register_emitter(this, is_main_listener());
+
+    // A visualisation that entered the tree while this emitter had no handle
+    initialize_visualisation();
 }
 
 void VAEmitter::apply_properties_to_handle()
@@ -398,6 +488,11 @@ void VAEmitter::apply_properties_to_handle()
     vaEmitterSetAmbientPermeationEnergyCap(emitter, ambient_permeation_energy_cap);
     vaEmitterSetMinimumAmbientPermeationEnergy(emitter, minimum_ambient_permeation_energy);
 
+    vaEmitterSetClusteringEnabled(emitter, clustering_enabled);
+    vaEmitterSetClusteringDistance(emitter, clustering_distance);
+    vaEmitterSetTargetClusteringEnabled(emitter, target_clustering_enabled);
+    vaEmitterSetTargetClusteringDistance(emitter, target_clustering_distance);
+
     vaEmitterSetType(emitter, type);
     vaEmitterSetTrailRefreshCount(emitter, trail_refresh_count);
     vaEmitterSetRefreshDistanceThreshold(emitter, refresh_distance_threshold);
@@ -430,6 +525,23 @@ void VAEmitter::remove_emitter()
 bool VAEmitter::is_raytraced() const
 {
     return emitter && !vaEmitterGetInitialising(emitter);
+}
+
+bool VAEmitter::is_ready_to_play() const
+{
+    if (!emitter || !va_world)
+        return false;
+
+    VAEmitter *listener = va_world->get_listener();
+
+    if (!listener || listener == this || vaEmitterHasRaytracedTarget(listener->get_handle(), emitter) != VA_TRUE)
+        return false;
+
+    // Its grouped EAX slot, and so its reverb effect, isn't known until it casts its own reverb rays
+    if (vaEmitterGetAffectsGroupedEAX(emitter) && vaEmitterGetReverbEnabled(emitter))
+        return vaEmitterGetEAX(emitter) != nullptr;
+
+    return true;
 }
 
 int VAEmitter::get_grouped_eax_index() const
@@ -530,12 +642,25 @@ void VAEmitter::add_target(VAEmitter *target)
 
 bool VAEmitter::has_raytraced_target(VAEmitter *target) const
 {
-    return vaEmitterHasRaytracedTarget(emitter, target->get_handle());
+    return vaEmitterHasRaytracedTarget(emitter, target->get_handle()) == VA_TRUE;
 }
 
 VALowPassFilter VAEmitter::get_target_filter(VAEmitter *target) const
 {
-    return *vaEmitterGetTargetFilter(emitter, target->get_handle());
+    VALowPassFilter *filter = nullptr;
+    VAResult result = vaEmitterGetTargetFilter(emitter, target->get_handle(), &filter);
+
+    if (result != VA_SUCCESS)
+    {
+        VA_ERROR_RESULT(result, "Failed to get the target filter for '", target->get_name(), "'");
+
+        VALowPassFilter unmuffled = {};
+        unmuffled.gainLF = 1.0f;
+        unmuffled.gainHF = 1.0f;
+        return unmuffled;
+    }
+
+    return *filter;
 }
 
 void VAEmitter::_process(double delta)
@@ -550,6 +675,13 @@ void VAEmitter::_process(double delta)
     if (is_raytraced())
     {
         apply_raytracing_results();
+    }
+
+    // Once ready, cast rays no more. A parent VARaytracedSource processes before this node, so it has already played
+    if (raytrace_once && !raytrace_once_removed && is_ready_to_play())
+    {
+        raytrace_once_removed = true;
+        remove_emitter();
     }
 }
 
@@ -598,12 +730,6 @@ void VAEmitter::on_raytraced_by_another_emitter(::VAEmitter *other)
     }
 
     apply_raytracing_results();
-
-    // Matches VAEmitter.cs's OnRaytracedByAnotherEmitter: once raytraced once, cast rays no more - remove it from the world.
-    if (raytrace_once)
-    {
-        remove_emitter();
-    }
 }
 
 static void destroy_handle(::VAEmitter *handle)
@@ -621,7 +747,10 @@ void VAEmitter::on_emitter_removed(::VAEmitter *handle)
 
     // Only clear it if it's still this node's handle
     if (emitter == handle)
+    {
         emitter = nullptr;
+        teardown_visualisation();
+    }
 }
 
 void VAEmitter::on_raytracing_complete_trampoline(::VAEmitter *emitter)
@@ -1101,6 +1230,58 @@ void VAEmitter::set_minimum_ambient_permeation_energy(float value)
     {
         vaEmitterSetMinimumAmbientPermeationEnergy(emitter, minimum_ambient_permeation_energy);
     }
+}
+
+bool VAEmitter::get_clustering_enabled() const
+{
+    return clustering_enabled;
+}
+
+void VAEmitter::set_clustering_enabled(bool value)
+{
+    clustering_enabled = value;
+
+    if (emitter)
+        vaEmitterSetClusteringEnabled(emitter, clustering_enabled);
+}
+
+float VAEmitter::get_clustering_distance() const
+{
+    return clustering_distance;
+}
+
+void VAEmitter::set_clustering_distance(float value)
+{
+    clustering_distance = MAX(0.01f, value);
+
+    if (emitter)
+        vaEmitterSetClusteringDistance(emitter, clustering_distance);
+}
+
+bool VAEmitter::get_target_clustering_enabled() const
+{
+    return target_clustering_enabled;
+}
+
+void VAEmitter::set_target_clustering_enabled(bool value)
+{
+    target_clustering_enabled = value;
+
+    if (emitter)
+        vaEmitterSetTargetClusteringEnabled(emitter, target_clustering_enabled);
+}
+
+float VAEmitter::get_target_clustering_distance() const
+{
+    return target_clustering_distance;
+}
+
+void VAEmitter::set_target_clustering_distance(float value)
+{
+    target_clustering_distance = MAX(0.01f, value);
+
+    if (emitter)
+        vaEmitterSetTargetClusteringDistance(emitter, target_clustering_distance);
 }
 
 int VAEmitter::get_type() const

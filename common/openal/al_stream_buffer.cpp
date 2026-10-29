@@ -56,6 +56,9 @@ bool ALStreamBuffer::create(ALenum format, int frequency)
         return false;
     }
 
+    // Clear any error left over from an earlier AL call so it isn't misattributed to alBufferCallbackSOFT below
+    manager->al_get_error()();
+
     manager->al_buffer_callback_soft()(new_handle, format, frequency, &ALStreamBuffer::buffer_callback, this);
 
     ALenum error = manager->al_get_error()();

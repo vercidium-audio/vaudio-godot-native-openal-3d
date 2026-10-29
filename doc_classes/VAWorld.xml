@@ -90,6 +90,9 @@
 		<member name="bounds_color" type="Color" setter="set_bounds_color" getter="get_bounds_color" default="Color(1, 0.65, 0, 1)">
 			The color of the bounds gizmo drawn in the editor viewport. Editor-only visualization; has no effect on raytracing.
 		</member>
+		<member name="world_name" type="String" setter="set_world_name" getter="get_world_name" default="&quot;&quot;">
+			The name displayed in the debug window and log messages. When empty, the node's name is used.
+		</member>
 		<member name="epsilon" type="float" setter="set_epsilon" getter="get_epsilon" default="0.01">
 			The epsilon value used for raytracing and primitive intersections.
 		</member>

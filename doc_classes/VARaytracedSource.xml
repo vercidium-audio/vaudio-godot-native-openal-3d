@@ -91,6 +91,12 @@
 		<member name="ambient_permeation_energy_cap" type="float" setter="set_ambient_permeation_energy_cap" getter="get_ambient_permeation_energy_cap" default="0.15">
 			The percentage of ambient permeation energy required for ambience to be at full volume.
 		</member>
+		<member name="clustering_enabled" type="bool" setter="set_clustering_enabled" getter="get_clustering_enabled" default="false">
+			If [code]true[/code], this source can share its rays with other nearby sources that also have clustering enabled. Sources in a cluster share the same reverb, EAX and ambience results.
+		</member>
+		<member name="clustering_distance" type="float" setter="set_clustering_distance" getter="get_clustering_distance" default="5.0">
+			The maximum distance between this source and the centre of a cluster, for it to share that cluster's rays. If two sources have different distances, the smaller one is used.
+		</member>
 		<member name="type" type="int" setter="set_type" getter="get_type" default="0">
 			A user-defined integer tag for categorising sources.
 		</member>
@@ -103,7 +109,7 @@
 		<member name="scattering_seed" type="int" setter="set_scattering_seed" getter="get_scattering_seed">
 			The seed used to randomise scattering vectors. Randomised per source by default.
 		</member>
-		<member name="clamp_position" type="bool" setter="set_clamp_position" getter="get_clamp_position" default="true">
+		<member name="clamp_position" type="bool" setter="set_clamp_position" getter="get_clamp_position" default="false">
 			If [code]true[/code], keeps this source's position inside the world bounds so it's always raytraced. If [code]false[/code], a source outside the world isn't raytraced, and [member VAWorld.emitters_outside_the_world_are_muffled] decides whether it's fully muffled or unmuffled.
 		</member>
 	</members>

@@ -328,6 +328,7 @@ void VAWorld::create_primitive(CollisionShape3D *collision_shape, VAMaterialType
 
     void *prim = nullptr;
     VAPrimitiveKind kind;
+    SharedMesh *shared_mesh = nullptr;
 
     if (Ref<BoxShape3D> box = shape; box.is_valid())
     {
@@ -604,26 +605,20 @@ void VAWorld::create_primitive(CollisionShape3D *collision_shape, VAMaterialType
     }
     else if (Ref<ConcavePolygonShape3D> concave_polygon = shape; concave_polygon.is_valid())
     {
-        VAVector min, max;
-        std::vector<VAVector> triangles = ConvertConcavePolygonToVAudio(concave_polygon, min, max);
-
-        if (triangles.empty())
-        {
-            VA_WARN("ConcavePolygonShape3D ", collision_shape->get_name(), " will not affect raytracing as it has no faces");
-            return;
-        }
-
         VAMatrix mat = ToVAudio(global_transform);
 
-        VAMeshPrimitive *p = nullptr;
-        VAResult create_result = vaMeshPrimitiveCreate(material, triangles.data(), (int)triangles.size(), min, max, &mat, &p);
-        if (create_result != VA_SUCCESS)
+        VAMeshPrimitive *p = create_shared_mesh_primitive(concave_polygon, [&](VAVector &min, VAVector &max)
         {
-            VA_ERROR(
-                "VAWorld::create_primitive(CollisionShape3D concave polygon) failed to create the mesh primitive for '",
-                collision_shape->get_name(), "' (VAResult=", VAResultToString(create_result), ")");
+            std::vector<VAVector> triangles = ConvertConcavePolygonToVAudio(concave_polygon, min, max);
+
+            if (triangles.empty())
+                VA_WARN("ConcavePolygonShape3D ", collision_shape->get_name(), " will not affect raytracing as it has no faces");
+
+            return triangles;
+        }, material, mat, collision_shape, shared_mesh);
+
+        if (!p)
             return;
-        }
 
         VAResult add_result = vaWorldAddPrimitive_(world, p);
         if (add_result != VA_SUCCESS)
@@ -632,6 +627,7 @@ void VAWorld::create_primitive(CollisionShape3D *collision_shape, VAMaterialType
                 "VAWorld::create_primitive(CollisionShape3D concave polygon) failed to add '",
                 collision_shape->get_name(), "' to the world (VAResult=", VAResultToString(add_result), ")");
             vaMeshPrimitiveDestroy(p);
+            release_shared_mesh(shared_mesh);
             return;
         }
 
@@ -640,62 +636,26 @@ void VAWorld::create_primitive(CollisionShape3D *collision_shape, VAMaterialType
     }
     else if (Ref<ConvexPolygonShape3D> convex_polygon = shape; convex_polygon.is_valid())
     {
-        VAVector min, max;
-        std::vector<VAVector> triangles = ConvertConvexPolygonToVAudio(convex_polygon, min, max);
-
-        if (triangles.empty())
-        {
-            VA_WARN("ConvexPolygonShape3D ", collision_shape->get_name(), " will not affect raytracing as it cannot be triangulated");
-            return;
-        }
-
-        VAMatrix mat = ToVAudio(global_transform);
-
-        VAMeshPrimitive *p = nullptr;
-        VAResult create_result = vaMeshPrimitiveCreate(material, triangles.data(), (int)triangles.size(), min, max, &mat, &p);
-        if (create_result != VA_SUCCESS)
-        {
-            VA_ERROR(
-                "VAWorld::create_primitive(CollisionShape3D convex polygon) failed to create the mesh primitive for '",
-                collision_shape->get_name(), "' (VAResult=", VAResultToString(create_result), ")");
-            return;
-        }
-
-        VAResult add_result = vaWorldAddPrimitive_(world, p);
-        if (add_result != VA_SUCCESS)
-        {
-            VA_ERROR(
-                "VAWorld::create_primitive(CollisionShape3D convex polygon) failed to add '",
-                collision_shape->get_name(), "' to the world (VAResult=", VAResultToString(add_result), ")");
-            vaMeshPrimitiveDestroy(p);
-            return;
-        }
-
-        prim = p;
-        kind = VAPrimitiveKind::Mesh;
+        // Godot doesn't expose a convex shape's hull triangles, only a wireframe debug mesh
+        VA_WARN("ConvexPolygonShape3D ", collision_shape->get_name(), " will not affect raytracing as convex polygon shapes are not supported. Use a ConcavePolygonShape3D or MeshInstance3D instead");
+        return;
     }
     else if (Ref<HeightMapShape3D> height_map = shape; height_map.is_valid())
     {
-        VAVector min, max;
-        std::vector<VAVector> triangles = ConvertHeightMapToVAudio(height_map, min, max);
-
-        if (triangles.empty())
-        {
-            VA_WARN("HeightMapShape3D ", collision_shape->get_name(), " will not affect raytracing as its dimensions are less than 2x2");
-            return;
-        }
-
         VAMatrix mat = ToVAudio(global_transform);
 
-        VAMeshPrimitive *p = nullptr;
-        VAResult create_result = vaMeshPrimitiveCreate(material, triangles.data(), (int)triangles.size(), min, max, &mat, &p);
-        if (create_result != VA_SUCCESS)
+        VAMeshPrimitive *p = create_shared_mesh_primitive(height_map, [&](VAVector &min, VAVector &max)
         {
-            VA_ERROR(
-                "VAWorld::create_primitive(CollisionShape3D height map) failed to create the mesh primitive for '",
-                collision_shape->get_name(), "' (VAResult=", VAResultToString(create_result), ")");
+            std::vector<VAVector> triangles = ConvertHeightMapToVAudio(height_map, min, max);
+
+            if (triangles.empty())
+                VA_WARN("HeightMapShape3D ", collision_shape->get_name(), " will not affect raytracing as its dimensions are less than 2x2");
+
+            return triangles;
+        }, material, mat, collision_shape, shared_mesh);
+
+        if (!p)
             return;
-        }
 
         VAResult add_result = vaWorldAddPrimitive_(world, p);
         if (add_result != VA_SUCCESS)
@@ -704,6 +664,7 @@ void VAWorld::create_primitive(CollisionShape3D *collision_shape, VAMaterialType
                 "VAWorld::create_primitive(CollisionShape3D height map) failed to add '",
                 collision_shape->get_name(), "' to the world (VAResult=", VAResultToString(add_result), ")");
             vaMeshPrimitiveDestroy(p);
+            release_shared_mesh(shared_mesh);
             return;
         }
 
@@ -718,6 +679,7 @@ void VAWorld::create_primitive(CollisionShape3D *collision_shape, VAMaterialType
     VAPrimitiveRef *ref = memnew(VAPrimitiveRef);
     ref->primitive = prim;
     ref->kind = kind;
+    ref->shared_geometry = shared_mesh;
 
     TransformWatcher *watcher = memnew(TransformWatcher);
     watcher->set_on_transform_changed([this, collision_shape, ref]()
@@ -727,7 +689,38 @@ void VAWorld::create_primitive(CollisionShape3D *collision_shape, VAMaterialType
     collision_shape->add_child(watcher);
     ref->watcher = watcher;
 
+    // Editing the shape resource (size, radius, points etc) doesn't move the node, so the watcher won't see it
+    ref->shape_resource = shape;
+    ref->on_shape_changed = [this, collision_shape]()
+    {
+        on_collision_shape_changed(collision_shape);
+    };
+    ref->shape_callable = callable_mp(ref, &VAPrimitiveRef::shape_changed);
+    shape->connect("changed", ref->shape_callable);
+
     collision_shape->set_meta(PrimitiveMetaKey(), ref);
+}
+
+void VAWorld::on_collision_shape_changed(CollisionShape3D *collision_shape)
+{
+    if (!collision_shape || !collision_shape->has_meta(PrimitiveMetaKey()))
+        return;
+
+    // Held locally so the ref outlives remove_primitive clearing the meta below
+    Ref<VAPrimitiveRef> ref = collision_shape->get_meta(PrimitiveMetaKey());
+    if (ref.is_null())
+        return;
+
+    // Mesh triangles are baked into the shared mesh when it's created, so recreate it from scratch. Every node using this shape gets the changed signal, the first one invalidates the stale shared mesh and the rest pick up its replacement
+    if (ref->kind == VAPrimitiveKind::Mesh)
+    {
+        VAMaterialType material = vaMeshPrimitiveGetMaterial((VAMeshPrimitive *)ref->primitive);
+        invalidate_shared_mesh((SharedMesh *)ref->shared_geometry);
+        remove_primitive(collision_shape, false);
+        create_primitive(collision_shape, material);
+    }
+    else
+        update_collision_shape_primitive(collision_shape, ref.ptr());
 }
 
 void VAWorld::create_primitive(MeshInstance3D *mesh_instance, VAMaterialType material, bool use_flat_transmission)
@@ -744,24 +737,16 @@ void VAWorld::create_primitive(MeshInstance3D *mesh_instance, VAMaterialType mat
         return;
     }
 
-    VAVector min, max;
-    std::vector<VAVector> triangles = ConvertMeshToVAudio(mesh, min, max);
-    if (triangles.empty())
-    {
-        return;
-    }
-
     VAMatrix mat = ToVAudio(mesh_instance->get_global_transform());
 
-    VAMeshPrimitive *prim = nullptr;
-    VAResult create_result = vaMeshPrimitiveCreate(material, triangles.data(), (int)triangles.size(), min, max, &mat, &prim);
-    if (create_result != VA_SUCCESS)
+    SharedMesh *shared_mesh = nullptr;
+    VAMeshPrimitive *prim = create_shared_mesh_primitive(mesh, [&](VAVector &min, VAVector &max)
     {
-        VA_ERROR(
-            "VAWorld::create_primitive(MeshInstance3D) failed to create the mesh primitive for '",
-            mesh_instance->get_name(), "' (VAResult=", VAResultToString(create_result), ")");
+        return ConvertMeshToVAudio(mesh, min, max);
+    }, material, mat, mesh_instance, shared_mesh);
+
+    if (!prim)
         return;
-    }
 
     VAResult permeation_result = vaMeshPrimitiveSetUseFlatTransmission(prim, use_flat_transmission);
     if (permeation_result != VA_SUCCESS && permeation_result != VA_UNCHANGED)
@@ -778,6 +763,7 @@ void VAWorld::create_primitive(MeshInstance3D *mesh_instance, VAMaterialType mat
             "VAWorld::create_primitive(MeshInstance3D) failed to add '",
             mesh_instance->get_name(), "' to the world (VAResult=", VAResultToString(add_result), ")");
         vaMeshPrimitiveDestroy(prim);
+        release_shared_mesh(shared_mesh);
         return;
     }
 
@@ -795,7 +781,86 @@ void VAWorld::create_primitive(MeshInstance3D *mesh_instance, VAMaterialType mat
         }
     });
 
+    ref->shared_geometry = shared_mesh;
     mesh_instance->set_meta(PrimitiveMetaKey(), ref);
+}
+
+VAMeshPrimitive *VAWorld::create_shared_mesh_primitive(const Ref<Resource> &resource, std::function<std::vector<VAVector>(VAVector &, VAVector &)> read_triangles, VAMaterialType material, const VAMatrix &transform, Node *node, SharedMesh *&out_shared_mesh)
+{
+    out_shared_mesh = nullptr;
+
+    SharedMesh *shared_mesh;
+    auto it = shared_meshes.find(resource->get_instance_id());
+
+    if (it != shared_meshes.end())
+    {
+        shared_mesh = it->second;
+    }
+    else
+    {
+        VAVector min, max;
+        std::vector<VAVector> triangles = read_triangles(min, max);
+
+        if (triangles.empty())
+            return nullptr;
+
+        ::VAMesh *mesh = nullptr;
+        VAResult mesh_result = vaMeshCreate(triangles.data(), (int)triangles.size(), min, max, &mesh);
+        if (mesh_result != VA_SUCCESS)
+        {
+            VA_ERROR(
+                "VAWorld::create_shared_mesh_primitive failed to create the mesh for '",
+                node->get_name(), "' (VAResult=", VAResultToString(mesh_result), ")");
+            return nullptr;
+        }
+
+        shared_mesh = new SharedMesh{ mesh, resource, 0 };
+        shared_meshes[resource->get_instance_id()] = shared_mesh;
+    }
+
+    // Counted before creating the primitive, so release_shared_mesh cleans up a mesh that was created above if this fails
+    shared_mesh->reference_count++;
+
+    VAMeshPrimitive *prim = nullptr;
+    VAResult create_result = vaMeshPrimitiveCreateFromMesh(material, shared_mesh->mesh, &transform, &prim);
+    if (create_result != VA_SUCCESS)
+    {
+        VA_ERROR(
+            "VAWorld::create_shared_mesh_primitive failed to create the mesh primitive for '",
+            node->get_name(), "' (VAResult=", VAResultToString(create_result), ")");
+        release_shared_mesh(shared_mesh);
+        return nullptr;
+    }
+
+    out_shared_mesh = shared_mesh;
+    return prim;
+}
+
+void VAWorld::release_shared_mesh(SharedMesh *shared_mesh)
+{
+    if (!shared_mesh || --shared_mesh->reference_count > 0)
+        return;
+
+    invalidate_shared_mesh(shared_mesh);
+
+    // The SDK frees it once the world's raytracing threads have finished with it
+    VAResult destroy_result = vaMeshDestroy(shared_mesh->mesh);
+    if (destroy_result != VA_SUCCESS)
+        VA_ERROR("VAWorld::release_shared_mesh failed to destroy a mesh (VAResult=", VAResultToString(destroy_result), ")");
+
+    delete shared_mesh;
+}
+
+void VAWorld::invalidate_shared_mesh(SharedMesh *shared_mesh)
+{
+    if (!shared_mesh)
+        return;
+
+    // Only erase it if it's still the current entry, since an earlier invalidation may have already replaced it
+    auto it = shared_meshes.find(shared_mesh->resource->get_instance_id());
+
+    if (it != shared_meshes.end() && it->second == shared_mesh)
+        shared_meshes.erase(it);
 }
 
 void VAWorld::update_collision_shape_primitive(CollisionShape3D *collision_shape, VAPrimitiveRef *ref)
@@ -1041,6 +1106,9 @@ void VAWorld::remove_primitive(Node *node, bool recursive)
                 ref->watcher = nullptr;
             }
 
+            if (ref->shape_resource.is_valid() && ref->shape_resource->is_connected("changed", ref->shape_callable))
+                ref->shape_resource->disconnect("changed", ref->shape_callable);
+
             // vaWorldRemovePrimitive_ failing with VA_NOT_ADDED_TO_WORLD means our bookkeeping disagrees with the SDK about this primitive's membership - still proceed to Destroy so we don't leak it, but surface the mismatch.
             switch (ref->kind)
             {
@@ -1175,6 +1243,10 @@ void VAWorld::remove_primitive(Node *node, bool recursive)
                             "VAWorld::remove_primitive(mesh) failed to destroy '",
                             node->get_name(), "' (VAResult=", VAResultToString(destroy_result), ")");
                     }
+
+                    // Must come after the primitive is destroyed, as vaMeshDestroy fails while a primitive still uses the mesh
+                    release_shared_mesh((SharedMesh *)ref->shared_geometry);
+                    ref->shared_geometry = nullptr;
                     break;
                 }
             }

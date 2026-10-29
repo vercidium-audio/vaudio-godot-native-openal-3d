@@ -49,11 +49,14 @@ private:
     float ambient_permeation_energy_cap = 0.15f;
     float minimum_ambient_permeation_energy = 0.01f;
 
+    bool clustering_enabled = false;
+    float clustering_distance = 5.0f;
+
     int type = 0;
     int trail_refresh_count = 16;
     float refresh_distance_threshold = 1.0f;
     int scattering_seed = 0;
-    bool clamp_position = true;
+    bool clamp_position = false;
 
     void apply_properties_to_emitter();
 
@@ -83,6 +86,9 @@ public:
     bool is_raytraced() const;
 
     bool is_raytraced_by_listener() const;
+
+    // See VAEmitter::is_ready_to_play
+    bool is_ready_to_play() const;
 
     int get_grouped_eax_index() const;
 
@@ -140,6 +146,11 @@ public:
     void set_ambient_permeation_energy_cap(float value);
     float get_minimum_ambient_permeation_energy() const;
     void set_minimum_ambient_permeation_energy(float value);
+
+    bool get_clustering_enabled() const;
+    void set_clustering_enabled(bool value);
+    float get_clustering_distance() const;
+    void set_clustering_distance(float value);
 
     int get_type() const;
     void set_type(int value);

@@ -30,5 +30,5 @@ addons/vaudio-godot-native-openal-3d/.DS_Store
 # Build logs
 *.log
 
-# CMake settings
+# cmake settings
 .vscode/settings.json

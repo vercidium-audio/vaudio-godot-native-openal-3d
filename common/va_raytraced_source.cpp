@@ -21,6 +21,7 @@ void VARaytracedSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_muffling_gain_hf"), &VARaytracedSource::get_muffling_gain_hf);
     ClassDB::bind_method(D_METHOD("is_raytraced"), &VARaytracedSource::is_raytraced);
     ClassDB::bind_method(D_METHOD("is_raytraced_by_listener"), &VARaytracedSource::is_raytraced_by_listener);
+    ClassDB::bind_method(D_METHOD("is_ready_to_play"), &VARaytracedSource::is_ready_to_play);
     ClassDB::bind_method(D_METHOD("get_grouped_eax_index"), &VARaytracedSource::get_grouped_eax_index);
 
     // Direct port of VASourceProperties.cs's groups (Reverb/Muffling/Ambience/Advanced) - a subset of VAEmitter's own property surface; Debug Rendering colors not ported, same as VAEmitter.
@@ -110,6 +111,16 @@ void VARaytracedSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_minimum_ambient_permeation_energy", "value"), &VARaytracedSource::set_minimum_ambient_permeation_energy);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "minimum_ambient_permeation_energy", PROPERTY_HINT_RANGE, "0.0,1.0,0.001"), "set_minimum_ambient_permeation_energy", "get_minimum_ambient_permeation_energy");
 
+    ADD_GROUP("Clustering", "");
+
+    ClassDB::bind_method(D_METHOD("get_clustering_enabled"), &VARaytracedSource::get_clustering_enabled);
+    ClassDB::bind_method(D_METHOD("set_clustering_enabled", "value"), &VARaytracedSource::set_clustering_enabled);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "clustering_enabled"), "set_clustering_enabled", "get_clustering_enabled");
+
+    ClassDB::bind_method(D_METHOD("get_clustering_distance"), &VARaytracedSource::get_clustering_distance);
+    ClassDB::bind_method(D_METHOD("set_clustering_distance", "value"), &VARaytracedSource::set_clustering_distance);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "clustering_distance", PROPERTY_HINT_RANGE, "0.01,100.0,0.01,or_greater"), "set_clustering_distance", "get_clustering_distance");
+
     ADD_GROUP("Advanced", "");
 
     ClassDB::bind_method(D_METHOD("get_type"), &VARaytracedSource::get_type);
@@ -185,7 +196,9 @@ void VARaytracedSource::_enter_tree()
         return;
     }
 
-    create_emitter();
+    // After a reparent the child VAEmitter is still here, and keeps its handle or re-attaches itself to the new world
+    if (!emitter)
+        create_emitter();
 }
 
 void VARaytracedSource::_exit_tree()
@@ -207,13 +220,7 @@ void VARaytracedSource::_exit_tree()
             "was added under a VAWorld while it was in the tree.");
     }
 
-    if (emitter)
-    {
-        // remove_child alone only detaches - VAEmitter is exclusively owned by this node, so it must also be freed here or it leaks (confirmed via a headless run reporting a leaked ObjectDB instance before this fix).
-        remove_child(emitter);
-        memdelete(emitter);
-        emitter = nullptr;
-    }
+    // The child VAEmitter is kept, so a reparent within the same VAWorld keeps its handle. It's freed along with this node
 }
 
 // Re-attempts find_va_world each time a node is added anywhere in the tree - see VAEmitter::retry_find_va_world's identical pattern.
@@ -229,7 +236,8 @@ void VARaytracedSource::retry_find_va_world(Node *node)
     get_tree()->disconnect("node_added", callable_mp(this, &VARaytracedSource::retry_find_va_world));
     waiting_for_world = false;
 
-    create_emitter();
+    if (!emitter)
+        create_emitter();
 }
 
 // Matches VASource.cs's CreateEmitter: a private child VAEmitter, never the listener, that never casts its own
@@ -277,6 +285,9 @@ void VARaytracedSource::apply_properties_to_emitter()
     emitter->set_ambient_permeation_energy_cap(ambient_permeation_energy_cap);
     emitter->set_minimum_ambient_permeation_energy(minimum_ambient_permeation_energy);
 
+    emitter->set_clustering_enabled(clustering_enabled);
+    emitter->set_clustering_distance(clustering_distance);
+
     emitter->set_type(type);
     emitter->set_trail_refresh_count(trail_refresh_count);
     emitter->set_refresh_distance_threshold(refresh_distance_threshold);
@@ -287,6 +298,11 @@ void VARaytracedSource::apply_properties_to_emitter()
 bool VARaytracedSource::is_raytraced() const
 {
     return emitter && emitter->is_raytraced();
+}
+
+bool VARaytracedSource::is_ready_to_play() const
+{
+    return emitter && emitter->is_ready_to_play();
 }
 
 bool VARaytracedSource::is_raytraced_by_listener() const
@@ -631,6 +647,32 @@ void VARaytracedSource::set_minimum_ambient_permeation_energy(float value)
     {
         emitter->set_minimum_ambient_permeation_energy(minimum_ambient_permeation_energy);
     }
+}
+
+bool VARaytracedSource::get_clustering_enabled() const
+{
+    return clustering_enabled;
+}
+
+void VARaytracedSource::set_clustering_enabled(bool value)
+{
+    clustering_enabled = value;
+
+    if (emitter)
+        emitter->set_clustering_enabled(clustering_enabled);
+}
+
+float VARaytracedSource::get_clustering_distance() const
+{
+    return clustering_distance;
+}
+
+void VARaytracedSource::set_clustering_distance(float value)
+{
+    clustering_distance = MAX(0.01f, value);
+
+    if (emitter)
+        emitter->set_clustering_distance(clustering_distance);
 }
 
 int VARaytracedSource::get_type() const

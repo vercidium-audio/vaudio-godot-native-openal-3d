@@ -3,7 +3,8 @@
 	<brief_description>
 	</brief_description>
 	<description>
-		Global OpenAL device and mixer control, registered as an [Engine] singleton - reach it from any script as [code]ALManager[/code], at any time, with no scene-tree node required. The output device, sample rate, HRTF, max reverb sends, and max mono/stereo sources used for the one device open at game start come from Project Settings ([code]audio/vaudio/output_device[/code], [code]audio/vaudio/sample_rate[/code], [code]audio/vaudio/hrtf_enabled[/code], [code]audio/vaudio/max_reverb_sends[/code], [code]audio/vaudio/max_mono_sources[/code], [code]audio/vaudio/max_stereo_sources[/code]), not from this singleton - [method set_output_device] is the one exception, letting a shipped game's audio settings menu switch the output device at runtime.
+		Global OpenAL device and mixer control, registered as an [Engine] singleton - reach it from any script as [code]ALManager[/code], at any time, with no scene-tree node required. The output device, sample rate, HRTF, max reverb sends, and max mono/stereo sources used for the one device open at game start come from Project Settings ([code]audio/vaudio/output_device[/code], [code]audio/vaudio/sample_rate[/code], [code]audio/vaudio/hrtf_enabled[/code], [code]audio/vaudio/hrtf[/code], [code]audio/vaudio/max_reverb_sends[/code], [code]audio/vaudio/max_mono_sources[/code], [code]audio/vaudio/max_stereo_sources[/code]), not from this singleton - [method set_output_device], [method set_hrtf] and [method set_hrtf_enabled] are the exceptions, letting a shipped game's audio settings menu change them at runtime.
+		Custom HRTFs: place OpenAL Soft [code].mhr[/code] files in the [code]audio/vaudio/hrtf_folder[/code] folder (default [code]res://hrtf[/code]) and they're listed alongside OpenAL Soft's built-in HRTF, using the file name without its extension. Custom HRTFs are listed before the built-in one, so with the [code]Default[/code] setting OpenAL Soft uses the first custom HRTF. They're bundled into exports automatically. SOFA ([code].sofa[/code]) HRTF datasets can be converted to [code].mhr[/code] with OpenAL Soft's [code]makemhr[/code] utility, e.g. [code]makemhr -i subject.sofa -o subject.mhr[/code].
 	</description>
 	<tutorials>
 	</tutorials>
@@ -25,6 +26,44 @@
 			<param index="0" name="device_name" type="String" />
 			<description>
 				Switches the playback device at runtime, reopening the OpenAL device and context and reusing the current sample rate, HRTF, and max reverb sends settings. Every existing AL object (sources, buffers, filters, effects) is invalidated by this. Pass an empty string to use the driver's default device. Returns [code]false[/code] on failure.
+			</description>
+		</method>
+		<method name="get_available_hrtfs">
+			<return type="PackedStringArray" />
+			<description>
+				Returns the names of the HRTFs OpenAL Soft can use, including any [code].mhr[/code] files in the [code]audio/vaudio/hrtf_folder[/code] folder. Pass one of these to [method set_hrtf].
+			</description>
+		</method>
+		<method name="set_hrtf">
+			<return type="bool" />
+			<param index="0" name="name" type="String" />
+			<description>
+				Switches to the named HRTF at runtime, without interrupting playing sounds. Pass an empty string to use OpenAL Soft's default HRTF. If the name isn't found, the default HRTF is used and a warning is logged. Returns [code]false[/code] if the device couldn't be reset.
+			</description>
+		</method>
+		<method name="get_hrtf">
+			<return type="String" />
+			<description>
+				Returns the HRTF name last passed to [method set_hrtf] or set in [code]audio/vaudio/hrtf[/code], or an empty string for the default HRTF.
+			</description>
+		</method>
+		<method name="get_active_hrtf">
+			<return type="String" />
+			<description>
+				Returns the name of the HRTF OpenAL Soft is actually using, or an empty string if HRTF is not active (e.g. it's disabled, or the output isn't stereo).
+			</description>
+		</method>
+		<method name="set_hrtf_enabled">
+			<return type="bool" />
+			<param index="0" name="value" type="bool" />
+			<description>
+				Turns HRTF on or off at runtime, without interrupting playing sounds. HRTF is intended for headphones - players using speakers may prefer it off. Returns [code]false[/code] if the device couldn't be reset.
+			</description>
+		</method>
+		<method name="get_hrtf_enabled">
+			<return type="bool" />
+			<description>
+				Returns whether HRTF is requested, from [method set_hrtf_enabled] or [code]audio/vaudio/hrtf_enabled[/code].
 			</description>
 		</method>
 		<method name="set_master_volume">

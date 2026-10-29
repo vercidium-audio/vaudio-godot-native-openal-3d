@@ -42,6 +42,8 @@ private:
     alcGetProcAddressFn alcGetProcAddress_ = nullptr;
 
     alcReopenDeviceSOFTFn alcReopenDeviceSOFT_ = nullptr;
+    alcGetStringiSOFTFn alcGetStringiSOFT_ = nullptr;
+    alcResetDeviceSOFTFn alcResetDeviceSOFT_ = nullptr;
 
     alcCaptureOpenDeviceFn alcCaptureOpenDevice_ = nullptr;
     alcCaptureCloseDeviceFn alcCaptureCloseDevice_ = nullptr;
@@ -103,6 +105,9 @@ private:
     int sample_rate = 0;
     bool hrtf_enabled = false;
 
+    // Empty means OpenAL Soft's default HRTF
+    std::string hrtf_name;
+
     ALenum distance_model = AL_INVERSE_DISTANCE_CLAMPED;
 
     float meters_per_unit = 1.0f;
@@ -120,7 +125,18 @@ private:
     void unload_library();
     void close_device();
 
-    // Reads device_name/max_auxiliary_sends/sample_rate/hrtf_enabled from Project Settings.
+    // Writes the zero-terminated ALC attribute list shared by context creation, device reopen and device reset. Needs at least 13 entries.
+    void build_attributes(ALCint *attributes);
+
+    // Index into the device's current HRTF list for ALC_HRTF_ID_SOFT, or -1 for OpenAL Soft's default
+    int find_hrtf_index();
+
+    // Points OpenAL Soft at the audio/vaudio/hrtf_folder .mhr files. Must run before the library is loaded.
+    void prepare_hrtf_folder();
+
+    bool reset_device();
+
+    // Reads device_name/max_auxiliary_sends/sample_rate/hrtf_enabled/hrtf from Project Settings.
     void read_settings_from_project_settings();
 
 protected:
@@ -205,6 +221,24 @@ public:
     PackedStringArray get_available_devices();
 
     PackedStringArray get_available_capture_devices();
+
+    PackedStringArray get_available_hrtfs();
+
+    bool set_hrtf(const String &name);
+
+    String get_hrtf() const
+    {
+        return String::utf8(hrtf_name.c_str());
+    }
+
+    String get_active_hrtf();
+
+    bool set_hrtf_enabled(bool value);
+
+    bool get_hrtf_enabled() const
+    {
+        return hrtf_enabled;
+    }
 
     void shutdown();
 

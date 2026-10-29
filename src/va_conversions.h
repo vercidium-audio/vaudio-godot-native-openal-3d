@@ -63,7 +63,7 @@ inline std::vector<VAVector> ConvertMeshToVAudio(const Ref<Mesh> &mesh, VAVector
         {
             Vector3 edge1 = v1 - v0;
             Vector3 edge2 = v2 - v0;
-            Vector3 calculated_normal = edge1.cross(edge2).normalized();
+            Vector3 calculated_normal = edge2.cross(edge1).normalized();
             Vector3 mesh_normal = normals[index];
 
             if (calculated_normal.dot(mesh_normal) < 0)
@@ -75,10 +75,10 @@ inline std::vector<VAVector> ConvertMeshToVAudio(const Ref<Mesh> &mesh, VAVector
             }
         }
 
-        // Godot uses CCW winding; VAudio expects CW - swap v1/v2 to convert.
+        // Godot and vaudio both use CW winding for front faces
         vertices.push_back(ToVAudio(v0));
-        vertices.push_back(ToVAudio(v2));
         vertices.push_back(ToVAudio(v1));
+        vertices.push_back(ToVAudio(v2));
 
         min.x = MIN(min.x, MIN(v0.x, MIN(v1.x, v2.x)));
         min.y = MIN(min.y, MIN(v0.y, MIN(v1.y, v2.y)));
@@ -143,7 +143,7 @@ inline std::vector<VAVector> ConvertMeshToVAudio(const Ref<Mesh> &mesh, VAVector
     return vertices;
 }
 
-// ConcavePolygonShape3D::get_faces() already returns a flat CW-wound triangle vertex list (unlike Mesh, which is CCW and needs flipping) - just accumulate bounds.
+// ConcavePolygonShape3D::get_faces() already returns a flat CW-wound triangle vertex list - just accumulate bounds.
 inline std::vector<VAVector> ConvertConcavePolygonToVAudio(const Ref<ConcavePolygonShape3D> &shape, VAVector &out_min, VAVector &out_max)
 {
     PackedVector3Array faces = shape->get_faces();
@@ -179,21 +179,6 @@ inline std::vector<VAVector> ConvertConcavePolygonToVAudio(const Ref<ConcavePoly
     out_max = ToVAudio(max);
 
     return vertices;
-}
-
-// ConvexPolygonShape3D has no direct triangle list of its own - triangulate via its debug mesh, same as the Mono plugin's ConvertConvexPolygonToVector3FList.
-inline std::vector<VAVector> ConvertConvexPolygonToVAudio(const Ref<ConvexPolygonShape3D> &shape, VAVector &out_min, VAVector &out_max)
-{
-    Ref<Mesh> debug_mesh = shape->get_debug_mesh();
-
-    if (debug_mesh.is_null())
-    {
-        out_min = ToVAudio(Vector3());
-        out_max = ToVAudio(Vector3());
-        return std::vector<VAVector>();
-    }
-
-    return ConvertMeshToVAudio(debug_mesh, out_min, out_max);
 }
 
 // HeightMapShape3D is centered at the origin, spanning -width/2..+width/2 and -depth/2..+depth/2 - triangulate each 2x2 cell of the grid into two CW-wound triangles.

@@ -23,7 +23,7 @@ VAListener::VAListener()
     set_has_relative_reverb(true);
 }
 
-// Hides inherited properties not meaningful on a listener: affects_grouped_eax/occlusion_energy_cap/permeation_energy_cap only apply to emitters that can be occluded/permeated, and raytrace_once only applies to emitters that get raytraced against the listener, not the listener itself.
+// Hides inherited properties not meaningful on a listener: affects_grouped_eax/occlusion_energy_cap/permeation_energy_cap only apply to emitters that can be occluded/permeated, raytrace_once only applies to emitters that get raytraced against the listener, not the listener itself, and the listener never shares a cluster with its own targets.
 void VAListener::_validate_property(PropertyInfo &p_property) const
 {
     if (p_property.name == StringName("has_relative_reverb") ||
@@ -31,7 +31,9 @@ void VAListener::_validate_property(PropertyInfo &p_property) const
         p_property.name == StringName("keep_reverb_tail_alive") ||
         p_property.name == StringName("occlusion_energy_cap") ||
         p_property.name == StringName("permeation_energy_cap") ||
-        p_property.name == StringName("raytrace_once"))
+        p_property.name == StringName("raytrace_once") ||
+        p_property.name == StringName("clustering_enabled") ||
+        p_property.name == StringName("clustering_distance"))
     {
         p_property.usage = PROPERTY_USAGE_NONE;
     }
@@ -89,10 +91,15 @@ void VAListener::activate(::VAEmitter *shared_handle)
     vaEmitterSetPosition(emitter, ToVAudio(get_global_position()));
 
     apply_properties_to_handle();
+
+    initialize_visualisation();
 }
 
 void VAListener::deactivate()
 {
+    // The next current listener takes the handle, so its visualisation callback and ray count are cleared first
+    teardown_visualisation();
+
     current = false;
     emitter = nullptr;
 }

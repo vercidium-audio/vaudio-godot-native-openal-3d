@@ -16,7 +16,8 @@ VASource::~VASource()
 
 bool VASource::play()
 {
-    if (!is_raytraced())
+    // Wait for the muffling and reverb results, so the sound never starts unmuffled or without reverb
+    if (!is_ready_to_play())
     {
         return false;
     }
@@ -31,12 +32,7 @@ void VASource::_process(double delta)
     VARaytracedSource::_process(delta);
     process_raytracing(delta);
 
-    if (!is_raytraced())
-    {
-        return;
-    }
-
-    if (!played && get_autoplay())
+    if (!played && get_autoplay() && is_ready_to_play())
     {
         play();
     }

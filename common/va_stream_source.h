@@ -19,6 +19,9 @@ private:
 
     bool stream_open = false;
 
+    // Latched once the emitter is first ready to play, so a raytrace_once stream keeps accepting data after its emitter leaves the world
+    bool stream_ready = false;
+
     std::vector<uint8_t> drained_chunk;
 
     void drain_used_chunks();
@@ -41,6 +44,9 @@ public:
     void push_audio_data(const uint8_t *data, int num_bytes);
 
     void close_stream();
+
+    // Closes the stream too, else pushed data would queue forever with no source playing it
+    void stop() override;
 
     bool is_stream_open() const
     {

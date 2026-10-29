@@ -69,3 +69,37 @@ static func is_playing(source: Node) -> bool:
 
 static func make_current(listener: Node) -> void:
 	listener.make_current()
+
+static func open_stream(source: Node, format: int, frequency: int) -> bool:
+	return source.open_stream(format, frequency)
+
+static func push_audio_data(source: Node, data: PackedByteArray) -> void:
+	source.push_audio_data(data)
+
+static func close_stream(source: Node) -> void:
+	source.close_stream()
+
+static func is_stream_open(source: Node) -> bool:
+	return source.is_stream_open()
+
+static func play(source: Node) -> bool:
+	return source.play()
+
+static func stop(source: Node) -> void:
+	source.stop()
+
+# HRTF lives on the ALManager singleton here. The world is unused, but the C# adapter needs it to reach ALManager
+static func available_hrtfs(_world: Node) -> PackedStringArray:
+	return ALManager.get_available_hrtfs()
+
+static func set_hrtf(_world: Node, hrtf_name: String) -> bool:
+	return ALManager.set_hrtf(hrtf_name)
+
+static func get_hrtf(_world: Node) -> String:
+	return ALManager.get_hrtf()
+
+static func active_hrtf(_world: Node) -> String:
+	return ALManager.get_active_hrtf()
+
+static func set_hrtf_enabled(_world: Node, value: bool) -> bool:
+	return ALManager.set_hrtf_enabled(value)

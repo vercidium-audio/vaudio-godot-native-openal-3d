@@ -13,9 +13,11 @@ fi
 git submodule update --init --recursive
 
 case "$(uname -s)" in
-    Linux) PLATFORM=linux; ARCH=x86_64; LIBEXT=".so" ;;
+    Linux) PLATFORM=linux; ARCH=x86_64; LIBEXT=".so"; EXTRA_SCONS_ARGS="" ;;
     Darwin)
         PLATFORM=macos; ARCH=arm64; LIBEXT=".dylib"
+        # Without a deployment target the plugin only loads on the build machine's macOS version or newer. 11.0 is the first arm64 macOS and Godot's arm64 minimum.
+        EXTRA_SCONS_ARGS="macos_deployment_target=11.0"
         # Non-interactive SSH gets a bare PATH without Homebrew, where scons lives.
         for brew_bin in /opt/homebrew/bin /usr/local/bin; do
             [ -x "$brew_bin/scons" ] && case ":$PATH:" in *":$brew_bin:"*) ;; *) PATH="$brew_bin:$PATH" ;; esac
@@ -24,11 +26,12 @@ case "$(uname -s)" in
     *) echo "Unsupported host: $(uname -s)" >&2; exit 1 ;;
 esac
 
-scons platform="$PLATFORM" arch="$ARCH" target=editor
-scons platform="$PLATFORM" arch="$ARCH" target=template_debug
-scons platform="$PLATFORM" arch="$ARCH" target=template_release
+scons platform="$PLATFORM" arch="$ARCH" target=editor $EXTRA_SCONS_ARGS
+scons platform="$PLATFORM" arch="$ARCH" target=template_debug $EXTRA_SCONS_ARGS
+scons platform="$PLATFORM" arch="$ARCH" target=template_release $EXTRA_SCONS_ARGS
 
-BIN_DIR="addons/vaudio-godot-native-openal-3d/bin"
+ADDON_DIR="addons/vaudio-godot-native-openal-3d"
+BIN_DIR="$ADDON_DIR/bin"
 EDITOR_LIB="libvaudiogodotnativeopenal3d.${PLATFORM}.editor.${ARCH}${LIBEXT}"
 DEBUG_LIB="libvaudiogodotnativeopenal3d.${PLATFORM}.template_debug.${ARCH}${LIBEXT}"
 RELEASE_LIB="libvaudiogodotnativeopenal3d.${PLATFORM}.template_release.${ARCH}${LIBEXT}"
@@ -60,6 +63,7 @@ copy_to() {
         [ -f "$BIN_DIR/$lib" ] && cp -f "$BIN_DIR/$lib" "$dest/"
     done
     [ -f "$BIN_DIR/vaudio-debug-window" ] && cp -f "$BIN_DIR/vaudio-debug-window" "$dest/"
+    cp -f "$ADDON_DIR/plugin.cfg" "$ADDON_DIR/plugin.gd" "$1/"
 }
 
 if [ -n "${VAUDIO_RELEASE_DIR:-}" ]; then copy_to "$VAUDIO_RELEASE_DIR"; else echo "VAUDIO_RELEASE_DIR not set - skipping copy to release repo"; fi

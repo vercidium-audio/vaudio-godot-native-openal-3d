@@ -25,6 +25,10 @@ using alcGetProcAddressFn = void *(ALC_APIENTRY *)(ALCdevice *, const ALCchar *)
 // (see reinitialize(), al_manager.cpp). An ALC extension, so unlike the AL_EXT_EFX/AL_SOFT_callback_buffer entries below, resolved via alcGetProcAddress.
 using alcReopenDeviceSOFTFn = LPALCREOPENDEVICESOFT;
 
+// ALC_SOFT_HRTF - enumerates the available HRTFs, and resets the device in place to switch between them without invalidating any AL objects
+using alcGetStringiSOFTFn = LPALCGETSTRINGISOFT;
+using alcResetDeviceSOFTFn = LPALCRESETDEVICESOFT;
+
 // ALC_EXT_capture (core in the ALC API since OpenAL 1.1) - resolved like the other alc* entry points above, for ALCaptureDevice.
 using alcCaptureOpenDeviceFn = ALCdevice *(ALC_APIENTRY *)(const ALCchar *, ALCuint, ALCenum, ALCsizei);
 using alcCaptureCloseDeviceFn = ALCboolean(ALC_APIENTRY *)(ALCdevice *);

@@ -11,6 +11,7 @@ class ALSourceHandle
 {
 private:
     ALuint handle = 0;
+    ALuint buffer = 0;
     bool looping = false;
 
 public:
@@ -51,6 +52,11 @@ public:
     ALuint get_handle() const
     {
         return handle;
+    }
+
+    ALuint get_buffer() const
+    {
+        return buffer;
     }
 
     bool is_valid() const

@@ -72,6 +72,11 @@ private:
     float ambient_permeation_energy_cap = 0.15f;
     float minimum_ambient_permeation_energy = 0.01f;
 
+    bool clustering_enabled = false;
+    float clustering_distance = 5.0f;
+    bool target_clustering_enabled = false;
+    float target_clustering_distance = 5.0f;
+
     int type = 0;
     int trail_refresh_count = 16;
     float refresh_distance_threshold = 1.0f;
@@ -79,6 +84,7 @@ private:
     bool clamp_position = true;
 
     bool raytrace_once = false;
+    bool raytrace_once_removed = false;
 
     bool random_trail_color = false;
     Color trail_color = Color(1.0f, 1.0f, 1.0f, 25.0f / 255.0f);
@@ -99,7 +105,17 @@ private:
 
     bool waiting_for_world = false;
 
+    // Set from leaving the tree until the end of that frame. If this node re-enters the same VAWorld before then (e.g. a reparent), it keeps its handle
+    bool detach_pending = false;
+
+    // Checked before releasing, as the VAWorld may have been freed while this node was out of the tree
+    uint64_t va_world_id = 0;
+
     void retry_find_va_world(Node *node);
+    void on_va_world_found(VAWorld *world);
+    void defer_release();
+    void release_if_pending();
+    void release_from_world();
 
     void apply_raytracing_results();
 
@@ -114,6 +130,7 @@ private:
 protected:
     static void _bind_methods();
     void _validate_property(PropertyInfo &p_property) const;
+    void _notification(int p_what);
 
 public:
     // Destroys the orphaned handles owned by this world, called from ~VAWorld after vaWorldDestroy has unlinked them (e.g. ones still waiting on a reverb tail), so a late OnRemoved can't reach a freed VAWorld
@@ -143,6 +160,9 @@ public:
     }
 
     bool is_raytraced() const;
+
+    // True once the listener has raytraced this emitter and, if it casts reverb rays and affects grouped EAX, it has cast its own reverb rays too. Sources don't play until then
+    bool is_ready_to_play() const;
 
     int get_grouped_eax_index() const;
 
@@ -190,6 +210,12 @@ public:
     {
         visualisation = value;
     }
+
+    // Starts the VAVisualisation attached to this emitter, once this emitter holds a handle
+    void initialize_visualisation();
+
+    // Stops it. Call before this emitter lets go of its handle
+    void teardown_visualisation();
 
     int get_reverb_ray_count() const;
     void set_reverb_ray_count(int value);
@@ -251,6 +277,15 @@ public:
     void set_ambient_permeation_energy_cap(float value);
     float get_minimum_ambient_permeation_energy() const;
     void set_minimum_ambient_permeation_energy(float value);
+
+    bool get_clustering_enabled() const;
+    void set_clustering_enabled(bool value);
+    float get_clustering_distance() const;
+    void set_clustering_distance(float value);
+    bool get_target_clustering_enabled() const;
+    void set_target_clustering_enabled(bool value);
+    float get_target_clustering_distance() const;
+    void set_target_clustering_distance(float value);
 
     int get_visualisation_ray_count() const;
     void set_visualisation_ray_count(int value);

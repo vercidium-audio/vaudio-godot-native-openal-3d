@@ -19,6 +19,7 @@ extern "C"
 
 #include "openal/al_reverb.h"
 #include "va_conversions.h"
+#include "va_debug_window_check.h"
 #include "va_engine_util.h"
 #include "va_primitive_ref.h"
 
@@ -91,6 +92,7 @@ private:
     bool pending_shutdown = false;
     int raytrace_count = 0;
     bool rendering_enabled = true;
+    float visualisation_scale = 1.0f;
     bool sync_viewport = true;
 
     void send_viewport_camera_to_running_game();
@@ -132,6 +134,25 @@ private:
     void create_primitive(MeshInstance3D *mesh_instance, VAMaterialType material, bool use_flat_transmission);
 
     void update_collision_shape_primitive(CollisionShape3D *collision_shape, VAPrimitiveRef *ref);
+    void on_collision_shape_changed(CollisionShape3D *collision_shape);
+
+    // A VAMesh built once per Godot Mesh/Shape3D resource and shared by every mesh primitive created from it. Stored on the world rather than as resource metadata, since a VAMesh can only belong to one world
+    struct SharedMesh
+    {
+        ::VAMesh *mesh = nullptr;
+        Ref<Resource> resource;
+        int reference_count = 0;
+    };
+
+    // Keyed by the resource's instance id. Runtime edits to a Mesh resource (e.g. ArrayMesh surfaces) aren't detected, so nodes keep its old triangles until they're re-added
+    std::unordered_map<uint64_t, SharedMesh *> shared_meshes;
+
+    // read_triangles is only called if the resource doesn't have a shared mesh yet. Returns nullptr if it has no triangles or creation failed
+    VAMeshPrimitive *create_shared_mesh_primitive(const Ref<Resource> &resource, std::function<std::vector<VAVector>(VAVector &, VAVector &)> read_triangles, VAMaterialType material, const VAMatrix &transform, Node *node, SharedMesh *&out_shared_mesh);
+    void release_shared_mesh(SharedMesh *shared_mesh);
+
+    // Stops new primitives reusing this shared mesh, e.g. after its Shape3D changed. Existing primitives keep it until they're removed
+    void invalidate_shared_mesh(SharedMesh *shared_mesh);
 
 protected:
     static void _bind_methods();
@@ -220,7 +241,20 @@ public:
         rendering_enabled = value;
 
         if (world)
-            vaWorldSetRenderingEnabled(world, value);
+            va_godot::error_if_debug_window_missing(vaWorldSetRenderingEnabled(world, value));
+    }
+
+    float get_visualisation_scale() const
+    {
+        return visualisation_scale;
+    }
+
+    void set_visualisation_scale(float value)
+    {
+        visualisation_scale = value;
+
+        if (world)
+            vaWorldSetVisualisationScale(world, value);
     }
 
     bool get_sync_viewport() const
@@ -250,6 +284,12 @@ public:
         return bounds_color;
     }
     void set_bounds_color(Color value);
+
+    String get_world_name() const
+    {
+        return world_name;
+    }
+    void set_world_name(const String &value);
 
     float get_epsilon() const
     {
@@ -367,6 +407,9 @@ public:
 private:
     Vector3 bounds_size = Vector3(200, 100, 200);
     Color bounds_color = Color(0.0f, 0.0f, 0.0f, 0.25f);
+    // Empty means the node's own name is used
+    String world_name;
+    void apply_world_name();
     float epsilon = 0.01f;
     // A node only inherits a cascading material if its visual render layer / body collision layer is in these masks. A node with its own material is always included. 0xFFFFF = all 20 layers.
     uint32_t render_layers = 0xFFFFF;
