@@ -250,7 +250,7 @@ void VAWorld::_ready()
     set_notify_transform(true);
 
     normalize_transform();
-    warn_if_bounds_too_small();
+    reclamp_bounds_size();
 
     if (IS_EDITOR_HINT())
     {

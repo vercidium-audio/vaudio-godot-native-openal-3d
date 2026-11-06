@@ -97,7 +97,7 @@
 			What the bounds follow during play. With None (0) they start at [member position]. With Listener (1) they're centred on the current VAListener, so set [member bounds_size] to cover the area that's loaded around the player, and [member position] only places the box in the editor and until a listener enters the tree.
 		</member>
 		<member name="bounds_update_distance" type="float" setter="set_bounds_update_distance" getter="get_bounds_update_distance" default="25.0">
-			How far the current listener must move during play, in world units, before the bounds follow it, with [member bounds_follow] set to Listener. Every move of the bounds re-checks all raytraced trails, so they should move in steps. Keep [member bounds_size] well over twice this value on every axis, or the listener can walk out of the bounds before they recentre. 0 follows every move.
+			How far the current listener must move during play, in world units, before the bounds follow it, with [member bounds_follow] set to Listener. Every move of the bounds re-checks all raytraced trails, so they should move in steps. While following the listener, [member bounds_size] is clamped to at least twice this value on every axis, so the listener can't walk out of the bounds before they recentre. 0 follows every move.
 		</member>
 		<member name="bounds_color" type="Color" setter="set_bounds_color" getter="get_bounds_color" default="Color(1, 0.65, 0, 1)">
 			The color of the bounds gizmo drawn in the editor viewport. Editor-only visualization; has no effect on raytracing.

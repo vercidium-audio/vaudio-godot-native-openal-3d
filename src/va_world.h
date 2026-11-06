@@ -440,8 +440,9 @@ private:
     void place_bounds();
     void follow_bounds();
 
-    // With bounds_follow Listener, warns when the listener can walk out of the bounds before they recentre
-    void warn_if_bounds_too_small();
+    // With bounds_follow Listener, the listener can move just under bounds_update_distance along one axis before the bounds recentre, so each half of the box must be at least that wide
+    Vector3 clamp_bounds_size(Vector3 size) const;
+    void reclamp_bounds_size();
 
     Color bounds_color = Color(0.0f, 0.0f, 0.0f, 0.25f);
     // Empty means the node's own name is used

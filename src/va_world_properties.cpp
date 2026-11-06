@@ -25,14 +25,13 @@ void VAWorld::set_position(const Vector3 &value)
 
 void VAWorld::set_bounds_size(Vector3 value)
 {
-    bounds_size = value;
+    bounds_size = clamp_bounds_size(value);
     update_gizmos();
-    warn_if_bounds_too_small();
 
     if (!world)
         return;
 
-    VAResult result = vaWorldSetSize(world, ToVAudio(value));
+    VAResult result = vaWorldSetSize(world, ToVAudio(bounds_size));
 
     if (result != VA_SUCCESS)
         VA_ERROR_NAMED_RESULT(result, "Failed to set world size (may be negative or NaN/Infinity)");
@@ -50,7 +49,7 @@ Vector3 VAWorld::get_bounds_position() const
 void VAWorld::set_bounds_follow(int value)
 {
     bounds_follow = value;
-    warn_if_bounds_too_small();
+    reclamp_bounds_size();
 
     if (world)
         place_bounds();
@@ -59,7 +58,7 @@ void VAWorld::set_bounds_follow(int value)
 void VAWorld::set_bounds_update_distance(float value)
 {
     bounds_update_distance = MAX(0.0f, value);
-    warn_if_bounds_too_small();
+    reclamp_bounds_size();
 }
 
 Vector3 VAWorld::get_bounds_target() const
@@ -106,17 +105,20 @@ void VAWorld::follow_bounds()
         place_bounds();
 }
 
-void VAWorld::warn_if_bounds_too_small()
+Vector3 VAWorld::clamp_bounds_size(Vector3 size) const
 {
-    // Properties load in any order, so _ready checks the final values
-    if (!is_inside_tree() || bounds_follow != BOUNDS_FOLLOW_LISTENER || bounds_update_distance <= 0.0f)
-        return;
+    // Properties load in any order, so _ready clamps the final values
+    if (!is_inside_tree() || bounds_follow != BOUNDS_FOLLOW_LISTENER)
+        return size;
 
-    // The listener can move just under bounds_update_distance along one axis before the bounds recentre, so each half of the box must be wider than that
-    float smallest = std::min({bounds_size.x, bounds_size.y, bounds_size.z});
+    float minimum = bounds_update_distance * 2.0f;
+    return Vector3(MAX(size.x, minimum), MAX(size.y, minimum), MAX(size.z, minimum));
+}
 
-    if (smallest <= bounds_update_distance * 2.0f)
-        VA_WARN_NAMED("bounds_size's smallest side (", smallest, ") is not more than twice bounds_update_distance (", bounds_update_distance, "), so the listener can walk out of the bounds before they follow it. Make bounds_size well over ", bounds_update_distance * 2.0f, " on every axis, or lower bounds_update_distance.");
+void VAWorld::reclamp_bounds_size()
+{
+    if (clamp_bounds_size(bounds_size) != bounds_size)
+        set_bounds_size(bounds_size);
 }
 
 void VAWorld::set_bounds_color(Color value)
