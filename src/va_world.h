@@ -279,6 +279,21 @@ public:
     }
     void set_bounds_size(Vector3 value);
 
+    // The bounds' minimum corner in the SDK during play, which differs from this node's position while bounds_follow is Listener
+    Vector3 get_bounds_position() const;
+
+    int get_bounds_follow() const
+    {
+        return bounds_follow;
+    }
+    void set_bounds_follow(int value);
+
+    float get_bounds_update_distance() const
+    {
+        return bounds_update_distance;
+    }
+    void set_bounds_update_distance(float value);
+
     Color get_bounds_color() const
     {
         return bounds_color;
@@ -406,6 +421,28 @@ public:
 
 private:
     Vector3 bounds_size = Vector3(200, 100, 200);
+
+    enum BoundsFollow
+    {
+        BOUNDS_FOLLOW_NONE,
+        BOUNDS_FOLLOW_LISTENER,
+    };
+
+    int bounds_follow = BOUNDS_FOLLOW_NONE;
+    float bounds_update_distance = 25.0f;
+
+    // The position last pushed to the SDK, and the listener it was centred on
+    Vector3 bounds_position;
+    va_godot::VAEmitter *bounds_listener = nullptr;
+
+    // Where bounds_follow wants the bounds' minimum corner. Following a listener while there is none leaves the bounds where they are
+    Vector3 get_bounds_target() const;
+    void place_bounds();
+    void follow_bounds();
+
+    // With bounds_follow Listener, warns when the listener can walk out of the bounds before they recentre
+    void warn_if_bounds_too_small();
+
     Color bounds_color = Color(0.0f, 0.0f, 0.0f, 0.25f);
     // Empty means the node's own name is used
     String world_name;

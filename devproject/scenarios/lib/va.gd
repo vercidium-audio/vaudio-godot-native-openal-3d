@@ -36,6 +36,9 @@ static func grouped_eax_index(source: Node) -> int:
 static func raytrace_count(world: Node) -> int:
 	return world.get_raytrace_count()
 
+static func bounds_position(world: Node) -> Vector3:
+	return world.get_bounds_position()
+
 static func raytracing_time(world: Node) -> float:
 	return world.get_raytracing_time()
 

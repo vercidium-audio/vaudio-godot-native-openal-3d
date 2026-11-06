@@ -1,5 +1,6 @@
 #include "openal/al_manager.h"
 #include "va_conversions.h"
+#include "va_emitter.h"
 #include "va_engine_util.h"
 #include "va_world.h"
 
@@ -16,19 +17,17 @@ void VAWorld::set_position(const Vector3 &value)
     Node3D::set_position(value);
     update_gizmos();
 
-    if (!world)
+    if (!world || bounds_follow == BOUNDS_FOLLOW_LISTENER)
         return;
 
-    VAResult result = vaWorldSetPosition(world, ToVAudio(value));
-
-    if (result != VA_SUCCESS)
-        VA_ERROR_NAMED_RESULT(result, "Failed to set world position (may be NaN/Infinity)");
+    place_bounds();
 }
 
 void VAWorld::set_bounds_size(Vector3 value)
 {
     bounds_size = value;
     update_gizmos();
+    warn_if_bounds_too_small();
 
     if (!world)
         return;
@@ -37,6 +36,87 @@ void VAWorld::set_bounds_size(Vector3 value)
 
     if (result != VA_SUCCESS)
         VA_ERROR_NAMED_RESULT(result, "Failed to set world size (may be negative or NaN/Infinity)");
+
+    // Stay centred on the listener, where a fixed box keeps its minimum corner
+    if (bounds_follow == BOUNDS_FOLLOW_LISTENER)
+        place_bounds();
+}
+
+Vector3 VAWorld::get_bounds_position() const
+{
+    return world ? FromVAudio(vaWorldGetPosition(world)) : get_position();
+}
+
+void VAWorld::set_bounds_follow(int value)
+{
+    bounds_follow = value;
+    warn_if_bounds_too_small();
+
+    if (world)
+        place_bounds();
+}
+
+void VAWorld::set_bounds_update_distance(float value)
+{
+    bounds_update_distance = MAX(0.0f, value);
+    warn_if_bounds_too_small();
+}
+
+Vector3 VAWorld::get_bounds_target() const
+{
+    if (bounds_follow != BOUNDS_FOLLOW_LISTENER)
+        return get_position();
+
+    return listener ? listener->get_global_position() - bounds_size * 0.5f : bounds_position;
+}
+
+void VAWorld::place_bounds()
+{
+    bounds_position = get_bounds_target();
+    bounds_listener = listener;
+
+    VAResult result = vaWorldSetPosition(world, ToVAudio(bounds_position));
+
+    if (result != VA_SUCCESS)
+        VA_ERROR_NAMED_RESULT(result, "Failed to set world position (may be NaN/Infinity)");
+}
+
+void VAWorld::follow_bounds()
+{
+    if (bounds_follow != BOUNDS_FOLLOW_LISTENER)
+        return;
+
+    if (!listener)
+    {
+        bounds_listener = nullptr;
+        return;
+    }
+
+    // A new current listener gets centred bounds whatever bounds_update_distance is
+    if (listener != bounds_listener)
+    {
+        place_bounds();
+        return;
+    }
+
+    Vector3 target = get_bounds_target();
+
+    // Every move of the bounds re-checks all raytraced trails, so they move in steps
+    if (target != bounds_position && target.distance_squared_to(bounds_position) >= bounds_update_distance * bounds_update_distance)
+        place_bounds();
+}
+
+void VAWorld::warn_if_bounds_too_small()
+{
+    // Properties load in any order, so _ready checks the final values
+    if (!is_inside_tree() || bounds_follow != BOUNDS_FOLLOW_LISTENER || bounds_update_distance <= 0.0f)
+        return;
+
+    // The listener can move just under bounds_update_distance along one axis before the bounds recentre, so each half of the box must be wider than that
+    float smallest = std::min({bounds_size.x, bounds_size.y, bounds_size.z});
+
+    if (smallest <= bounds_update_distance * 2.0f)
+        VA_WARN_NAMED("bounds_size's smallest side (", smallest, ") is not more than twice bounds_update_distance (", bounds_update_distance, "), so the listener can walk out of the bounds before they follow it. Make bounds_size well over ", bounds_update_distance * 2.0f, " on every axis, or lower bounds_update_distance.");
 }
 
 void VAWorld::set_bounds_color(Color value)

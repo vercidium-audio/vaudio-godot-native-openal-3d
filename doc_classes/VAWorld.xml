@@ -66,6 +66,12 @@
 				Returns the reverb decay time, in seconds, of the grouped EAX zone at [param index].
 			</description>
 		</method>
+		<method name="get_bounds_position" qualifiers="const">
+			<return type="Vector3" />
+			<description>
+				Returns the bounds' minimum corner in the SDK during play, which differs from [member position] while [member bounds_follow] is Listener. Returns [member position] in the editor.
+			</description>
+		</method>
 		<method name="get_raytrace_count" qualifiers="const">
 			<return type="int" />
 			<description>
@@ -86,6 +92,12 @@
 		</member>
 		<member name="bounds_size" type="Vector3" setter="set_bounds_size" getter="get_bounds_size" default="Vector3(200, 100, 200)">
 			The size of the raytracing bounds, extending from [member position]. All rays are confined within these bounds; emitters outside them are not raytraced, and primitives fully outside them don't affect raytracing.
+		</member>
+		<member name="bounds_follow" type="int" setter="set_bounds_follow" getter="get_bounds_follow" default="0">
+			What the bounds follow during play. With None (0) they start at [member position]. With Listener (1) they're centred on the current VAListener, so set [member bounds_size] to cover the area that's loaded around the player, and [member position] only places the box in the editor and until a listener enters the tree.
+		</member>
+		<member name="bounds_update_distance" type="float" setter="set_bounds_update_distance" getter="get_bounds_update_distance" default="25.0">
+			How far the current listener must move during play, in world units, before the bounds follow it, with [member bounds_follow] set to Listener. Every move of the bounds re-checks all raytraced trails, so they should move in steps. Keep [member bounds_size] well over twice this value on every axis, or the listener can walk out of the bounds before they recentre. 0 follows every move.
 		</member>
 		<member name="bounds_color" type="Color" setter="set_bounds_color" getter="get_bounds_color" default="Color(1, 0.65, 0, 1)">
 			The color of the bounds gizmo drawn in the editor viewport. Editor-only visualization; has no effect on raytracing.
