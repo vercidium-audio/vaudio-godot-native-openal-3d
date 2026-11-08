@@ -4,6 +4,7 @@
 #include <cmath>
 #include <vector>
 
+#include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/concave_polygon_shape3d.hpp>
 #include <godot_cpp/classes/convex_polygon_shape3d.hpp>
 #include <godot_cpp/classes/height_map_shape3d.hpp>
@@ -49,7 +50,7 @@ inline Transform3D RemoveScale(const Transform3D &transform, Vector3 &out_scale)
     return Transform3D(transform.basis.orthonormalized(), transform.origin);
 }
 
-// Flatten every surface of a Godot Mesh into a flat CW-wound triangle vertex list for a VAMeshPrimitive, computing the local-space AABB along the way.
+// Flatten every triangle surface of a Godot Mesh into a flat CW-wound triangle vertex list for a VAMeshPrimitive, computing the local-space AABB along the way.
 inline std::vector<VAVector> ConvertMeshToVAudio(const Ref<Mesh> &mesh, VAVector &out_min, VAVector &out_max)
 {
     std::vector<VAVector> vertices;
@@ -88,9 +89,15 @@ inline std::vector<VAVector> ConvertMeshToVAudio(const Ref<Mesh> &mesh, VAVector
         max.z = MAX(max.z, MAX(v0.z, MAX(v1.z, v2.z)));
     };
 
+    // Only ArrayMesh exposes surface primitive types to GDExtension. Line and point surfaces (e.g. a debug mesh's wireframe) aren't triangles
+    Ref<ArrayMesh> array_mesh = mesh;
+
     int surface_count = mesh->get_surface_count();
     for (int surface_index = 0; surface_index < surface_count; surface_index++)
     {
+        if (array_mesh.is_valid() && array_mesh->surface_get_primitive_type(surface_index) != Mesh::PRIMITIVE_TRIANGLES)
+            continue;
+
         Array arrays = mesh->surface_get_arrays(surface_index);
         if (arrays.is_empty())
             continue;

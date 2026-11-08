@@ -605,70 +605,40 @@ void VAWorld::create_primitive(CollisionShape3D *collision_shape, VAMaterialType
     }
     else if (Ref<ConcavePolygonShape3D> concave_polygon = shape; concave_polygon.is_valid())
     {
-        VAMatrix mat = ToVAudio(global_transform);
-
-        VAMeshPrimitive *p = create_shared_mesh_primitive(concave_polygon, [&](VAVector &min, VAVector &max)
+        prim = add_shape_mesh_primitive(collision_shape, shape, "concave polygon", [&](VAVector &min, VAVector &max)
         {
-            std::vector<VAVector> triangles = ConvertConcavePolygonToVAudio(concave_polygon, min, max);
+            return ConvertConcavePolygonToVAudio(concave_polygon, min, max);
+        }, "it has no faces", material, ToVAudio(global_transform), shared_mesh);
 
-            if (triangles.empty())
-                VA_WARN("ConcavePolygonShape3D ", collision_shape->get_name(), " will not affect raytracing as it has no faces");
-
-            return triangles;
-        }, material, mat, collision_shape, shared_mesh);
-
-        if (!p)
+        if (!prim)
             return;
 
-        VAResult add_result = vaWorldAddPrimitive_(world, p);
-        if (add_result != VA_SUCCESS)
-        {
-            VA_ERROR(
-                "VAWorld::create_primitive(CollisionShape3D concave polygon) failed to add '",
-                collision_shape->get_name(), "' to the world (VAResult=", VAResultToString(add_result), ")");
-            vaMeshPrimitiveDestroy(p);
-            release_shared_mesh(shared_mesh);
-            return;
-        }
-
-        prim = p;
         kind = VAPrimitiveKind::Mesh;
     }
     else if (Ref<ConvexPolygonShape3D> convex_polygon = shape; convex_polygon.is_valid())
     {
-        // Godot doesn't expose a convex shape's hull triangles, only a wireframe debug mesh
-        VA_WARN("ConvexPolygonShape3D ", collision_shape->get_name(), " will not affect raytracing as convex polygon shapes are not supported. Use a ConcavePolygonShape3D or MeshInstance3D instead");
-        return;
+        // The debug mesh has a lines surface (skipped) and a triangle surface of the hull Godot computed
+        prim = add_shape_mesh_primitive(collision_shape, shape, "convex polygon", [&](VAVector &min, VAVector &max)
+        {
+            Ref<ArrayMesh> debug_mesh = convex_polygon->get_debug_mesh();
+            return debug_mesh.is_valid() ? ConvertMeshToVAudio(debug_mesh, min, max) : std::vector<VAVector>();
+        }, "Godot returned no hull triangles for it", material, ToVAudio(global_transform), shared_mesh);
+
+        if (!prim)
+            return;
+
+        kind = VAPrimitiveKind::Mesh;
     }
     else if (Ref<HeightMapShape3D> height_map = shape; height_map.is_valid())
     {
-        VAMatrix mat = ToVAudio(global_transform);
-
-        VAMeshPrimitive *p = create_shared_mesh_primitive(height_map, [&](VAVector &min, VAVector &max)
+        prim = add_shape_mesh_primitive(collision_shape, shape, "height map", [&](VAVector &min, VAVector &max)
         {
-            std::vector<VAVector> triangles = ConvertHeightMapToVAudio(height_map, min, max);
+            return ConvertHeightMapToVAudio(height_map, min, max);
+        }, "its dimensions are less than 2x2", material, ToVAudio(global_transform), shared_mesh);
 
-            if (triangles.empty())
-                VA_WARN("HeightMapShape3D ", collision_shape->get_name(), " will not affect raytracing as its dimensions are less than 2x2");
-
-            return triangles;
-        }, material, mat, collision_shape, shared_mesh);
-
-        if (!p)
+        if (!prim)
             return;
 
-        VAResult add_result = vaWorldAddPrimitive_(world, p);
-        if (add_result != VA_SUCCESS)
-        {
-            VA_ERROR(
-                "VAWorld::create_primitive(CollisionShape3D height map) failed to add '",
-                collision_shape->get_name(), "' to the world (VAResult=", VAResultToString(add_result), ")");
-            vaMeshPrimitiveDestroy(p);
-            release_shared_mesh(shared_mesh);
-            return;
-        }
-
-        prim = p;
         kind = VAPrimitiveKind::Mesh;
     }
     else
@@ -756,16 +726,8 @@ void VAWorld::create_primitive(MeshInstance3D *mesh_instance, VAMaterialType mat
             mesh_instance->get_name(), "' (VAResult=", VAResultToString(permeation_result), ")");
     }
 
-    VAResult add_result = vaWorldAddPrimitive_(world, prim);
-    if (add_result != VA_SUCCESS)
-    {
-        VA_ERROR(
-            "VAWorld::create_primitive(MeshInstance3D) failed to add '",
-            mesh_instance->get_name(), "' to the world (VAResult=", VAResultToString(add_result), ")");
-        vaMeshPrimitiveDestroy(prim);
-        release_shared_mesh(shared_mesh);
+    if (!add_shared_mesh_primitive(prim, shared_mesh, mesh_instance, "MeshInstance3D"))
         return;
-    }
 
     VAPrimitiveRef *ref = attach_watcher(mesh_instance, prim, VAPrimitiveKind::Mesh, [this, mesh_instance, prim]()
     {
@@ -833,6 +795,41 @@ VAMeshPrimitive *VAWorld::create_shared_mesh_primitive(const Ref<Resource> &reso
     }
 
     out_shared_mesh = shared_mesh;
+    return prim;
+}
+
+bool VAWorld::add_shared_mesh_primitive(VAMeshPrimitive *prim, SharedMesh *shared_mesh, Node *node, const String &context)
+{
+    VAResult add_result = vaWorldAddPrimitive_(world, prim);
+    if (add_result == VA_SUCCESS)
+        return true;
+
+    VA_ERROR(
+        "VAWorld::create_primitive(", context, ") failed to add '",
+        node->get_name(), "' to the world (VAResult=", VAResultToString(add_result), ")");
+    vaMeshPrimitiveDestroy(prim);
+    release_shared_mesh(shared_mesh);
+    return false;
+}
+
+VAMeshPrimitive *VAWorld::add_shape_mesh_primitive(CollisionShape3D *collision_shape, const Ref<Shape3D> &shape, const char *kind_name, std::function<std::vector<VAVector>(VAVector &, VAVector &)> read_triangles, const char *empty_reason, VAMaterialType material, const VAMatrix &transform, SharedMesh *&out_shared_mesh)
+{
+    VAMeshPrimitive *prim = create_shared_mesh_primitive(shape, [&](VAVector &min, VAVector &max)
+    {
+        std::vector<VAVector> triangles = read_triangles(min, max);
+
+        if (triangles.empty())
+            VA_WARN(shape->get_class(), " ", collision_shape->get_name(), " will not affect raytracing as ", empty_reason);
+
+        return triangles;
+    }, material, transform, collision_shape, out_shared_mesh);
+
+    if (!prim)
+        return nullptr;
+
+    if (!add_shared_mesh_primitive(prim, out_shared_mesh, collision_shape, String("CollisionShape3D ") + kind_name))
+        return nullptr;
+
     return prim;
 }
 

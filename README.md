@@ -7,7 +7,7 @@
 
 For Mono Godot (C#), please use [this plugin](https://github.com/vercidium-audio/vaudio-godot-mono-openal-3d/releases).
 
-This repository requires Vercidium Audio v1.11.1 and OpenAL Soft to run. Windows, Linux and macOS (15 or later, Apple Silicon only) are supported.
+This repository requires Vercidium Audio v1.11.1 and OpenAL Soft to run. Windows, Linux and macOS (11 or later, Apple Silicon and Intel) are supported. The macOS build is universal, and Intel has been tested under Rosetta, not on Intel hardware.
 - Download the Vercidium Audio SDK from [vercidium.com](https://vercidium.com)
 - Download OpenAL Soft from [github.com/kcat/openal-soft](https://github.com/kcat/openal-soft/releases/tag/1.25.2)
 
@@ -26,7 +26,7 @@ This repository requires Vercidium Audio v1.11.1 and OpenAL Soft to run. Windows
 
 ## Building
 
-On Windows, run `build.bat`. On Linux/macOS, run `build-unix.sh` (auto-detects the host - Linux builds an x86_64 `.so`, macOS builds an arm64 `.dylib`).
+On Windows, run `build.bat`. On Linux/macOS, run `build-unix.sh` (auto-detects the host - Linux builds an x86_64 `.so`, macOS builds a universal `.dylib`).
 
 To automatically copy the plugin to your game, add your game's path to `.env`, e.g. `VAUDIO_RELEASE_DIR=your-godot-game\addons\vaudio-godot-native-openal-3d`
 

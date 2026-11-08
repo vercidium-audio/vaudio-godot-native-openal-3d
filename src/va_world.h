@@ -151,6 +151,12 @@ private:
     VAMeshPrimitive *create_shared_mesh_primitive(const Ref<Resource> &resource, std::function<std::vector<VAVector>(VAVector &, VAVector &)> read_triangles, VAMaterialType material, const VAMatrix &transform, Node *node, SharedMesh *&out_shared_mesh);
     void release_shared_mesh(SharedMesh *shared_mesh);
 
+    // Adds a primitive from create_shared_mesh_primitive to the world. On failure it's destroyed and its shared mesh released
+    bool add_shared_mesh_primitive(VAMeshPrimitive *prim, SharedMesh *shared_mesh, Node *node, const String &context);
+
+    // create_shared_mesh_primitive + add_shared_mesh_primitive for a CollisionShape3D's shape resource, warning "<class> <name> will not affect raytracing as <empty_reason>" if it has no triangles
+    VAMeshPrimitive *add_shape_mesh_primitive(CollisionShape3D *collision_shape, const Ref<Shape3D> &shape, const char *kind_name, std::function<std::vector<VAVector>(VAVector &, VAVector &)> read_triangles, const char *empty_reason, VAMaterialType material, const VAMatrix &transform, SharedMesh *&out_shared_mesh);
+
     // Stops new primitives reusing this shared mesh, e.g. after its Shape3D changed. Existing primitives keep it until they're removed
     void invalidate_shared_mesh(SharedMesh *shared_mesh);
 

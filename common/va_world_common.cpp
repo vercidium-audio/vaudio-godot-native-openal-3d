@@ -243,7 +243,7 @@ ALReverbEffect *VAWorld::get_reverb_effect(::VAEmitter *emitter)
             {
                 VA_WARN(
                     "Emitter has a grouped EAX index of ", grouped_eax_index,
-                    " but only ", (int)grouped_reverb_effects.size(), " EAX presets are available.");
+                    " but only ", (int)grouped_reverb_effects.size(), " EAX presets are available. Increase the 'Maximum Grouped EAX Count' setting on the VAWorld node.");
                 return &listener_reverb_effect;
             }
 
