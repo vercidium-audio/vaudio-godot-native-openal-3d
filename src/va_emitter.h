@@ -170,7 +170,7 @@ public:
     bool is_ready_to_play() const;
 
     // is_ready_to_play, but always waiting for its own reverb rays. raytrace_once waits for this, so a sound started outside the bounds still gets reverb once inside
-    bool has_results() const;
+    bool has_listener_results() const;
 
     // Unclamped and outside the VAWorld's bounds, so the SDK doesn't raytrace it and it has no reverb
     bool is_outside_bounds() const;

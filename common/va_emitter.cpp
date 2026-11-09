@@ -551,7 +551,7 @@ bool VAEmitter::is_ready_to_play() const
     return has_listener_results(!is_outside_bounds());
 }
 
-bool VAEmitter::has_results() const
+bool VAEmitter::has_listener_results() const
 {
     return has_listener_results(true);
 }
@@ -700,7 +700,7 @@ void VAEmitter::_process(double delta)
     }
 
     // Once ready, cast rays no more. A parent VARaytracedSource processes before this node, so it has already played. A sound started outside the bounds keeps going until it's raytraced inside and has reverb
-    if (raytrace_once && !raytrace_once_removed && has_results())
+    if (raytrace_once && !raytrace_once_removed && has_listener_results())
     {
         raytrace_once_removed = true;
         remove_emitter();
