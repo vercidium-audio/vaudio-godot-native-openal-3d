@@ -73,6 +73,14 @@ protected:
 
     virtual void configure_source(ALSourceHandle &source) = 0;
 
+    // A play() waiting for its streams to decode, which isn't playing yet. Not public, so it stays out of the generated docs
+    bool is_play_requested() const
+    {
+        return play_requested;
+    }
+
+    friend struct VABoundsPlayback;
+
 public:
     ALSource();
     ~ALSource();
@@ -90,6 +98,12 @@ public:
     virtual void stop();
 
     bool is_playing() const;
+
+    // Whether the sound is sent to a reverb effect (grouped or the listener's)
+    bool has_reverb() const
+    {
+        return effect != nullptr;
+    }
 
     void update_filter(float new_gain, float new_gain_hf, bool fullReverb = false);
 
@@ -155,8 +169,8 @@ public:
 
     void set_streams(const TypedArray<AudioStream> &value)
     {
-        // Matches AudioStreamPlayer.set_stream(), which stops whatever was playing
-        stop();
+        // Matches AudioStreamPlayer.set_stream(), which stops whatever was playing. The base stop(), so it runs while a scene loads without cancelling autoplay
+        ALSource::stop();
         streams = value;
     }
 

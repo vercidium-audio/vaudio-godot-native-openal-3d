@@ -61,6 +61,7 @@ void ALSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("play"), &ALSource::play);
     ClassDB::bind_method(D_METHOD("stop"), &ALSource::stop);
     ClassDB::bind_method(D_METHOD("is_playing"), &ALSource::is_playing);
+    ClassDB::bind_method(D_METHOD("has_reverb"), &ALSource::has_reverb);
 }
 
 ALSource::ALSource()

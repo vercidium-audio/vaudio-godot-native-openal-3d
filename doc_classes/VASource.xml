@@ -4,7 +4,8 @@
 	</brief_description>
 	<description>
 		A spatialised 3D sound source that casts its own raytracing rays for reverb, ambience, and visualisation (see [VARaytracedSource]), and plays a fixed [AudioStream] resource decoded once up front. Muffling (occlusion/permeation) is applied to it by the listener's own rays, so this node never casts occlusion or permeation rays itself - use [VAEmitter]'s occlusion/permeation settings on the listener to control muffling.
-		If [member ALSource.autoplay] is [code]true[/code] and [method play] is called (including the automatic call on [code]_ready[/code]) before this source's emitter has produced any raytracing results yet, playback is deferred and starts automatically as soon as those results are available.
+		[method play] returns [code]false[/code] until this source is ready to play (see [method VARaytracedSource.is_ready_to_play]). If [member ALSource.autoplay] is [code]true[/code], playback starts automatically once it's ready.
+		While [method VARaytracedSource.is_silenced_by_bounds] is [code]true[/code], a source that doesn't loop isn't started ([method play] returns [code]false[/code] with a warning, autoplay is skipped, and neither retries once it's inside), and a playing source is stopped. A looping source waits and plays again once it's back inside. [method stop] cancels that wait.
 	</description>
 	<tutorials>
 	</tutorials>

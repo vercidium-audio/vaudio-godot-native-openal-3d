@@ -233,6 +233,12 @@ VAEAXReverbParams CopyReverbParams(const VAEAXReverb *eax)
 
 ALReverbEffect *VAWorld::get_reverb_effect(::VAEmitter *emitter)
 {
+    VAEmitter *self = emitter ? static_cast<VAEmitter *>(vaEmitterGetUserData(emitter)) : nullptr;
+
+    // Not raytraced outside the bounds, so any grouped EAX it has is stale, and the listener's reverb doesn't describe where it is either
+    if (self && self->is_outside_bounds())
+        return nullptr;
+
     if (emitter && vaEmitterGetAffectsGroupedEAX(emitter))
     {
         int grouped_eax_index = vaEmitterGetGroupedEAXIndex(emitter);
@@ -241,9 +247,13 @@ ALReverbEffect *VAWorld::get_reverb_effect(::VAEmitter *emitter)
         {
             if (grouped_eax_index >= (int)grouped_reverb_effects.size())
             {
-                VA_WARN(
-                    "Emitter has a grouped EAX index of ", grouped_eax_index,
-                    " but only ", (int)grouped_reverb_effects.size(), " EAX presets are available. Increase the 'Maximum Grouped EAX Count' setting on the VAWorld node.");
+                // Grouped reverb effects are only created once reverb updates with a listener
+                if (!listener || !listener->get_handle())
+                    VA_WARN("Emitter has a grouped EAX index of ", grouped_eax_index, " but the VAWorld has no VAListener, so no EAX presets are available. ", MISSING_LISTENER_HINT);
+                else
+                    VA_WARN(
+                        "Emitter has a grouped EAX index of ", grouped_eax_index,
+                        " but only ", (int)grouped_reverb_effects.size(), " EAX presets are available. Increase the 'Maximum Grouped EAX Count' setting on the VAWorld node.");
                 return &listener_reverb_effect;
             }
 
@@ -251,13 +261,8 @@ ALReverbEffect *VAWorld::get_reverb_effect(::VAEmitter *emitter)
         }
     }
 
-    if (emitter)
-    {
-        VAEmitter *self = static_cast<VAEmitter *>(vaEmitterGetUserData(emitter));
-
-        if (self && !self->get_use_listener_reverb())
-            return nullptr;
-    }
+    if (self && !self->get_use_listener_reverb())
+        return nullptr;
 
     return &listener_reverb_effect;
 }

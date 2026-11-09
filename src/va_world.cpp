@@ -30,6 +30,7 @@ void VAWorld::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_bounds_size"), &VAWorld::get_bounds_size);
     ClassDB::bind_method(D_METHOD("set_bounds_size", "value"), &VAWorld::set_bounds_size);
     ClassDB::bind_method(D_METHOD("get_bounds_position"), &VAWorld::get_bounds_position);
+    ClassDB::bind_method(D_METHOD("is_within_bounds", "position"), &VAWorld::is_within_bounds);
     ClassDB::bind_method(D_METHOD("get_bounds_follow"), &VAWorld::get_bounds_follow);
     ClassDB::bind_method(D_METHOD("set_bounds_follow", "value"), &VAWorld::set_bounds_follow);
     ClassDB::bind_method(D_METHOD("get_bounds_update_distance"), &VAWorld::get_bounds_update_distance);
@@ -364,7 +365,7 @@ void VAWorld::on_reverb_updated()
         // Don't warn during teardown - a reverb update can still be in flight after the listener node has unregistered but before this VAWorld node is destroyed.
         if (!warned_missing_listener && !is_shutting_down)
         {
-            VA_WARN_NAMED("Has no VAListener node, so reverb cannot be updated. Add a VAListener node to this scene.");
+            VA_WARN_NAMED("Has no VAListener node, so reverb cannot be updated. ", MISSING_LISTENER_HINT);
             warned_missing_listener = true;
         }
 

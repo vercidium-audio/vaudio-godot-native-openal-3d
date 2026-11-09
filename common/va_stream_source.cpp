@@ -32,14 +32,26 @@ bool VAStreamSource::open_stream(int format, int frequency)
         return false;
     }
 
-    auto source = std::make_unique<ALSourceHandle>();
+    stopped_by_bounds = is_silenced_by_bounds();
 
-    if (!source->create())
+    if (!stopped_by_bounds && !start_sound())
     {
-        // ALSourceHandle::create already logged the reason for failure.
         stream_buffer.destroy();
         return false;
     }
+
+    stream_open = true;
+    stream_ready = false;
+    return true;
+}
+
+bool VAStreamSource::start_sound()
+{
+    auto source = std::make_unique<ALSourceHandle>();
+
+    // ALSourceHandle::create already logged the reason for failure.
+    if (!source->create())
+        return false;
 
     source->set_buffer(stream_buffer.get_handle());
     source->set_gain(get_gain());
@@ -50,9 +62,36 @@ bool VAStreamSource::open_stream(int format, int frequency)
     source->play();
 
     get_sources().push_back(std::move(source));
-    stream_open = true;
-    stream_ready = false;
     return true;
+}
+
+void VAStreamSource::apply_bounds_rules()
+{
+    if (!stream_open)
+        return;
+
+    if (is_silenced_by_bounds())
+    {
+        if (!is_playing())
+            return;
+
+        ALSource::stop();
+        stopped_by_bounds = true;
+        return;
+    }
+
+    if (!stopped_by_bounds)
+        return;
+
+    // Audio queued before it left would play late, so it starts from the next push
+    stopped_by_bounds = false;
+    stream_buffer.clear();
+
+    if (!start_sound())
+    {
+        VA_WARN_NAMED("The stream failed to create its sound, so it was closed");
+        close_stream();
+    }
 }
 
 void VAStreamSource::push_audio_data(const PackedByteArray &data)
@@ -68,7 +107,8 @@ void VAStreamSource::push_audio_data(const uint8_t *data, int num_bytes)
         return;
     }
 
-    if (num_bytes == 0)
+    // Nothing plays it while the bounds have stopped it
+    if (num_bytes == 0 || stopped_by_bounds)
     {
         return;
     }
@@ -97,6 +137,7 @@ void VAStreamSource::close_stream()
     ALSource::stop();
     stream_buffer.destroy();
     stream_open = false;
+    stopped_by_bounds = false;
 }
 
 void VAStreamSource::stop()
@@ -130,6 +171,7 @@ void VAStreamSource::_process(double delta)
 {
     VARaytracedSource::_process(delta);
     process_raytracing(delta);
+    apply_bounds_rules();
 
     // Latched here too, since a raytrace_once emitter leaves the world later this frame
     if (stream_open && !stream_ready && is_ready_to_play())

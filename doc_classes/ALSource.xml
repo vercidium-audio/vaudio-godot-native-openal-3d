@@ -6,6 +6,14 @@
 	</description>
 	<tutorials>
 	</tutorials>
+	<methods>
+		<method name="has_reverb" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if this source currently sends to a reverb effect. A raytraced source outside the world bounds has none.
+			</description>
+		</method>
+	</methods>
 	<members>
 		<member name="streams" type="Array" setter="set_streams" getter="get_streams">
 			The pool of sounds to play. If more than one is set, a random entry is picked each time [method play] is called.

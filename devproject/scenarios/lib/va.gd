@@ -39,6 +39,19 @@ static func raytrace_count(world: Node) -> int:
 static func bounds_position(world: Node) -> Variant:
 	return world.get_bounds_position()
 
+static func is_ready_to_play(source: Node) -> bool:
+	return source.is_ready_to_play()
+
+static func is_within_bounds(world: Node, position) -> bool:
+	return world.is_within_bounds(position)
+
+static func is_silenced_by_bounds(source: Node) -> bool:
+	return source.is_silenced_by_bounds()
+
+# Whether the source's sound is sent to a reverb effect (grouped or the listener's)
+static func has_reverb(source: Node) -> bool:
+	return source.has_reverb()
+
 static func raytracing_time(world: Node) -> float:
 	return world.get_raytracing_time()
 

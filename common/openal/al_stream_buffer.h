@@ -49,6 +49,9 @@ public:
     // Deletes the OpenAL buffer (if any) and drops every pending/used/partial chunk. Safe to call more than once, even if create() was never called or failed.
     void destroy();
 
+    // Drops every pending and partial chunk. Only call while no source plays this buffer, since the partial chunk belongs to the mixer thread
+    void clear();
+
     // Copies length bytes starting at data into a new pending chunk. Safe to call from any thread; the caller retains ownership of data.
     void enqueue(const uint8_t *data, int length);
 

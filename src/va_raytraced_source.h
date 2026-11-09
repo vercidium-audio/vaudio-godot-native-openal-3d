@@ -90,6 +90,9 @@ public:
     // See VAEmitter::is_ready_to_play
     bool is_ready_to_play() const;
 
+    // See VAEmitter::is_silenced_by_bounds
+    bool is_silenced_by_bounds() const;
+
     int get_grouped_eax_index() const;
 
     va_godot::VAEmitter *get_emitter() const
