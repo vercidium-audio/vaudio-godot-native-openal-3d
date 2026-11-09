@@ -40,7 +40,7 @@ public:
     void _enter_tree() override;
     void _exit_tree() override;
 
-    // Autoplay waits for _process, once the parent emitter is ready to play and inside the bounds
+    // Autoplay waits for the parent emitter to be ready to play and inside the bounds
     void _ready() override;
 
     void _process(double delta) override;

@@ -99,7 +99,7 @@ public:
 
     bool is_playing() const;
 
-    // Whether the sound is sent to a reverb effect (grouped or the listener's)
+    // Whether the sound is sent to a reverb effect (grouped or the listener's). A raytraced source outside the bounds has none
     bool has_reverb() const
     {
         return effect != nullptr;

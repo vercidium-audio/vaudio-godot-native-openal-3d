@@ -44,7 +44,7 @@ public:
 
     void _validate_property(PropertyInfo &p_property) const;
 
-    // Outside the bounds (while they silence it) the stream opens without a sound, which starts once inside
+    // If outside the world bounds the stream opens without a sound, then starts once inside
     bool open_stream(int format, int frequency);
 
     void push_audio_data(const PackedByteArray &data);
