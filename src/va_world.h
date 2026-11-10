@@ -53,6 +53,8 @@ enum class PropagateMode
 // Copies a raw ::VAEAXReverb's fields into an OpenAL-facing VAEAXReverbParams. Defined once in common/va_world_common.cpp since it's dimension-agnostic; declared here so each repo's own va_world.cpp (which computes the listener-relative pan differently) can still call it from on_reverb_updated().
 VAEAXReverbParams CopyReverbParams(const VAEAXReverb *eax);
 
+constexpr const char *MISSING_LISTENER_HINT = "Ensure the VAListener node is created and is a sibling or child node of VAWorld.";
+
 // Name collision: the vaudio C SDK's opaque handle type is also called "VAWorld" (global namespace); inside va_godot, 'VAWorld' means this class and '::VAWorld' the SDK handle.
 // This is a Node3D purely so the editor can draw a gizmo for the bounds_position/bounds_size AABB (see VAWorldGizmoPlugin) - the node's own transform is otherwise unused by vaudio.
 class VAWorld : public Node3D
@@ -150,6 +152,12 @@ private:
     // read_triangles is only called if the resource doesn't have a shared mesh yet. Returns nullptr if it has no triangles or creation failed
     VAMeshPrimitive *create_shared_mesh_primitive(const Ref<Resource> &resource, std::function<std::vector<VAVector>(VAVector &, VAVector &)> read_triangles, VAMaterialType material, const VAMatrix &transform, Node *node, SharedMesh *&out_shared_mesh);
     void release_shared_mesh(SharedMesh *shared_mesh);
+
+    // Adds a primitive from create_shared_mesh_primitive to the world. On failure it's destroyed and its shared mesh released
+    bool add_shared_mesh_primitive(VAMeshPrimitive *prim, SharedMesh *shared_mesh, Node *node, const String &context);
+
+    // create_shared_mesh_primitive + add_shared_mesh_primitive for a CollisionShape3D's shape resource, warning "<class> <name> will not affect raytracing as <empty_reason>" if it has no triangles
+    VAMeshPrimitive *add_shape_mesh_primitive(CollisionShape3D *collision_shape, const Ref<Shape3D> &shape, const char *kind_name, std::function<std::vector<VAVector>(VAVector &, VAVector &)> read_triangles, const char *empty_reason, VAMaterialType material, const VAMatrix &transform, SharedMesh *&out_shared_mesh);
 
     // Stops new primitives reusing this shared mesh, e.g. after its Shape3D changed. Existing primitives keep it until they're removed
     void invalidate_shared_mesh(SharedMesh *shared_mesh);
@@ -279,6 +287,24 @@ public:
     }
     void set_bounds_size(Vector3 value);
 
+    // The bounds' minimum corner in the SDK during play, which differs from this node's position while bounds_follow is Listener
+    Vector3 get_bounds_position() const;
+
+    // Game-thread box test against the bounds, edges included like the SDK's own test. See VAEmitter::is_outside_bounds for the clamp and emitters_outside_the_world_are_muffled rules
+    bool is_within_bounds(const Vector3 &position) const;
+
+    int get_bounds_follow() const
+    {
+        return bounds_follow;
+    }
+    void set_bounds_follow(int value);
+
+    float get_bounds_update_distance() const
+    {
+        return bounds_update_distance;
+    }
+    void set_bounds_update_distance(float value);
+
     Color get_bounds_color() const
     {
         return bounds_color;
@@ -375,6 +401,7 @@ public:
     }
     void set_reference_frequency_hf(float value);
 
+    // If true, unclamped sources outside the bounds are fully muffled and stopped: one that doesn't loop isn't started there, and loops and streams play again once back inside. If false, they play unmuffled with no reverb
     bool get_emitters_outside_the_world_are_muffled() const
     {
         return emitters_outside_the_world_are_muffled;
@@ -406,6 +433,29 @@ public:
 
 private:
     Vector3 bounds_size = Vector3(200, 100, 200);
+
+    enum BoundsFollow
+    {
+        BOUNDS_FOLLOW_NONE,
+        BOUNDS_FOLLOW_LISTENER,
+    };
+
+    int bounds_follow = BOUNDS_FOLLOW_NONE;
+    float bounds_update_distance = 25.0f;
+
+    // The position last pushed to the SDK, and the listener it was centred on
+    Vector3 bounds_position;
+    va_godot::VAEmitter *bounds_listener = nullptr;
+
+    // Where bounds_follow wants the bounds' minimum corner. Following a listener while there is none leaves the bounds where they are
+    Vector3 get_bounds_target() const;
+    void place_bounds();
+    void follow_bounds();
+
+    // With bounds_follow Listener, the listener can move just under bounds_update_distance along one axis before the bounds recentre, so each half of the box must be at least that wide
+    Vector3 clamp_bounds_size(Vector3 size) const;
+    void reclamp_bounds_size();
+
     Color bounds_color = Color(0.0f, 0.0f, 0.0f, 0.25f);
     // Empty means the node's own name is used
     String world_name;

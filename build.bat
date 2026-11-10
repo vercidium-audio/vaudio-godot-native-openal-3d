@@ -5,6 +5,15 @@ if exist .env (
     for /f "usebackq tokens=1,* delims==" %%A in (".env") do set %%A=%%B
 )
 
+rem Invalid doc XML (e.g. a bare < in a description) silently breaks every editor tooltip
+where xmllint >nul 2>&1
+if errorlevel 1 (
+    echo WARNING: xmllint not found - skipping doc_classes XML validation
+) else (
+    xmllint --noout doc_classes\*.xml
+    if errorlevel 1 exit /b 1
+)
+
 scons target=editor
 if errorlevel 1 exit /b 1
 

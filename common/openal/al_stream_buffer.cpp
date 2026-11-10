@@ -23,9 +23,16 @@ void ALStreamBuffer::destroy()
 
     handle = 0;
 
+    clear();
+
+    std::lock_guard<std::mutex> lock(chunks_mutex);
+    used_chunks.clear();
+}
+
+void ALStreamBuffer::clear()
+{
     std::lock_guard<std::mutex> lock(chunks_mutex);
     pending_chunks.clear();
-    used_chunks.clear();
     has_partial_chunk = false;
 }
 

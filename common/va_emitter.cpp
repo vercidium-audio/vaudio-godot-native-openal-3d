@@ -34,6 +34,8 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_within_world_bounds"), &VAEmitter::get_within_world_bounds);
     ClassDB::bind_method(D_METHOD("is_raytraced"), &VAEmitter::is_raytraced);
     ClassDB::bind_method(D_METHOD("is_ready_to_play"), &VAEmitter::is_ready_to_play);
+    ClassDB::bind_method(D_METHOD("is_outside_bounds"), &VAEmitter::is_outside_bounds);
+    ClassDB::bind_method(D_METHOD("is_silenced_by_bounds"), &VAEmitter::is_silenced_by_bounds);
     ClassDB::bind_method(D_METHOD("get_grouped_eax_index"), &VAEmitter::get_grouped_eax_index);
     ClassDB::bind_method(D_METHOD("get_eax_debug_info"), &VAEmitter::get_eax_debug_info);
 
@@ -527,7 +529,7 @@ bool VAEmitter::is_raytraced() const
     return emitter && !vaEmitterGetInitialising(emitter);
 }
 
-bool VAEmitter::is_ready_to_play() const
+bool VAEmitter::has_listener_results(bool wait_for_own_eax) const
 {
     if (!emitter || !va_world)
         return false;
@@ -538,10 +540,30 @@ bool VAEmitter::is_ready_to_play() const
         return false;
 
     // Its grouped EAX slot, and so its reverb effect, isn't known until it casts its own reverb rays
-    if (vaEmitterGetAffectsGroupedEAX(emitter) && vaEmitterGetReverbEnabled(emitter))
+    if (wait_for_own_eax && vaEmitterGetAffectsGroupedEAX(emitter) && vaEmitterGetReverbEnabled(emitter))
         return vaEmitterGetEAX(emitter) != nullptr;
 
     return true;
+}
+
+bool VAEmitter::is_ready_to_play() const
+{
+    return has_listener_results(!is_outside_bounds());
+}
+
+bool VAEmitter::has_listener_results() const
+{
+    return has_listener_results(true);
+}
+
+bool VAEmitter::is_outside_bounds() const
+{
+    return va_world && !clamp_position && !va_world->is_within_bounds(get_global_position());
+}
+
+bool VAEmitter::is_silenced_by_bounds() const
+{
+    return va_world && va_world->get_emitters_outside_the_world_are_muffled() && is_outside_bounds();
 }
 
 int VAEmitter::get_grouped_eax_index() const
@@ -677,8 +699,8 @@ void VAEmitter::_process(double delta)
         apply_raytracing_results();
     }
 
-    // Once ready, cast rays no more. A parent VARaytracedSource processes before this node, so it has already played
-    if (raytrace_once && !raytrace_once_removed && is_ready_to_play())
+    // Once ready, cast rays no more. A parent VARaytracedSource processes before this node, so it has already played. A sound started outside the bounds keeps going until it's raytraced inside and has reverb
+    if (raytrace_once && !raytrace_once_removed && has_listener_results())
     {
         raytrace_once_removed = true;
         remove_emitter();

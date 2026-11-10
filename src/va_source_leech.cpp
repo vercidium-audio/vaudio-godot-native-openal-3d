@@ -15,6 +15,7 @@ void VASourceLeech::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_muffling_gain_hf"), &VASourceLeech::get_muffling_gain_hf);
     ClassDB::bind_method(D_METHOD("is_raytraced"), &VASourceLeech::is_raytraced);
     ClassDB::bind_method(D_METHOD("is_ready_to_play"), &VASourceLeech::is_ready_to_play);
+    ClassDB::bind_method(D_METHOD("is_silenced_by_bounds"), &VASourceLeech::is_silenced_by_bounds);
 }
 
 VASourceLeech::VASourceLeech()
@@ -74,29 +75,50 @@ bool VASourceLeech::is_ready_to_play() const
     return emitter && emitter->is_ready_to_play();
 }
 
+bool VASourceLeech::is_silenced_by_bounds() const
+{
+    return emitter && emitter->is_silenced_by_bounds();
+}
+
 bool VASourceLeech::play()
 {
+    if (playback.apply_on_play(*this, is_silenced_by_bounds()))
+        return false;
+
     // Wait for the parent emitter's muffling and reverb results, so the sound never starts unmuffled or without reverb
     if (!is_ready_to_play())
-    {
         return false;
-    }
 
-    played = ALSource3D::play();
+    bool played = ALSource3D::play();
+
+    if (played)
+        playback.on_played();
 
     return played;
+}
+
+void VASourceLeech::stop()
+{
+    playback.cancel();
+    ALSource3D::stop();
+}
+
+void VASourceLeech::_ready()
+{
 }
 
 void VASourceLeech::_process(double delta)
 {
     ALSource3D::_process(delta);
 
+    bool silenced = playback.apply(*this, is_silenced_by_bounds());
+
     if (!is_raytraced())
     {
         return;
     }
 
-    if (!played && get_autoplay() && is_ready_to_play())
+    if (!silenced && playback.is_pending(get_autoplay()) && is_ready_to_play())
     {
         play();
     }

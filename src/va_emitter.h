@@ -86,6 +86,9 @@ private:
     bool raytrace_once = false;
     bool raytrace_once_removed = false;
 
+    // The listener has raytraced it and, if wait_for_own_eax, it has cast its own reverb rays for grouped EAX
+    bool has_listener_results(bool wait_for_own_eax) const;
+
     bool random_trail_color = false;
     Color trail_color = Color(1.0f, 1.0f, 1.0f, 25.0f / 255.0f);
     Color reverb_color = Color(27.0f / 255.0f, 247.0f / 255.0f, 255.0f / 255.0f, 51.0f / 255.0f);
@@ -161,8 +164,19 @@ public:
 
     bool is_raytraced() const;
 
-    // True once the listener has raytraced this emitter and, if it casts reverb rays and affects grouped EAX, it has cast its own reverb rays too. Sources don't play until then
+    // True once the listener has raytraced this emitter, and this emitter has cast its own reverb rays.
+	// If this emitter is outside the world bounds, it does not cast reverb rays and this field does not wait for the reverb rays to be cast.
+	// Sources don't play until this field is true
     bool is_ready_to_play() const;
+
+    // is_ready_to_play, but always waiting for its own reverb rays. raytrace_once waits for this, so a sound started outside the bounds still gets reverb once inside
+    bool has_listener_results() const;
+
+    // Unclamped and outside the VAWorld's bounds, so the SDK doesn't raytrace it and it has no reverb
+    bool is_outside_bounds() const;
+
+    // Outside the bounds while emitters_outside_the_world_are_muffled is on. Sources don't start or stop while this is true
+    bool is_silenced_by_bounds() const;
 
     int get_grouped_eax_index() const;
 

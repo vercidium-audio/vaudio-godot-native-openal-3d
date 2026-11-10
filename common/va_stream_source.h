@@ -22,9 +22,16 @@ private:
     // Latched once the emitter is first ready to play, so a raytrace_once stream keeps accepting data after its emitter leaves the world
     bool stream_ready = false;
 
+    // Set when the bounds stopped the sound, or the stream was opened outside them, so it only restarts once inside if the bounds were the reason
+    bool stopped_by_bounds = false;
+
     std::vector<uint8_t> drained_chunk;
 
     void drain_used_chunks();
+
+    bool start_sound();
+
+    void apply_bounds_rules();
 
 protected:
     static void _bind_methods();
@@ -37,6 +44,7 @@ public:
 
     void _validate_property(PropertyInfo &p_property) const;
 
+    // If outside the world bounds the stream opens without a sound, then starts once inside
     bool open_stream(int format, int frequency);
 
     void push_audio_data(const PackedByteArray &data);

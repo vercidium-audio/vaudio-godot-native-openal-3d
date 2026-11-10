@@ -4,8 +4,23 @@
 	</brief_description>
 	<description>
 		A sound source that leeches raytracing results off a parent [VAEmitter] instead of casting its own rays. Must be a direct child of a [VAEmitter] (or [VAListener]) node. Useful for sounds that fire frequently from the same location (e.g. footsteps, gunshots) without each needing its own raytraced emitter.
-		If [member ALSource.autoplay] is [code]true[/code] and [method play] is called (including the automatic call on [code]_ready[/code]) before the parent emitter has produced any raytracing results yet, playback is deferred and starts automatically as soon as those results are available.
+		[method play] returns [code]false[/code] until the parent emitter is ready to play (see [method is_ready_to_play]). If [member ALSource.autoplay] is [code]true[/code], playback starts automatically once it's ready.
+		The world bounds rules of [VASource] apply, using the parent emitter's position and [member VAEmitter.clamp_position] (see [method is_silenced_by_bounds]). It counts as looping if [member ALSource.looping] is on.
 	</description>
 	<tutorials>
 	</tutorials>
+	<methods>
+		<method name="is_ready_to_play" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] once the parent emitter can play. See [method VAEmitter.is_ready_to_play].
+			</description>
+		</method>
+		<method name="is_silenced_by_bounds" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] while the parent emitter is silenced by the world bounds. See [method VAEmitter.is_silenced_by_bounds].
+			</description>
+		</method>
+	</methods>
 </class>

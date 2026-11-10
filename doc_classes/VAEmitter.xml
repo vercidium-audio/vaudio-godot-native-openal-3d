@@ -6,6 +6,26 @@
 	</description>
 	<tutorials>
 	</tutorials>
+	<methods>
+		<method name="is_ready_to_play" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] once the listener has raytraced this emitter and, if it casts reverb rays and [member affects_grouped_eax] is on, its own reverb is ready. Outside the bounds it doesn't wait for its own reverb, which it can't get there.
+			</description>
+		</method>
+		<method name="is_outside_bounds" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if [member clamp_position] is off and this emitter is outside the [VAWorld]'s bounds (see [method VAWorld.is_within_bounds]). A clamped emitter is raytraced from the nearest point inside the bounds, so it's never outside.
+			</description>
+		</method>
+		<method name="is_silenced_by_bounds" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if [method is_outside_bounds] and [member VAWorld.emitters_outside_the_world_are_muffled] is on, i.e. sounds here are stopped and aren't started.
+			</description>
+		</method>
+	</methods>
 	<members>
 		<member name="raytrace_once" type="bool" setter="set_raytrace_once" getter="get_raytrace_once" default="false">
 			Raytrace once on playback, then remove the emitter. Recommended for short sounds.

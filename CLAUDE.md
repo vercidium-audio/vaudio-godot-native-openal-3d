@@ -7,7 +7,7 @@ This plugin links against the packaged vaudionative shared library (vaudionative
 
 # How to use
 
-To build on Windows, run build.bat. To build on Linux/macOS, run build-unix.sh (auto-detects the host: Linux builds an x86_64 .so, macOS builds an arm64 .dylib).
+To build on Windows, run build.bat. To build on Linux/macOS, run build-unix.sh (auto-detects the host: Linux builds an x86_64 .so, macOS builds a universal .dylib).
 
 The vendored binaries under `thirdparty/` are per-platform and git-ignored - you supply them yourself:
 - `thirdparty/vaudio/lib/win64/` : `vaudionative.dll` + `vaudionative.lib` (+ `glfw3.dll`) (+ `vaudio-debug-window.exe`, optional, dev builds only - see below)
@@ -19,7 +19,7 @@ The vendored binaries under `thirdparty/` are per-platform and git-ignored - you
 
 OpenAL Soft is loaded at runtime from beside the plugin binary (LoadLibrary on Windows, dlopen on Linux/macOS), so the matching OpenAL shared library is copied into `bin/` by the build and ships in the release zip. There is no OpenAL import lib - all entry points are resolved manually in `ALManager` (`src/openal/al_manager.cpp`).
 
-macOS is Apple Silicon (arm64) only - the vendored `libopenal.1.dylib` is arm64, so the plugin is built `arch=arm64`, not universal.
+macOS builds are universal (arm64 + x86_64, minimum macOS 11.0), so the plugin runs on Apple Silicon and Intel Macs. The vendored `libopenal.1.dylib` is OpenAL Soft 1.25.2 built universal from source with `cmake -S openal-soft -B build -DCMAKE_BUILD_TYPE=Release '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DCMAKE_IGNORE_PREFIX_PATH=/opt/homebrew -DALSOFT_EXAMPLES=OFF -DALSOFT_UTILS=OFF -DALSOFT_NO_CONFIG_UTIL=ON -DALSOFT_INSTALL=OFF -DALSOFT_REQUIRE_COREAUDIO=ON -DHAVE_WFUNCTION_EFFECTS=OFF`. `HAVE_WFUNCTION_EFFECTS=OFF` is needed with Xcode 27's SDK, which marks the CoreAudio render callback `nonblocking` and trips OpenAL's `-Werror=function-effects`; ignoring `/opt/homebrew` keeps arm64-only Homebrew libs out of the link.
 
 `vaudio-debug-window` renders the raytracing simulation to a separate window. It only ships in vaudio's `dev` package, not `production`, so the build scripts only copy it into `bin/` if it exists.
 

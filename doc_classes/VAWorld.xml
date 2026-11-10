@@ -66,10 +66,23 @@
 				Returns the reverb decay time, in seconds, of the grouped EAX zone at [param index].
 			</description>
 		</method>
+		<method name="get_bounds_position" qualifiers="const">
+			<return type="Vector3" />
+			<description>
+				Returns the bounds' minimum corner in the SDK during play, which differs from [member position] while [member bounds_follow] is Listener. Returns [member position] in the editor.
+			</description>
+		</method>
+		<method name="is_within_bounds" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="position" type="Vector3" />
+			<description>
+				Returns [code]true[/code] if [param position] is inside the bounds starting at [method get_bounds_position] with size [member bounds_size], edges included. See [method VAEmitter.is_outside_bounds] for how sources use it.
+			</description>
+		</method>
 		<method name="get_raytrace_count" qualifiers="const">
 			<return type="int" />
 			<description>
-				Returns how many raytracing passes this world has completed. Useful for waiting until a change to the scene has been raytraced, e.g. [code]var target = world.get_raytrace_count() + 2; while world.get_raytrace_count() < target: await get_tree().process_frame[/code].
+				Returns how many raytracing passes this world has completed. Useful for waiting until a change to the scene has been raytraced, e.g. [code]var target = world.get_raytrace_count() + 2; while world.get_raytrace_count() &lt; target: await get_tree().process_frame[/code].
 			</description>
 		</method>
 		<method name="sync_primitive">
@@ -86,6 +99,12 @@
 		</member>
 		<member name="bounds_size" type="Vector3" setter="set_bounds_size" getter="get_bounds_size" default="Vector3(200, 100, 200)">
 			The size of the raytracing bounds, extending from [member position]. All rays are confined within these bounds; emitters outside them are not raytraced, and primitives fully outside them don't affect raytracing.
+		</member>
+		<member name="bounds_follow" type="int" setter="set_bounds_follow" getter="get_bounds_follow" default="0">
+			What the bounds follow during play. With None (0) they start at [member position]. With Listener (1) they're centred on the current VAListener, so set [member bounds_size] to cover the area that's loaded around the player, and [member position] only places the box in the editor and until a listener enters the tree.
+		</member>
+		<member name="bounds_update_distance" type="float" setter="set_bounds_update_distance" getter="get_bounds_update_distance" default="25.0">
+			How far the current listener must move during play, in world units, before the bounds follow it, with [member bounds_follow] set to Listener. Every move of the bounds re-checks all raytraced trails, so they should move in steps. While following the listener, [member bounds_size] is clamped to at least twice this value on every axis, so the listener can't walk out of the bounds before they recentre. 0 follows every move.
 		</member>
 		<member name="bounds_color" type="Color" setter="set_bounds_color" getter="get_bounds_color" default="Color(1, 0.65, 0, 1)">
 			The color of the bounds gizmo drawn in the editor viewport. Editor-only visualization; has no effect on raytracing.
@@ -121,7 +140,8 @@
 			The high-frequency reference, in Hz. Affects air absorption and reverb.
 		</member>
 		<member name="emitters_outside_the_world_are_muffled" type="bool" setter="set_emitters_outside_the_world_are_muffled" getter="get_emitters_outside_the_world_are_muffled" default="true">
-			If [code]true[/code], emitters outside the world bounds have zero occlusion/permeation energy (fully muffled). If [code]false[/code], they have maximum energy (unmuffled).
+			If [code]true[/code], emitters outside the world bounds are fully muffled, and the bounds are final for raytraced sources that don't clamp their position: a non-looping source isn't started outside them, a source that leaves them (or that they move away from) is stopped, and looping sources and open streams play again once they're back inside. See [method VAEmitter.is_silenced_by_bounds].
+			If [code]false[/code], emitters outside the bounds are unmuffled, and sources there play clearly with no reverb until they're back inside.
 		</member>
 		<member name="occlusion_rays_lose_energy_from_world_bounds" type="bool" setter="set_occlusion_rays_lose_energy_from_world_bounds" getter="get_occlusion_rays_lose_energy_from_world_bounds" default="false">
 			If [code]true[/code], occlusion rays lose energy when hitting the world bounds, based on the world bounds material. If [code]false[/code], occlusion rays bounce off the world bounds without losing energy, which makes sounds easier to discover.

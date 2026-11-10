@@ -2,7 +2,7 @@
 
 entry_symbol = "vaudio_godot_native_openal_3d_library_init"
 compatibility_minimum = "4.5"
-version = "1.11.0"
+version = "1.11.1"
 
 [libraries]
 
@@ -12,9 +12,9 @@ windows.release.x86_64 = "res://addons/vaudio-godot-native-openal-3d/bin/libvaud
 linux.editor.x86_64 = "res://addons/vaudio-godot-native-openal-3d/bin/libvaudiogodotnativeopenal3d.linux.editor.x86_64.so"
 linux.debug.x86_64 = "res://addons/vaudio-godot-native-openal-3d/bin/libvaudiogodotnativeopenal3d.linux.template_debug.x86_64.so"
 linux.release.x86_64 = "res://addons/vaudio-godot-native-openal-3d/bin/libvaudiogodotnativeopenal3d.linux.template_release.x86_64.so"
-macos.editor.arm64 = "res://addons/vaudio-godot-native-openal-3d/bin/libvaudiogodotnativeopenal3d.macos.editor.arm64.dylib"
-macos.debug.arm64 = "res://addons/vaudio-godot-native-openal-3d/bin/libvaudiogodotnativeopenal3d.macos.template_debug.arm64.dylib"
-macos.release.arm64 = "res://addons/vaudio-godot-native-openal-3d/bin/libvaudiogodotnativeopenal3d.macos.template_release.arm64.dylib"
+macos.editor = "res://addons/vaudio-godot-native-openal-3d/bin/libvaudiogodotnativeopenal3d.macos.editor.universal.dylib"
+macos.debug = "res://addons/vaudio-godot-native-openal-3d/bin/libvaudiogodotnativeopenal3d.macos.template_debug.universal.dylib"
+macos.release = "res://addons/vaudio-godot-native-openal-3d/bin/libvaudiogodotnativeopenal3d.macos.template_release.universal.dylib"
 
 [icons]
 
