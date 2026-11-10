@@ -26,6 +26,13 @@ case "$(uname -s)" in
     *) echo "Unsupported host: $(uname -s)" >&2; exit 1 ;;
 esac
 
+# Invalid doc XML (e.g. a bare < in a description) silently breaks every editor tooltip
+if command -v xmllint >/dev/null 2>&1; then
+    xmllint --noout doc_classes/*.xml
+else
+    echo "WARNING: xmllint not found - skipping doc_classes XML validation"
+fi
+
 scons platform="$PLATFORM" arch="$ARCH" target=editor $EXTRA_SCONS_ARGS
 scons platform="$PLATFORM" arch="$ARCH" target=template_debug $EXTRA_SCONS_ARGS
 scons platform="$PLATFORM" arch="$ARCH" target=template_release $EXTRA_SCONS_ARGS
