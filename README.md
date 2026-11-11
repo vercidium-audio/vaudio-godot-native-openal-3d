@@ -7,7 +7,7 @@
 
 For Mono Godot (C#), please use [this plugin](https://github.com/vercidium-audio/vaudio-godot-mono-openal-3d/releases).
 
-This repository requires Vercidium Audio v1.11.1 and OpenAL Soft to run.
+This repository requires Vercidium Audio v1.11.2 and OpenAL Soft to run.
 - Download the Vercidium Audio SDK from [vercidium.com](https://vercidium.com)
 - Download OpenAL Soft from [github.com/kcat/openal-soft](https://github.com/kcat/openal-soft/releases/tag/1.25.2)
 
