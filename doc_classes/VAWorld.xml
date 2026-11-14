@@ -165,7 +165,7 @@
 			How volume attenuates with distance from the listener. One of OpenAL's distance model constants (Inverse Distance Clamped, Inverse Distance, Linear Distance Clamped, Linear Distance, Exponent Distance Clamped, Exponent Distance, or None). Forwarded to the process-wide [ALManager] singleton; if multiple [VAWorld]s exist, the last one to set this wins.
 		</member>
 		<member name="reverb_only" type="bool" setter="set_reverb_only" getter="get_reverb_only" default="false">
-			If [code]true[/code], every sound's direct path is silenced so only reverb is audible. A diagnostic toggle for tuning reverb in isolation. Forwarded to the process-wide [ALManager] singleton; if multiple [VAWorld]s exist, the last one to set this wins.
+			If [code]true[/code], every sound's direct path is silenced so only reverb is audible. A diagnostic toggle for tuning reverb in isolation. Forwarded to the process-wide [ALManager] singleton; if multiple [VAWorld]s exist, the last one to set this wins. Each source also has its own [member ALSource.reverb_only].
 		</member>
 	</members>
 </class>

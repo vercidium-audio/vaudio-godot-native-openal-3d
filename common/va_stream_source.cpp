@@ -59,6 +59,9 @@ bool VAStreamSource::start_sound()
 
     configure_source(*source);
 
+    update_dry_output();
+    apply_filters(*source);
+
     source->play();
 
     get_sources().push_back(std::move(source));

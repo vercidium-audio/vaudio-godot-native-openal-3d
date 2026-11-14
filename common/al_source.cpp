@@ -50,6 +50,10 @@ void ALSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_playback_no_repeat", "value"), &ALSource::set_playback_no_repeat);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "playback_no_repeat"), "set_playback_no_repeat", "get_playback_no_repeat");
 
+    ClassDB::bind_method(D_METHOD("get_reverb_only"), &ALSource::get_reverb_only);
+    ClassDB::bind_method(D_METHOD("set_reverb_only", "value"), &ALSource::set_reverb_only);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "reverb_only"), "set_reverb_only", "get_reverb_only");
+
     ClassDB::bind_method(D_METHOD("get_looping"), &ALSource::get_looping);
     ClassDB::bind_method(D_METHOD("set_looping", "value"), &ALSource::set_looping);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "looping"), "set_looping", "get_looping");
@@ -62,6 +66,7 @@ void ALSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("stop"), &ALSource::stop);
     ClassDB::bind_method(D_METHOD("is_playing"), &ALSource::is_playing);
     ClassDB::bind_method(D_METHOD("has_reverb"), &ALSource::has_reverb);
+    ClassDB::bind_method(D_METHOD("is_dry_output_enabled"), &ALSource::is_dry_output_enabled);
 }
 
 ALSource::ALSource()
@@ -96,7 +101,35 @@ void ALSource::_process(double delta)
                         { return source->is_finished(); }),
         sources.end());
 
+    // Picks up this source's or the VAWorld's reverb_only changing, including on sources that don't update their filter every frame
+    if (update_dry_output())
+    {
+        for (auto &source : sources)
+            apply_filters(*source);
+    }
+
     release_retired_buffers();
+}
+
+bool ALSource::update_dry_output()
+{
+    ALManager *manager = ALManager::get_singleton();
+    bool enabled = !reverb_only && !(manager && manager->get_reverb_only());
+    bool changed = enabled != dry_output_enabled;
+    dry_output_enabled = enabled;
+    return changed;
+}
+
+void ALSource::apply_filters(ALSourceHandle &source) const
+{
+    ALManager *manager = ALManager::get_singleton();
+    ALuint direct_filter_handle = !dry_output_enabled && manager ? manager->get_silence_filter_handle() : filter.get_handle();
+
+    // if full_reverb is true, the clean/unfiltered sound is sent to the reverb effect, and then the reverb effect's output gain is reduced based on vaEAXReverbGetRelativeGain
+    ALuint reverb_filter_handle = full_reverb ? 0 : filter.get_handle();
+
+    source.set_direct_filter(direct_filter_handle);
+    source.set_reverb_send(effect ? effect->get_slot_handle() : 0, reverb_filter_handle);
 }
 
 void ALSource::retire_buffer(ALBuffer &&buffer)
@@ -328,13 +361,8 @@ bool ALSource::start_playing()
 
     configure_source(*source);
 
-    ALManager *manager = ALManager::get_singleton();
-    bool reverb_only = manager && manager->get_reverb_only();
-
-    ALuint reverb_slot = effect ? effect->get_slot_handle() : 0;
-    ALuint direct_filter_handle = reverb_only ? manager->get_silence_filter_handle() : filter.get_handle();
-    source->set_direct_filter(direct_filter_handle);
-    source->set_reverb_send(reverb_slot);
+    update_dry_output();
+    apply_filters(*source);
 
     source->play();
 
@@ -385,20 +413,11 @@ void ALSource::update_filter(float new_gain, float new_gain_hf, bool fullReverb)
     else
         filter.set_gain(new_gain, new_gain_hf);
 
-    ALManager *manager = ALManager::get_singleton();
-    bool reverb_only = manager && manager->get_reverb_only();
-
-    ALuint reverb_slot = effect ? effect->get_slot_handle() : 0;
-    ALuint direct_filter_handle = reverb_only ? manager->get_silence_filter_handle() : filter.get_handle();
-
-    // if fullReverb=true, the clean/unfiltered sound is sent to the reverb effect, and then the reverb effect's output gain is reduced based on vaEAXReverbGetRelativeGain
-    ALuint reverb_filter_handle = fullReverb ? 0 : filter.get_handle();
+    full_reverb = fullReverb;
+    update_dry_output();
 
     for (auto &source : sources)
-    {
-        source->set_direct_filter(direct_filter_handle);
-        source->set_reverb_send(reverb_slot, reverb_filter_handle);
-    }
+        apply_filters(*source);
 }
 
 void ALSource::set_gain(float value)
