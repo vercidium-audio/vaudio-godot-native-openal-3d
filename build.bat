@@ -1,3 +1,5 @@
+rem Human-reviewed
+
 @echo off
 setlocal
 

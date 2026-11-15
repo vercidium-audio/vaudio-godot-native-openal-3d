@@ -106,7 +106,7 @@ void VAStreamSource::push_audio_data(const uint8_t *data, int num_bytes)
 {
     if (!stream_open)
     {
-        VA_ERROR_NAMED("push_audio_data called before open_stream (or after close_stream)");
+        VA_ERROR_NAMED("push_audio_data() failed as the stream never opened");
         return;
     }
 
@@ -176,7 +176,7 @@ void VAStreamSource::_process(double delta)
     process_raytracing(delta);
     apply_bounds_rules();
 
-    // Latched here too, since a raytrace_once emitter leaves the world later this frame
+    // Also set stream_ready here in case nothing is pushed this frame. A raytrace_once emitter removes itself from the world later this frame, after which is_ready_to_play() is false and push_audio_data() would drop everything
     if (stream_open && !stream_ready && is_ready_to_play())
     {
         stream_ready = true;

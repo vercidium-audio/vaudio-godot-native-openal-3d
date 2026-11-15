@@ -392,7 +392,7 @@ void ALSource::stop()
     for (auto &source : sources)
         source->stop();
 
-    // Release them now - a stopped looping source never reports finished, so _process would never clean it up
+    // Release them now rather than waiting for _process to see them finish
     sources.clear();
     release_retired_buffers();
 }

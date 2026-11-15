@@ -257,6 +257,7 @@ public:
         return context;
     }
 
+    // OpenAL is loaded at runtime (see load_library), so these return the resolved function pointer and call sites read manager->al_sourcei()(args)
     alGenBuffersFn al_gen_buffers() const
     {
         return alGenBuffers_;

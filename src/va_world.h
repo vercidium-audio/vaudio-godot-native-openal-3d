@@ -112,7 +112,7 @@ private:
     VAMaterialType get_material(Node *node, bool warn_unknown = true);
     void resolve_inherited(Node *node, VAMaterialType &material, bool &use_flat_transmission, PropagateMode &filter);
 
-    void add_primitive(Node *node, VAMaterialType material, bool use_flat_transmission, PropagateMode filter, bool recursive);
+    void add_primitive(Node *node, VAMaterialType material, bool use_flat_transmission, PropagateMode propagateMode, bool recursive);
     void remove_primitive(Node *node, bool recursive);
 
     // The highest ancestor of node sitting directly under the scene tree root, or nullptr if node isn't under the tree.
@@ -122,10 +122,10 @@ private:
     void rebuild_primitives();
 
     // Reads this node's own propagate metadata, falling back to the mode inherited from an ancestor.
-    static PropagateMode read_propagate_filter(Node *node, PropagateMode inherited);
+    static PropagateMode read_propagate_mode(Node *node, PropagateMode inherited);
 
     // Whether a cascading material reaches this node, given a filter declared on an ancestor. Not static - reads render_layers / collision_layers.
-    bool passes_propagate_filter(Node *node, PropagateMode filter);
+    bool passes_propagation_filter(Node *node, PropagateMode propagateMode);
 
     VAPrimitiveRef *attach_watcher(Node3D *node, void *primitive, VAPrimitiveKind kind, std::function<void()> update);
 

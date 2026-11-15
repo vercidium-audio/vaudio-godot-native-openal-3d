@@ -69,7 +69,7 @@ String VAWorld::get_propagate_meta_key()
     return PropagateMetaKey();
 }
 
-PropagateMode VAWorld::read_propagate_filter(Node *node, PropagateMode inherited)
+PropagateMode VAWorld::read_propagate_mode(Node *node, PropagateMode inherited)
 {
     if (!node->has_meta(PropagateMetaKey()))
         return inherited;
@@ -133,9 +133,12 @@ Node *VAWorld::top_level_scene_node(Node *node)
 
 void VAWorld::sync_primitive(Node *node)
 {
-    // Guards being called on a VAWorld whose world hasn't been created yet; should always be non-null in practice since this is only called via the debugger-message capture in register_types.cpp.
+    // world is only created in _enter_tree at runtime, so it's null in the editor or before this VAWorld enters the tree
     if (!world)
+    {
+        VA_WARN_NAMED("sync_primitive(", node->get_name(), ") was called before the world was created, ignoring");
         return;
+    }
 
     // The material that governs the edited node can live on an ancestor. add_primitive only sees that material if the walk starts at or above the node owning it, so restart from the top-level scene node instead of the edited node - otherwise the primitive is removed below and never re-added.
     Node *sync_root = top_level_scene_node(node);
@@ -231,25 +234,26 @@ void VAWorld::on_node_added(Node *node)
     // node_added fires once per node rather than once per subtree, so a node inside an added subtree (e.g. an instanced scene whose root carries the material) has to pick up what its ancestors would have cascaded to it
     VAMaterialType material = VAMaterialAir;
     bool use_flat_transmission = false;
-    PropagateMode filter = PropagateMode::All;
-    resolve_inherited(node, material, use_flat_transmission, filter);
+    PropagateMode propagateMode = PropagateMode::All;
+    resolve_inherited(node, material, use_flat_transmission, propagateMode);
 
-    add_primitive(node, material, use_flat_transmission, filter, false);
+    add_primitive(node, material, use_flat_transmission, propagateMode, false);
 }
 
 // Applies each ancestor's material/transmission/propagate metadata outermost first, the same order a recursive add_primitive cascades them in. Unknown materials aren't warned about here - they already were when their own node was added.
-void VAWorld::resolve_inherited(Node *node, VAMaterialType &material, bool &use_flat_transmission, PropagateMode &filter)
+void VAWorld::resolve_inherited(Node *node, VAMaterialType &material, bool &use_flat_transmission, PropagateMode &propagateMode)
 {
+    // Recursion base case: the tree root Window has no parent, so there's nothing left to inherit from
     Node *parent = node->get_parent();
     if (!parent)
         return;
 
-    resolve_inherited(parent, material, use_flat_transmission, filter);
+    resolve_inherited(parent, material, use_flat_transmission, propagateMode);
 
     if (parent->has_meta(MaterialMetaKey()))
         material = get_material(parent, false);
 
-    filter = read_propagate_filter(parent, filter);
+    propagateMode = read_propagate_mode(parent, propagateMode);
 
     if (parent->has_meta(UseFlatTransmissionMetaKey()))
         use_flat_transmission = parent->get_meta(UseFlatTransmissionMetaKey());
