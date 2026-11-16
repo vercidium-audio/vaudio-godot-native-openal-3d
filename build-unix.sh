@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Linux/macOS counterpart of build.bat. Linux builds an x86_64 .so, macOS builds a universal (arm64 + x86_64) .dylib.
+# Linux/macOS counterpart of build.bat. Linux builds an x86_64 or arm64 .so (the host's arch), macOS builds a universal (arm64 + x86_64) .dylib.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -13,7 +13,14 @@ fi
 git submodule update --init --recursive
 
 case "$(uname -s)" in
-    Linux) PLATFORM=linux; ARCH=x86_64; FOLDER=linux; LIBEXT=".so"; EXTRA_SCONS_ARGS="" ;;
+    Linux)
+        PLATFORM=linux; LIBEXT=".so"; EXTRA_SCONS_ARGS=""
+        case "$(uname -m)" in
+            x86_64) ARCH=x86_64; FOLDER=linux ;;
+            aarch64) ARCH=arm64; FOLDER=linux-arm64 ;;
+            *) echo "Unsupported Linux architecture: $(uname -m)" >&2; exit 1 ;;
+        esac
+        ;;
     Darwin)
         PLATFORM=macos; ARCH=universal; FOLDER=mac; LIBEXT=".dylib"
         # Without a deployment target the plugin only loads on the build machine's macOS version or newer. 11.0 is the first arm64 macOS, and matches the vendored universal libopenal.1.dylib.

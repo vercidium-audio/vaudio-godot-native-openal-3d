@@ -16,19 +16,17 @@ if errorlevel 1 (
     if errorlevel 1 exit /b 1
 )
 
-scons target=editor
-if errorlevel 1 exit /b 1
-
-scons target=template_debug
-if errorlevel 1 exit /b 1
-
-scons target=template_release
-if errorlevel 1 exit /b 1
+rem x86_64 builds into bin\windows, arm64 into bin\windows-arm64 (see SConstruct)
+for %%A in (x86_64 arm64) do (
+    for %%T in (editor template_debug template_release) do (
+        scons target=%%T arch=%%A
+        if errorlevel 1 exit /b 1
+    )
+)
 
 set ADDON_DIR=addons\vaudio-godot-native-openal-3d
-set BIN_DIR=%ADDON_DIR%\bin\windows
 
-rem Copies bin\windows (the plugin, vaudionative, OpenAL, and the debug window + GLFW when vendored) into each addon folder
+rem Copies bin\windows and bin\windows-arm64 (the plugin, vaudionative, OpenAL, and the debug window + GLFW when vendored) into each addon folder
 setlocal enabledelayedexpansion
 for %%V in (VAUDIO_RELEASE_DIR VAUDIO_DEMO_ADDON_DIR) do (
     set DEST=!%%V!
@@ -36,8 +34,10 @@ for %%V in (VAUDIO_RELEASE_DIR VAUDIO_DEMO_ADDON_DIR) do (
         echo %%V not set - skipping copy
     ) else (
         echo Copying build output to !DEST!
-        if not exist "!DEST!\bin\windows" mkdir "!DEST!\bin\windows"
-        for %%F in ("%BIN_DIR%\*.dll" "%BIN_DIR%\*.exe") do copy /y "%%~F" "!DEST!\bin\windows\" >nul
+        for %%P in (windows windows-arm64) do (
+            if not exist "!DEST!\bin\%%P" mkdir "!DEST!\bin\%%P"
+            for %%F in ("%ADDON_DIR%\bin\%%P\*.dll" "%ADDON_DIR%\bin\%%P\*.exe") do copy /y "%%~F" "!DEST!\bin\%%P\" >nul
+        )
         for %%F in (plugin.cfg plugin.gd vaudio_godot_native_openal_3d.gdextension) do copy /y "%ADDON_DIR%\%%F" "!DEST!\" >nul
     )
 )

@@ -7,7 +7,7 @@ This plugin links against the packaged vaudionative shared library (vaudionative
 
 # How to use
 
-To build on Windows, run build.bat. To build on Linux/macOS, run build-unix.sh (auto-detects the host: Linux builds an x86_64 .so, macOS builds a universal .dylib).
+To build on Windows, run build.bat (builds x86_64 and arm64, into `bin/windows` and `bin/windows-arm64`). To build on Linux/macOS, run build-unix.sh (auto-detects the host: Linux builds an x86_64 or arm64 .so into `bin/linux` or `bin/linux-arm64`, macOS builds a universal .dylib).
 
 The vendored binaries under `thirdparty/` are per-platform and git-ignored - you supply them yourself. `{folder}` is the vaudio SDK package's platform folder name (`windows`, `windows-arm64`, `linux`, `linux-arm64`, `mac`), which SConstruct picks from `platform` + `arch`:
 - `thirdparty/vaudio/lib/{folder}/` : `vaudionative.dll` + `vaudionative.lib` / `libvaudionative.so` / `libvaudionative.dylib` (+ `vaudio-debug-window[.exe]` and `glfw3.dll` / `libglfw.so.3` / `libglfw.3.dylib`, optional, dev builds only - see below)

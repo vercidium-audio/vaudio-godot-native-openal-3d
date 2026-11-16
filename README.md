@@ -26,7 +26,7 @@ This repository requires Vercidium Audio v1.11.2 and OpenAL Soft to run.
 
 ## Building
 
-On Windows, run `build.bat`. On Linux/macOS, run `build-unix.sh` (auto-detects the host - Linux builds an x86_64 `.so`, macOS builds a universal `.dylib`).
+On Windows, run `build.bat` (builds x86_64 and arm64). On Linux/macOS, run `build-unix.sh` (auto-detects the host - Linux builds an x86_64 or arm64 `.so` for the host, macOS builds a universal `.dylib`).
 
 The build expects the Vercidium Audio SDK in `thirdparty/vaudio/lib/{folder}` and OpenAL Soft in `thirdparty/openal/lib/{folder}`, where `{folder}` is the SDK's platform folder name (`windows`, `windows-arm64`, `linux`, `linux-arm64` or `mac`). The output goes into `addons/vaudio-godot-native-openal-3d/bin/{folder}`, along with copies of `vaudionative` and OpenAL Soft.
 
