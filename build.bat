@@ -26,30 +26,21 @@ scons target=template_release
 if errorlevel 1 exit /b 1
 
 set ADDON_DIR=addons\vaudio-godot-native-openal-3d
-set BIN_DIR=%ADDON_DIR%\bin
+set BIN_DIR=%ADDON_DIR%\bin\windows
 
-if not "%VAUDIO_RELEASE_DIR%"=="" (
-    echo Copying build output to %VAUDIO_RELEASE_DIR%
-    copy /y "%BIN_DIR%\libvaudiogodotnativeopenal3d.windows.editor.x86_64.dll" "%VAUDIO_RELEASE_DIR%\bin\" >nul
-    copy /y "%BIN_DIR%\libvaudiogodotnativeopenal3d.windows.template_debug.x86_64.dll" "%VAUDIO_RELEASE_DIR%\bin\" >nul
-    copy /y "%BIN_DIR%\libvaudiogodotnativeopenal3d.windows.template_release.x86_64.dll" "%VAUDIO_RELEASE_DIR%\bin\" >nul
-    if exist "%BIN_DIR%\vaudio-debug-window.exe" copy /y "%BIN_DIR%\vaudio-debug-window.exe" "%VAUDIO_RELEASE_DIR%\bin\" >nul
-    copy /y "%ADDON_DIR%\plugin.cfg" "%VAUDIO_RELEASE_DIR%\" >nul
-    copy /y "%ADDON_DIR%\plugin.gd" "%VAUDIO_RELEASE_DIR%\" >nul
-) else (
-    echo VAUDIO_RELEASE_DIR not set - skipping copy to release repo
+rem Copies bin\windows (the plugin, vaudionative, OpenAL, and the debug window + GLFW when vendored) into each addon folder
+setlocal enabledelayedexpansion
+for %%V in (VAUDIO_RELEASE_DIR VAUDIO_DEMO_ADDON_DIR) do (
+    set DEST=!%%V!
+    if "!DEST!"=="" (
+        echo %%V not set - skipping copy
+    ) else (
+        echo Copying build output to !DEST!
+        if not exist "!DEST!\bin\windows" mkdir "!DEST!\bin\windows"
+        for %%F in ("%BIN_DIR%\*.dll" "%BIN_DIR%\*.exe") do copy /y "%%~F" "!DEST!\bin\windows\" >nul
+        for %%F in (plugin.cfg plugin.gd vaudio_godot_native_openal_3d.gdextension) do copy /y "%ADDON_DIR%\%%F" "!DEST!\" >nul
+    )
 )
 
-if not "%VAUDIO_DEMO_ADDON_DIR%"=="" (
-    echo Copying build output to %VAUDIO_DEMO_ADDON_DIR%
-    copy /y "%BIN_DIR%\libvaudiogodotnativeopenal3d.windows.editor.x86_64.dll" "%VAUDIO_DEMO_ADDON_DIR%\bin\" >nul
-    copy /y "%BIN_DIR%\libvaudiogodotnativeopenal3d.windows.template_debug.x86_64.dll" "%VAUDIO_DEMO_ADDON_DIR%\bin\" >nul
-    copy /y "%BIN_DIR%\libvaudiogodotnativeopenal3d.windows.template_release.x86_64.dll" "%VAUDIO_DEMO_ADDON_DIR%\bin\" >nul
-    if exist "%BIN_DIR%\vaudio-debug-window.exe" copy /y "%BIN_DIR%\vaudio-debug-window.exe" "%VAUDIO_DEMO_ADDON_DIR%\bin\" >nul
-    copy /y "%ADDON_DIR%\plugin.cfg" "%VAUDIO_DEMO_ADDON_DIR%\" >nul
-    copy /y "%ADDON_DIR%\plugin.gd" "%VAUDIO_DEMO_ADDON_DIR%\" >nul
-) else (
-    echo VAUDIO_DEMO_ADDON_DIR not set - skipping copy to demo project addon
-)
-
+endlocal
 endlocal
