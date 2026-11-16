@@ -66,6 +66,14 @@ void VAVisualisation::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_update_frequency_ms", "value"), &VAVisualisation::set_update_frequency_ms);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "update_frequency_ms"), "set_update_frequency_ms", "get_update_frequency_ms");
 
+    ClassDB::bind_method(D_METHOD("get_random_visualisation_seed"), &VAVisualisation::get_random_visualisation_seed);
+    ClassDB::bind_method(D_METHOD("set_random_visualisation_seed", "value"), &VAVisualisation::set_random_visualisation_seed);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "random_visualisation_seed"), "set_random_visualisation_seed", "get_random_visualisation_seed");
+
+    ClassDB::bind_method(D_METHOD("get_visualisation_seed"), &VAVisualisation::get_visualisation_seed);
+    ClassDB::bind_method(D_METHOD("set_visualisation_seed", "value"), &VAVisualisation::set_visualisation_seed);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "visualisation_seed"), "set_visualisation_seed", "get_visualisation_seed");
+
     ClassDB::bind_method(D_METHOD("get_fade_in_ms"), &VAVisualisation::get_fade_in_ms);
     ClassDB::bind_method(D_METHOD("set_fade_in_ms", "value"), &VAVisualisation::set_fade_in_ms);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "fade_in_ms"), "set_fade_in_ms", "get_fade_in_ms");
@@ -196,6 +204,7 @@ void VAVisualisation::teardown_visualisation()
     {
         vaEmitterSetVisualisationCallback(emitter->get_handle(), nullptr);
         vaEmitterSetVisualisationRayCount(emitter->get_handle(), 0);
+        vaEmitterClearVisualisationSeed(emitter->get_handle());
     }
 
     callback_registered = false;
@@ -223,6 +232,25 @@ void VAVisualisation::apply_properties_to_emitter()
     vaEmitterSetVisualisationRayCount(emitter->get_handle(), ray_count);
     vaEmitterSetVisualisationBounceCount(emitter->get_handle(), bounce_count);
     vaEmitterSetVisualisationUpdateFrequency(emitter->get_handle(), update_frequency_ms);
+    apply_seed_to_emitter();
+}
+
+void VAVisualisation::apply_seed_to_emitter()
+{
+    if (!emitter || !emitter->get_handle())
+        return;
+
+    if (random_visualisation_seed)
+        vaEmitterClearVisualisationSeed(emitter->get_handle());
+    else
+        vaEmitterSetVisualisationSeed(emitter->get_handle(), visualisation_seed);
+}
+
+// Hidden rather than removed, so the seed is still saved while unused
+void VAVisualisation::_validate_property(PropertyInfo &p_property) const
+{
+    if (p_property.name == StringName("visualisation_seed") && random_visualisation_seed)
+        p_property.usage &= ~PROPERTY_USAGE_EDITOR;
 }
 
 int VAVisualisation::required_instance_count() const
@@ -410,6 +438,29 @@ void VAVisualisation::set_update_frequency_ms(int value)
 
     if (emitter && emitter->get_handle())
         vaEmitterSetVisualisationUpdateFrequency(emitter->get_handle(), update_frequency_ms);
+}
+
+bool VAVisualisation::get_random_visualisation_seed() const
+{
+    return random_visualisation_seed;
+}
+
+void VAVisualisation::set_random_visualisation_seed(bool value)
+{
+    random_visualisation_seed = value;
+    apply_seed_to_emitter();
+    notify_property_list_changed();
+}
+
+int VAVisualisation::get_visualisation_seed() const
+{
+    return visualisation_seed;
+}
+
+void VAVisualisation::set_visualisation_seed(int value)
+{
+    visualisation_seed = value;
+    apply_seed_to_emitter();
 }
 
 int VAVisualisation::get_fade_in_ms() const

@@ -17,6 +17,12 @@
 		<member name="update_frequency_ms" type="int" setter="set_update_frequency_ms" getter="get_update_frequency_ms" default="500">
 			The interval, in milliseconds, between visualisation ray updates. Mirrors the parent emitter's visualisation_update_frequency.
 		</member>
+		<member name="random_visualisation_seed" type="bool" setter="set_random_visualisation_seed" getter="get_random_visualisation_seed" default="true">
+			Whether to randomise visualisation rays each time. When false, [member visualisation_seed] is used, so every update casts the same rays.
+		</member>
+		<member name="visualisation_seed" type="int" setter="set_visualisation_seed" getter="get_visualisation_seed" default="0">
+			Seed used to randomise visualisation rays when [member random_visualisation_seed] is false. Only shown in the inspector when [member random_visualisation_seed] is false.
+		</member>
 		<member name="fade_in_ms" type="int" setter="set_fade_in_ms" getter="get_fade_in_ms" default="100">
 			How long, in milliseconds, each diamond takes to fade in from transparent to color's alpha after it first appears.
 		</member>

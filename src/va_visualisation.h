@@ -38,6 +38,8 @@ private:
     int ray_count = 32;
     int bounce_count = 4;
     int update_frequency_ms = 200;
+    bool random_visualisation_seed = true;
+    int visualisation_seed = 0;
 
     int fade_in_ms = 750;
     int fade_out_ms = 750;
@@ -56,6 +58,7 @@ private:
     void retry_find_emitter(Node *node);
     void create_multimesh();
     void apply_properties_to_emitter();
+    void apply_seed_to_emitter();
     void apply_shader_uniforms();
 
     // Ring buffer needs room for every batch still fading at once (duration_ms / update_frequency_ms), not just the latest.
@@ -68,6 +71,7 @@ private:
 
 protected:
     static void _bind_methods();
+    void _validate_property(PropertyInfo &p_property) const;
 
 public:
     VAVisualisation();
@@ -90,6 +94,10 @@ public:
     void set_bounce_count(int value);
     int get_update_frequency_ms() const;
     void set_update_frequency_ms(int value);
+    bool get_random_visualisation_seed() const;
+    void set_random_visualisation_seed(bool value);
+    int get_visualisation_seed() const;
+    void set_visualisation_seed(int value);
 
     int get_fade_in_ms() const;
     void set_fade_in_ms(int value);
