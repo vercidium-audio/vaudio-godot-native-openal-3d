@@ -16,6 +16,7 @@ class VASourceAmbient : public ALSourceRelative
 private:
     va_godot::VAWorld *va_world = nullptr;
     bool played = false;
+    bool warned_no_ambience = false;
 
     bool waiting_for_world = false;
 

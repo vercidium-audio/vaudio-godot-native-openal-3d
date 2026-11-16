@@ -97,7 +97,18 @@ void VASourceAmbient::_process(double delta)
     }
 
     va_godot::VAEmitter *listener = va_world ? va_world->get_listener() : nullptr;
-    if (!listener || !listener->is_ambient_filter_ready())
+    if (!listener)
+    {
+        return;
+    }
+
+    if (!warned_no_ambience && listener->is_raytraced() && !listener->is_ambient_occlusion_enabled() && !listener->is_ambient_permeation_enabled())
+    {
+        VA_WARN_NAMED("The listener '", listener->get_name(), "' does not have ambience enabled, so this VASourceAmbient will never play. Set the listener's ambient occlusion / permeation ray and bounce counts above 0.");
+        warned_no_ambience = true;
+    }
+
+    if (!listener->is_ambient_filter_ready())
     {
         return;
     }

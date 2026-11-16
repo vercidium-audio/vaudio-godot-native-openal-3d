@@ -85,6 +85,17 @@ public:
 
     bool is_raytraced() const;
 
+    // The SDK only casts ambient rays when both the ray and bounce counts are above 0
+    bool is_ambient_occlusion_enabled() const
+    {
+        return ambient_occlusion_ray_count > 0 && ambient_occlusion_bounce_count > 0;
+    }
+
+    bool is_ambient_permeation_enabled() const
+    {
+        return ambient_permeation_ray_count > 0 && ambient_permeation_bounce_count > 0;
+    }
+
     bool is_raytraced_by_listener() const;
 
     // See VAEmitter::is_ready_to_play

@@ -20,6 +20,8 @@ void VARaytracedSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_muffling_gain_lf"), &VARaytracedSource::get_muffling_gain_lf);
     ClassDB::bind_method(D_METHOD("get_muffling_gain_hf"), &VARaytracedSource::get_muffling_gain_hf);
     ClassDB::bind_method(D_METHOD("is_raytraced"), &VARaytracedSource::is_raytraced);
+    ClassDB::bind_method(D_METHOD("is_ambient_occlusion_enabled"), &VARaytracedSource::is_ambient_occlusion_enabled);
+    ClassDB::bind_method(D_METHOD("is_ambient_permeation_enabled"), &VARaytracedSource::is_ambient_permeation_enabled);
     ClassDB::bind_method(D_METHOD("is_raytraced_by_listener"), &VARaytracedSource::is_raytraced_by_listener);
     ClassDB::bind_method(D_METHOD("is_ready_to_play"), &VARaytracedSource::is_ready_to_play);
     ClassDB::bind_method(D_METHOD("is_silenced_by_bounds"), &VARaytracedSource::is_silenced_by_bounds);

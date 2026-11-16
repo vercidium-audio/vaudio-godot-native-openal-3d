@@ -33,6 +33,8 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_va_position"), &VAEmitter::get_va_position);
     ClassDB::bind_method(D_METHOD("get_within_world_bounds"), &VAEmitter::get_within_world_bounds);
     ClassDB::bind_method(D_METHOD("is_raytraced"), &VAEmitter::is_raytraced);
+    ClassDB::bind_method(D_METHOD("is_ambient_occlusion_enabled"), &VAEmitter::is_ambient_occlusion_enabled);
+    ClassDB::bind_method(D_METHOD("is_ambient_permeation_enabled"), &VAEmitter::is_ambient_permeation_enabled);
     ClassDB::bind_method(D_METHOD("is_ready_to_play"), &VAEmitter::is_ready_to_play);
     ClassDB::bind_method(D_METHOD("is_outside_bounds"), &VAEmitter::is_outside_bounds);
     ClassDB::bind_method(D_METHOD("is_silenced_by_bounds"), &VAEmitter::is_silenced_by_bounds);
