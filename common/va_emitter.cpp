@@ -735,6 +735,8 @@ void VAEmitter::apply_raytracing_results()
     if (this != listener && listener->has_raytraced_target(this))
     {
         VALowPassFilter vaudio_filter = listener->get_target_filter(this);
+        muffling_gain_lf = vaudio_filter.gainLF;
+        muffling_gain_hf = vaudio_filter.gainHF;
 
         if (filter)
         {

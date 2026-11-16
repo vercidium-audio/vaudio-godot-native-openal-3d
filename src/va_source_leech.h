@@ -10,25 +10,19 @@ extern "C"
 
 using namespace godot;
 
-namespace va_godot
-{
-class VAWorld;
-class VAEmitter;
-}
+namespace va_godot { class VAEmitter; }
 
 class VASourceLeech : public ALSource3D
 {
     GDCLASS(VASourceLeech, ALSource3D);
 
 private:
-    va_godot::VAWorld *va_world = nullptr;
-
     // Not owned - the parent VAEmitter this node leeches raytracing results off, resolved once in _enter_tree via get_parent().
     va_godot::VAEmitter *emitter = nullptr;
 
     VABoundsPlayback playback;
 
-    void apply_raytracing_results(va_godot::VAEmitter *other);
+    void apply_raytracing_results();
 
 protected:
     static void _bind_methods();

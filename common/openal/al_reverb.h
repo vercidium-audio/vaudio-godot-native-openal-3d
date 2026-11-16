@@ -1,3 +1,5 @@
+// Human-reviewed
+
 #pragma once
 
 #include "al_functions.h"
@@ -28,8 +30,7 @@ struct VAEAXReverbParams
     float roomRolloffFactor = 0.0f;
     int decayHFLimit = 1; // AL_TRUE
 
-    // Grouped-EAX only: the aux slot's own send gain (AL_EFFECTSLOT_GAIN), driven by vaEAXReverbGetRelativeGain so a
-    // grouped zone fades out for a listener that hasn't raytraced it. Stays 1.0 for the single global listener slot.
+    // Used to muffle a grouped EAX zone. Stays 1.0 for the VAListener
     float effectSlotGain = 1.0f;
 };
 

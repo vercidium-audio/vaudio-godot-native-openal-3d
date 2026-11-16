@@ -1082,7 +1082,7 @@ void VAWorld::add_primitive(Node *node, VAMaterialType material, bool use_flat_t
         TypedArray<Node> children = node->get_children();
         for (int i = 0; i < children.size(); i++)
         {
-            add_primitive(Object::cast_to<Node>(children[i]), material, use_flat_transmission, filter, true);
+            add_primitive(Object::cast_to<Node>(children[i]), material, use_flat_transmission, propagateMode, true);
         }
     }
 }

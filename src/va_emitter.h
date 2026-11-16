@@ -98,6 +98,10 @@ private:
 
     ALFilter *filter = nullptr;
 
+    // Absolute gains, as ALFilter stores HF relative to LF
+    float muffling_gain_lf = 1.0f;
+    float muffling_gain_hf = 1.0f;
+
     float ambient_filter_gain_lf = 1.0f;
     float ambient_filter_gain_hf = 1.0f;
     bool ambient_filter_ready = false;
@@ -203,6 +207,17 @@ public:
     float get_ambient_filter_gain_hf() const
     {
         return ambient_filter_gain_hf;
+    }
+
+    // How muffled this emitter sounds to the listener. 1.0/1.0 until the listener raytraces it
+    float get_muffling_gain_lf() const
+    {
+        return muffling_gain_lf;
+    }
+
+    float get_muffling_gain_hf() const
+    {
+        return muffling_gain_hf;
     }
 
     ALFilter *get_filter() const
