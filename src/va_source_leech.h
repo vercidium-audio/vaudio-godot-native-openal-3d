@@ -22,8 +22,6 @@ private:
 
     VABoundsPlayback playback;
 
-    void apply_raytracing_results();
-
 protected:
     static void _bind_methods();
 
@@ -34,23 +32,24 @@ public:
     void _enter_tree() override;
     void _exit_tree() override;
 
-    // Autoplay waits for the parent emitter to be ready to play and inside the bounds
+    // Autoplay waits for the parent emitter to be ready to play and within world bounds
     void _ready() override;
 
     void _process(double delta) override;
 
+    // True if the parent VAEmitter has cast its own reverb and ambience rays
     bool is_raytraced() const;
 
     // See VAEmitter::is_ready_to_play
     bool is_ready_to_play() const;
 
-    // The parent emitter's VAEmitter::is_silenced_by_bounds, using its clamp_position
+    // True if the parent VAEmitter is outside the world bounds, and VAWorld.EmittersOutsideTheWorldAreMuffled=true
     bool is_silenced_by_bounds() const;
 
-    // Matches VASource's Play() override: returns false without playing until the parent emitter is ready to play, and follows the same bounds rules.
+    // Matches VASource's Play() override: waits until the parent emitter is ready to play, and follows the same bounds rules
     bool play() override;
 
-    // Also cancels a play that's waiting, e.g. a loop waiting outside the bounds
+    // Stop playback and cancel pending playback
     void stop() override;
 
     // Current muffling filter state (direct/dry path only); 1.0/1.0 until the listener has raytraced the parent emitter at least once.

@@ -179,9 +179,8 @@ public:
         return ambient_permeation_ray_count > 0 && ambient_permeation_bounce_count > 0;
     }
 
-    // True once the listener has raytraced this emitter, and this emitter has cast its own reverb rays.
-	// If this emitter is outside the world bounds, it does not cast reverb rays and this field does not wait for the reverb rays to be cast.
-	// Sources don't play until this field is true
+    // True once this emitter has cast its own rays and the listener has raytraced it. Sources don't play until this is true
+    // Inside the bounds it also waits for its own grouped EAX, which doesn't exist outside them
     bool is_ready_to_play() const;
 
     // is_ready_to_play, but always waiting for its own reverb rays. raytrace_once waits for this, so a sound started outside the bounds still gets reverb once inside

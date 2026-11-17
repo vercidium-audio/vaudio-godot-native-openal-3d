@@ -550,7 +550,7 @@ bool VAEmitter::has_listener_results(bool wait_for_own_eax) const
 
 bool VAEmitter::is_ready_to_play() const
 {
-    return has_listener_results(!is_outside_bounds());
+    return is_raytraced() && has_listener_results(!is_outside_bounds());
 }
 
 bool VAEmitter::has_listener_results() const

@@ -15,6 +15,13 @@ static func set_value(node: Object, property: String, value: Variant) -> void:
 	node.set(property, value)
 
 # Creates a plugin node by class name, e.g. "VADefaultMaterial". The world is unused here, but the C# adapter needs it to find the addon folder
+# Whether the property is shown in the inspector, after the node's _validate_property
+static func is_in_inspector(node: Object, property: String) -> bool:
+	for info in node.get_property_list():
+		if info.name == property:
+			return info.usage & PROPERTY_USAGE_EDITOR != 0
+	return false
+
 static func create_node(_world: Node, type: String) -> Node:
 	return ClassDB.instantiate(type)
 

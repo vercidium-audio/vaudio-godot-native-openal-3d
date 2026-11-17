@@ -66,8 +66,6 @@ private:
 
     void retry_find_va_world(Node *node);
 
-    void apply_raytracing_results(va_godot::VAEmitter *other);
-
 protected:
     static void _bind_methods();
 
