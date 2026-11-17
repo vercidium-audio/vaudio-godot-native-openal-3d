@@ -139,6 +139,10 @@ private:
     // Reads device_name/max_auxiliary_sends/sample_rate/hrtf_enabled/hrtf from Project Settings.
     void read_settings_from_project_settings();
 
+    // See get_cached_capture_devices()
+    PackedStringArray cached_capture_devices;
+    bool capture_devices_cached = false;
+
 protected:
     static void _bind_methods();
 
@@ -252,6 +256,23 @@ public:
     PackedStringArray get_available_devices();
 
     PackedStringArray get_available_capture_devices();
+
+    // Enumerating capture devices can be slow, and Godot calls _validate_property every time it fetches the property list, so VAInputStreamSource's dropdown reuses this until refresh_capture_devices()
+    const PackedStringArray &get_cached_capture_devices()
+    {
+        if (!capture_devices_cached)
+        {
+            cached_capture_devices = get_available_capture_devices();
+            capture_devices_cached = true;
+        }
+
+        return cached_capture_devices;
+    }
+
+    void refresh_capture_devices()
+    {
+        capture_devices_cached = false;
+    }
 
     PackedStringArray get_available_hrtfs();
 

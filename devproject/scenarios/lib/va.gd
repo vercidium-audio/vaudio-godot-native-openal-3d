@@ -20,14 +20,18 @@ static func connect_signal(node: Object, signal_name: String, callable: Callable
 		return
 	node.connect(signal_name, callable)
 
-# Creates a plugin node by class name, e.g. "VADefaultMaterial". The world is unused here, but the C# adapter needs it to find the addon folder
-# Whether the property is shown in the inspector, after the node's _validate_property
-static func is_in_inspector(node: Object, property: String) -> bool:
+# The property's info from get_property_list(), after the node's _validate_property, or empty if it has none
+static func property_info(node: Object, property: String) -> Dictionary:
 	for info in node.get_property_list():
 		if info.name == property:
-			return info.usage & PROPERTY_USAGE_EDITOR != 0
-	return false
+			return info
+	return {}
 
+# Whether the property is shown in the inspector, after the node's _validate_property
+static func is_in_inspector(node: Object, property: String) -> bool:
+	return property_info(node, property).get("usage", 0) & PROPERTY_USAGE_EDITOR != 0
+
+# Creates a plugin node by class name, e.g. "VADefaultMaterial". The world is unused here, but the C# adapter needs it to find the addon folder
 static func create_node(_world: Node, type: String) -> Node:
 	return ClassDB.instantiate(type)
 
@@ -107,6 +111,12 @@ static func open_stream(source: Node, format: int, frequency: int) -> bool:
 
 static func push_audio_data(source: Node, data: PackedByteArray) -> void:
 	source.push_audio_data(data)
+
+static func open_capture(source: Node, device_name: String, format: int, frequency: int, buffer_size_frames: int) -> bool:
+	return source.open_capture(device_name, format, frequency, buffer_size_frames)
+
+static func is_capture_open(source: Node) -> bool:
+	return source.is_capture_open()
 
 static func close_stream(source: Node) -> void:
 	source.close_stream()

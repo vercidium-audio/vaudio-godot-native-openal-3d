@@ -55,6 +55,12 @@ void VAInputStreamSource::_bind_methods()
     ADD_SIGNAL(MethodInfo("audio_captured", PropertyInfo(Variant::PACKED_BYTE_ARRAY, "data")));
 }
 
+// peak_amplitude() only reads 8 and 16-bit PCM, matching the format dropdown
+static bool is_supported_format(int format)
+{
+    return format == AL_FORMAT_MONO8 || format == AL_FORMAT_MONO16 || format == AL_FORMAT_STEREO8 || format == AL_FORMAT_STEREO16;
+}
+
 // Uses PROPERTY_HINT_ENUM rather than PROPERTY_HINT_ENUM_SUGGESTION since Godot's editor unconditionally injects a blank entry into the latter for Variant::STRING, with no way to suppress it.
 void VAInputStreamSource::_validate_property(PropertyInfo &p_property) const
 {
@@ -66,11 +72,8 @@ void VAInputStreamSource::_validate_property(PropertyInfo &p_property) const
     if (!manager)
         return;
 
-    PackedStringArray devices = manager->get_available_capture_devices();
-
-    if (devices.is_empty())
-        return;
-
+    // Still a dropdown with no devices, so it only offers the default rather than becoming a free text field
+    PackedStringArray devices = manager->get_cached_capture_devices();
     devices.insert(0, DEFAULT_DEVICE_LABEL);
 
     p_property.hint = PROPERTY_HINT_ENUM;
@@ -84,6 +87,9 @@ void VAInputStreamSource::set_device_name(const String &value)
 
 void VAInputStreamSource::refresh_devices()
 {
+    if (ALManager *manager = ALManager::get_singleton())
+        manager->refresh_capture_devices();
+
     notify_property_list_changed();
 }
 
@@ -142,10 +148,17 @@ bool VAInputStreamSource::open_capture(const String &device_name, int format, in
 {
     close_capture();
 
+    if (!is_supported_format(format))
+    {
+        VA_WARN_NAMED(format, " isn't a supported capture format. Use MONO8, MONO16, STEREO8 or STEREO16 instead");
+        return false;
+    }
+
     bool opened = capture_device.open(device_name, (ALenum)format, frequency, buffer_size_frames,
         [this, format](const uint8_t *data, int num_bytes)
         {
-            if (peak_amplitude(data, num_bytes, format) < microphone_threshold)
+            // Ignore quiet input
+            if (microphone_threshold > 0 && peak_amplitude(data, num_bytes, format) < microphone_threshold)
             {
                 return;
             }
@@ -173,6 +186,7 @@ bool VAInputStreamSource::open_capture(const String &device_name, int format, in
 
 void VAInputStreamSource::start_capture()
 {
+    // Reachable from scripts, e.g. after a failed open_capture or after close_capture
     if (!capture_open)
     {
         VA_ERROR_NAMED("start_capture called before open_capture (or after close_capture)");
