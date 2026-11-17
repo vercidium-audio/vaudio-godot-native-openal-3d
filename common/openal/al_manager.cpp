@@ -24,6 +24,37 @@ ALManager *ALManager::get_singleton()
     return singleton;
 }
 
+ALManager *ALManager::get_initialized_singleton(const char *action)
+{
+    if (singleton && singleton->is_initialized())
+        return singleton;
+
+    // The reason OpenAL didn't start was already logged at startup (or by the failed device switch)
+    VA_ERROR("Can't ", action, " because OpenAL failed to start. Check the earlier vaudio errors in the Output panel, e.g. the OpenAL library is missing from the plugin's bin folder, or no audio output device was found");
+    return nullptr;
+}
+
+ALuint ALManager::gen_buffer()
+{
+    // alGetError is a single sticky flag, so clear any stale error before reading the result of alGenBuffers below
+    alGetError_();
+
+    ALuint new_handle = 0;
+    alGenBuffers_(1, &new_handle);
+
+    ALenum error = alGetError_();
+
+    if (new_handle != 0 && error == AL_NO_ERROR)
+        return new_handle;
+
+    if (error == AL_OUT_OF_MEMORY)
+        VA_ERROR("Failed to create an OpenAL buffer because the system is out of memory");
+    else
+        VA_ERROR("Failed to create an OpenAL buffer. Error code: ", ALErrorToString(error));
+
+    return 0;
+}
+
 // get_available_devices()/get_available_capture_devices() plus the runtime device-switching and mixer-property methods
 void ALManager::_bind_methods()
 {

@@ -1,3 +1,5 @@
+// Human-reviewed
+
 #include "va_stream_source.h"
 
 #include <godot_cpp/core/class_db.hpp>
@@ -62,6 +64,7 @@ bool VAStreamSource::start_sound()
     update_dry_output();
     apply_filters(*source);
 
+    // The is_ready_to_play() check happens below in push_audio_data()
     source->play();
 
     get_sources().push_back(std::move(source));
@@ -112,17 +115,13 @@ void VAStreamSource::push_audio_data(const uint8_t *data, int num_bytes)
 
     // Nothing plays it while the bounds have stopped it
     if (num_bytes == 0 || stopped_by_bounds)
-    {
         return;
-    }
 
-    // Data that arrives before the muffling and reverb results is dropped, so the stream never plays unmuffled or without reverb
+    // Ignore data that arrives before raytracing completed, so the stream never plays unmuffled or without reverb
     if (!stream_ready)
     {
         if (!is_ready_to_play())
-        {
             return;
-        }
 
         stream_ready = true;
     }
@@ -133,9 +132,7 @@ void VAStreamSource::push_audio_data(const uint8_t *data, int num_bytes)
 void VAStreamSource::close_stream()
 {
     if (!stream_open)
-    {
         return;
-    }
 
     ALSource::stop();
     stream_buffer.destroy();
@@ -187,8 +184,6 @@ void VAStreamSource::_process(double delta)
 
 void VAStreamSource::drain_used_chunks()
 {
-    // Just discards each used chunk's bytes, unlike ALStreamSource.cs's TryGetUsedData which hands it back to the caller to recycle.
-    while (stream_buffer.try_get_used_chunk(drained_chunk))
-    {
-    }
+    // Discard each used chunk's bytes
+    while (stream_buffer.try_get_used_chunk(drained_chunk)) { }
 }

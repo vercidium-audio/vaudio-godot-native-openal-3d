@@ -12,7 +12,11 @@ env = SConscript("extern/godot-cpp/SConstruct")
 # - LINKFLAGS are for linking flags
 
 env.Append(CPPPATH=["src/", "common/", "thirdparty/vaudio/include/", "thirdparty/openal/include/"])
-sources = Glob("src/*.cpp") + Glob("src/openal/*.cpp") + Glob("common/*.cpp") + Glob("common/openal/*.cpp")
+
+# Object files go in obj/ instead of beside the sources, since the 2D plugin's common/ is a junction to this one and both would write the same object file names into it
+VariantDir("obj/src", "src", duplicate=0)
+VariantDir("obj/common", "common", duplicate=0)
+sources = Glob("obj/src/*.cpp") + Glob("obj/src/openal/*.cpp") + Glob("obj/common/*.cpp") + Glob("obj/common/openal/*.cpp")
 
 if env["target"] in ["editor", "template_debug"]:
     doc_data = env.GodotCPPDocData("src/gen/doc_data.gen.cpp", source=Glob("doc_classes/*.xml"))

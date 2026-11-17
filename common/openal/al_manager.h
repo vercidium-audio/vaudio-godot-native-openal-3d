@@ -145,6 +145,37 @@ protected:
 public:
     static ALManager *get_singleton();
 
+    // The singleton, or nullptr after logging "Can't <action> because OpenAL failed to start" if OpenAL isn't running
+    static ALManager *get_initialized_singleton(const char *action);
+
+    // Generates one buffer, or logs a readable error and returns 0
+    ALuint gen_buffer();
+
+    void delete_buffer(ALuint handle)
+    {
+        alDeleteBuffers_(1, &handle);
+    }
+
+    void delete_source(ALuint handle)
+    {
+        alDeleteSources_(1, &handle);
+    }
+
+    void delete_filter(ALuint handle)
+    {
+        alDeleteFilters_(1, &handle);
+    }
+
+    void delete_effect(ALuint handle)
+    {
+        alDeleteEffects_(1, &handle);
+    }
+
+    void delete_auxiliary_effect_slot(ALuint handle)
+    {
+        alDeleteAuxiliaryEffectSlots_(1, &handle);
+    }
+
     ALManager() = default;
     ~ALManager();
 

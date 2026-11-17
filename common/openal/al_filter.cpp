@@ -49,10 +49,7 @@ void ALFilter::destroy()
     ALManager *manager = ALManager::get_singleton();
 
     if (handle != 0 && manager && manager->has_efx())
-    {
-        ALuint handles[1] = {handle};
-        manager->al_delete_filters()(1, handles);
-    }
+        manager->delete_filter(handle);
 
     handle = 0;
 }

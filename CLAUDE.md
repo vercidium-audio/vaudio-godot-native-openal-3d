@@ -25,6 +25,12 @@ The ARM64 OpenAL Soft 1.25.2 builds come from the `Vercidium/openal-soft-github-
 
 `vaudio-debug-window` renders the raytracing simulation to a separate window. It only ships in vaudio's `dev` package, not `production`, so the build scripts only copy it (and GLFW) into `bin/{folder}/` if it exists.
 
+# Shared common folder
+
+`common/` is shared with the 2D plugin: `../vaudio-godot-native-openal-2d/common` is a local Windows junction to this folder, so this repo is the source of truth. Keep everything in `common/` dimension-agnostic - anything 2D or 3D specific belongs in each repo's `src/`. Git follows the junction, so every edit here also shows as modified in the 2D repo, and both repos need committing together.
+
+SConstruct builds object files into the gitignored `obj/` folder (`VariantDir`) rather than beside the sources, since both plugins would otherwise write the same object file names into the shared `common/` folder.
+
 # C++ code style
 
 - Allman brace style: opening curly braces go on their own new line (for functions, classes,

@@ -23,7 +23,7 @@ bool VABoundsPlayback::stop_if_silenced(ALSource &source, bool silenced)
 bool VABoundsPlayback::request_play(ALSource &source, bool silenced, bool ready)
 {
     if (silenced && !source.get_looping())
-        VA_WARN(source.get_name(), ": play() was called outside the VAWorld's bounds, so nothing played. A sound that doesn't loop isn't started outside them, and doesn't play once back inside");
+        VA_WARN(source.get_name(), ": This source did not play because it is outside the world bounds.");
 
     if (!silenced && ready)
         return true;

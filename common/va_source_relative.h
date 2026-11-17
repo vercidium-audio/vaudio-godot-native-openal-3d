@@ -1,13 +1,13 @@
+// Human-reviewed
+
 #pragma once
 
 #include "al_source_relative.h"
 
 using namespace godot;
 
-namespace va_godot
-{
-class VAWorld;
-}
+// Alias the VAWorld node, not the C SDK struct
+namespace va_godot { class VAWorld; }
 
 class VASourceRelative : public ALSourceRelative
 {
@@ -16,7 +16,7 @@ class VASourceRelative : public ALSourceRelative
 private:
     va_godot::VAWorld *va_world = nullptr;
 
-    // Set while _enter_tree found no VAWorld yet (see VAEmitter's identical waiting_for_world field).
+    // Set to true if _enter_tree did not find a VAWorld
     bool waiting_for_world = false;
 
     void retry_find_va_world(Node *node);
