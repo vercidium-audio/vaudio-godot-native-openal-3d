@@ -13,13 +13,14 @@ env = SConscript("extern/godot-cpp/SConstruct")
 
 env.Append(CPPPATH=["src/", "common/", "thirdparty/vaudio/include/", "thirdparty/openal/include/"])
 
-# Object files go in obj/ instead of beside the sources, since the 2D plugin's common/ is a junction to this one and both would write the same object file names into it
-VariantDir("obj/src", "src", duplicate=0)
-VariantDir("obj/common", "common", duplicate=0)
-sources = Glob("obj/src/*.cpp") + Glob("obj/src/openal/*.cpp") + Glob("obj/common/*.cpp") + Glob("obj/common/openal/*.cpp")
+# Object files go in obj/ instead of beside the sources, since the 2D plugin's common/ is a junction to this one and both would write the same object file names into it. Each platform/arch/target gets its own folder, or every build would overwrite the last one's objects and recompile everything
+obj_dir = "obj/" + env["platform"] + "-" + env["arch"] + "/" + env["target"]
+VariantDir(obj_dir + "/src", "src", duplicate=0)
+VariantDir(obj_dir + "/common", "common", duplicate=0)
+sources = Glob(obj_dir + "/src/*.cpp") + Glob(obj_dir + "/src/openal/*.cpp") + Glob(obj_dir + "/common/*.cpp") + Glob(obj_dir + "/common/openal/*.cpp")
 
 if env["target"] in ["editor", "template_debug"]:
-    doc_data = env.GodotCPPDocData("src/gen/doc_data.gen.cpp", source=Glob("doc_classes/*.xml"))
+    doc_data = env.GodotCPPDocData(obj_dir + "/gen/doc_data.gen.cpp", source=Glob("doc_classes/*.xml"))
     sources.append(doc_data)
 
 platform = env["platform"]
