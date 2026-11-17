@@ -1,3 +1,5 @@
+// Human-created
+
 #include "va_listener.h"
 
 #include <godot_cpp/classes/global_constants.hpp>
@@ -23,7 +25,7 @@ VAListener::VAListener()
     set_has_relative_reverb(true);
 }
 
-// Hides inherited properties not meaningful on a listener: affects_grouped_eax/occlusion_energy_cap/permeation_energy_cap only apply to emitters that can be occluded/permeated, raytrace_once only applies to emitters that get raytraced against the listener, not the listener itself, and the listener never shares a cluster with its own targets.
+// Hide properties that aren't relevant to the listener
 void VAListener::_validate_property(PropertyInfo &p_property) const
 {
     if (p_property.name == StringName("has_relative_reverb") ||
@@ -46,7 +48,7 @@ bool VAListener::is_current() const
 
 void VAListener::set_current(bool value)
 {
-    // Not in a world yet (e.g. set while loading the scene, or in the editor) - VAWorld::register_listener reads the flag once this node is attached
+    // Not in a world yet (e.g. set while loading the scene, or in the editor). Will become current in attach_to_world() instead
     if (!va_world)
     {
         current = value;
@@ -74,17 +76,18 @@ void VAListener::detach_from_world()
     va_world->unregister_listener(this);
 }
 
-// Takes over the shared handle from the previous listener, or creates it if this is the first listener in the world. Targets stay connected to this listener.
 void VAListener::activate(::VAEmitter *shared_handle)
 {
     current = true;
 
     if (!shared_handle)
     {
+        // First listener, create the VAEmitter
         create_emitter();
         return;
     }
 
+    // Take over the shared Emitter from the previous listener
     emitter = shared_handle;
     vaEmitterSetUserData(emitter, this);
     vaEmitterSetName(emitter, String(get_name()).utf8().get_data());
@@ -97,7 +100,7 @@ void VAListener::activate(::VAEmitter *shared_handle)
 
 void VAListener::deactivate()
 {
-    // The next current listener takes the handle, so its visualisation callback and ray count are cleared first
+    // Remove all visualisation callbacks / ray counts, so the new current listener can take over
     teardown_visualisation();
 
     current = false;
