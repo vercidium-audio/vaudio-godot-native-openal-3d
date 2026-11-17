@@ -45,4 +45,13 @@
 			Ray bounces further than this distance from the parent emitter are not rendered. Set to 0 to render bounces at any distance.
 		</member>
 	</members>
+	<signals>
+		<signal name="visualisation_data_received">
+			<param index="0" name="positions" type="PackedVector3Array" />
+			<param index="1" name="normals" type="PackedVector3Array" />
+			<description>
+				Emitted every [member update_frequency_ms] milliseconds with the world-space position and surface normal of every visualisation ray bounce, one normal per position. Includes bounces beyond [member max_distance], which only limits what is rendered. Connect to this to use the ray bounces yourself, e.g. to draw them differently or place effects where they land.
+			</description>
+		</signal>
+	</signals>
 </class>

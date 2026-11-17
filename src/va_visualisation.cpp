@@ -101,6 +101,8 @@ void VAVisualisation::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_max_distance"), &VAVisualisation::get_max_distance);
     ClassDB::bind_method(D_METHOD("set_max_distance", "value"), &VAVisualisation::set_max_distance);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_distance", PROPERTY_HINT_RANGE, "0.0,500.0,0.1,or_greater"), "set_max_distance", "get_max_distance");
+
+    ADD_SIGNAL(MethodInfo("visualisation_data_received", PropertyInfo(Variant::PACKED_VECTOR3_ARRAY, "positions"), PropertyInfo(Variant::PACKED_VECTOR3_ARRAY, "normals")));
 }
 
 VAVisualisation::VAVisualisation()
@@ -348,7 +350,7 @@ void VAVisualisation::visualisation_callback_trampoline(::VAEmitter *emitter, VA
 
 void VAVisualisation::on_visualisation_data(VAVisualisationData *data, int count)
 {
-    if (!multimesh.is_valid() || count <= 0)
+    if (count <= 0)
         return;
 
     if (!data)
@@ -356,6 +358,11 @@ void VAVisualisation::on_visualisation_data(VAVisualisationData *data, int count
         VA_ERROR_NAMED("Received visualisation data with a null buffer but a non-zero count.");
         return;
     }
+
+    emit_visualisation_data(data, count);
+
+    if (!multimesh.is_valid())
+        return;
 
     int capacity = multimesh->get_instance_count();
     int needed = MAX(count, required_instance_count());
@@ -399,6 +406,22 @@ void VAVisualisation::on_visualisation_data(VAVisualisationData *data, int count
     }
 
     multimesh->set_visible_instance_count(capacity);
+}
+
+void VAVisualisation::emit_visualisation_data(VAVisualisationData *data, int count)
+{
+    PackedVector3Array positions;
+    PackedVector3Array normals;
+    positions.resize(count);
+    normals.resize(count);
+
+    for (int i = 0; i < count; i++)
+    {
+        positions.set(i, FromVAudio(data[i].position));
+        normals.set(i, FromVAudio(data[i].normal));
+    }
+
+    emit_signal("visualisation_data_received", positions, normals);
 }
 
 int VAVisualisation::get_ray_count() const

@@ -14,6 +14,12 @@ static func set_value(node: Object, property: String, value: Variant) -> void:
 		return
 	node.set(property, value)
 
+static func connect_signal(node: Object, signal_name: String, callable: Callable) -> void:
+	if not node.has_signal(signal_name):
+		push_error("[devproject] %s has no signal '%s'" % [node, signal_name])
+		return
+	node.connect(signal_name, callable)
+
 # Creates a plugin node by class name, e.g. "VADefaultMaterial". The world is unused here, but the C# adapter needs it to find the addon folder
 # Whether the property is shown in the inspector, after the node's _validate_property
 static func is_in_inspector(node: Object, property: String) -> bool:

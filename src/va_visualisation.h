@@ -68,6 +68,7 @@ private:
 
     static void visualisation_callback_trampoline(::VAEmitter *emitter, VAVisualisationData *data, int count);
     void on_visualisation_data(VAVisualisationData *data, int count);
+    void emit_visualisation_data(VAVisualisationData *data, int count);
 
 protected:
     static void _bind_methods();
