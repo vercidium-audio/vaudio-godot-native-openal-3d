@@ -186,6 +186,10 @@ void VAWorld::validate_materials_in_editor(Node *node)
 void VAWorld::init_scene()
 {
     // Scans from get_tree()->get_root() rather than get_current_scene() - some scenes add their level as a sibling of the current scene rather than a child, so get_current_scene() would miss primitives already baked into it. See va_world_lookup.h's find_va_world for the same fix applied to VAWorld discovery.
+    // The scene can change again before this deferred call runs
+    if (!is_inside_tree())
+        return;
+
     Node *root = get_tree()->get_root();
     if (!root)
     {
