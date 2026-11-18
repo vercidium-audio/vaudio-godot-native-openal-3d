@@ -3,6 +3,7 @@
 #include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/classes/time.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
 #include "../va_device_name.h"
@@ -790,6 +791,48 @@ bool ALManager::reset_device()
         singleton = this;
 
     return ok;
+}
+
+// Once the output device is lost (e.g. headphones unplugged), OpenAL Soft stops every source and new ones stop as soon as they play, so reopen it in place, which keeps every AL object valid. Throttled, since every VAWorld calls it each frame
+void ALManager::check_device_connected()
+{
+    if (!is_initialized())
+        return;
+
+    uint64_t now = Time::get_singleton()->get_ticks_msec();
+    if (now < next_connection_check_ms)
+        return;
+
+    next_connection_check_ms = now + 1000;
+
+    if (alcIsExtensionPresent_(device, "ALC_EXT_disconnect") == ALC_FALSE)
+        return;
+
+    ALCint connected = ALC_TRUE;
+    alcGetIntegerv_(device, ALC_CONNECTED, 1, &connected);
+
+    if (connected)
+    {
+        device_lost = false;
+        return;
+    }
+
+    if (!device_lost)
+        VA_WARN("The audio output device was disconnected, reopening it");
+
+    ALCint attributes[13];
+    build_attributes(attributes);
+
+    if (alcReopenDeviceSOFT_ && alcReopenDeviceSOFT_(device, device_name.empty() ? nullptr : device_name.c_str(), attributes) == ALC_TRUE)
+    {
+        device_lost = false;
+        return;
+    }
+
+    if (!device_lost)
+        VA_ERROR("Failed to reopen the audio output device after it was disconnected, retrying every second");
+
+    device_lost = true;
 }
 
 void ALManager::shutdown()

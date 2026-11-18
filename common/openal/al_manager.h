@@ -108,6 +108,10 @@ private:
     // Empty means OpenAL Soft's default HRTF
     std::string hrtf_name;
 
+    // check_device_connected() state, so a lost device is only reported once while it keeps retrying
+    uint64_t next_connection_check_ms = 0;
+    bool device_lost = false;
+
     ALenum distance_model = AL_INVERSE_DISTANCE_CLAMPED;
 
     float meters_per_unit = 1.0f;
@@ -293,6 +297,8 @@ public:
     }
 
     void shutdown();
+
+    void check_device_connected();
 
     bool is_initialized() const
     {
