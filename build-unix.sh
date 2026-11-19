@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Linux/macOS counterpart of build.bat. Linux builds an x86_64 .so, macOS builds a universal (arm64 + x86_64) .dylib.
+# Linux/macOS counterpart of build.bat. Linux builds an x86_64 or arm64 .so (the host's arch), macOS builds a universal (arm64 + x86_64) .dylib.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -13,9 +13,16 @@ fi
 git submodule update --init --recursive
 
 case "$(uname -s)" in
-    Linux) PLATFORM=linux; ARCH=x86_64; LIBEXT=".so"; EXTRA_SCONS_ARGS="" ;;
+    Linux)
+        PLATFORM=linux; LIBEXT=".so"; EXTRA_SCONS_ARGS=""
+        case "$(uname -m)" in
+            x86_64) ARCH=x86_64; FOLDER=linux ;;
+            aarch64) ARCH=arm64; FOLDER=linux-arm64 ;;
+            *) echo "Unsupported Linux architecture: $(uname -m)" >&2; exit 1 ;;
+        esac
+        ;;
     Darwin)
-        PLATFORM=macos; ARCH=universal; LIBEXT=".dylib"
+        PLATFORM=macos; ARCH=universal; FOLDER=mac; LIBEXT=".dylib"
         # Without a deployment target the plugin only loads on the build machine's macOS version or newer. 11.0 is the first arm64 macOS, and matches the vendored universal libopenal.1.dylib.
         EXTRA_SCONS_ARGS="macos_deployment_target=11.0"
         # Non-interactive SSH gets a bare PATH without Homebrew, where scons lives.
@@ -37,22 +44,15 @@ scons platform="$PLATFORM" arch="$ARCH" target=editor $EXTRA_SCONS_ARGS
 scons platform="$PLATFORM" arch="$ARCH" target=template_debug $EXTRA_SCONS_ARGS
 scons platform="$PLATFORM" arch="$ARCH" target=template_release $EXTRA_SCONS_ARGS
 
+# SConstruct writes the plugin, vaudionative, OpenAL and (when vendored) the debug window + GLFW into bin/{FOLDER}
 ADDON_DIR="addons/vaudio-godot-native-openal-3d"
-BIN_DIR="$ADDON_DIR/bin"
-EDITOR_LIB="libvaudiogodotnativeopenal3d.${PLATFORM}.editor.${ARCH}${LIBEXT}"
-DEBUG_LIB="libvaudiogodotnativeopenal3d.${PLATFORM}.template_debug.${ARCH}${LIBEXT}"
-RELEASE_LIB="libvaudiogodotnativeopenal3d.${PLATFORM}.template_release.${ARCH}${LIBEXT}"
+BIN_DIR="$ADDON_DIR/bin/$FOLDER"
 
-# vaudionative and OpenAL Soft shared libs to carry alongside the plugin, per platform (see SConstruct).
-# libglfw is only needed by vaudio-debug-window (dev builds) and may not be vendored - copy_to skips it silently if absent.
-if [ "$PLATFORM" = "linux" ]; then
-    RUNTIME_LIBS=(libvaudionative.so libopenal.so.1 libglfw.so.3)
-else
-    RUNTIME_LIBS=(libvaudionative.dylib libopenal.1.dylib libglfw.3.dylib)
-
+if [ "$PLATFORM" = "macos" ]; then
     # libvaudionative.dylib is linked with no -install_name, so it records its absolute build-machine path -
-    # rewrite the plugin's reference to it (and its own id) to @loader_path so the copy shipped in bin/ resolves.
-    for plugin in "$BIN_DIR/$EDITOR_LIB" "$BIN_DIR/$DEBUG_LIB" "$BIN_DIR/$RELEASE_LIB"; do
+    # rewrite the plugin's reference to it (and its own id) to @loader_path so the copy shipped beside it resolves.
+    for target in editor template_debug template_release; do
+        plugin="$BIN_DIR/libvaudiogodotnativeopenal3d.${PLATFORM}.${target}.${ARCH}${LIBEXT}"
         dep=$(otool -L "$plugin" | awk '/libvaudionative\.dylib/ {print $1; exit}')
         [ -n "$dep" ] && install_name_tool -change "$dep" "@loader_path/libvaudionative.dylib" "$plugin"
     done
@@ -62,15 +62,12 @@ fi
 [ -f "$BIN_DIR/vaudio-debug-window" ] && chmod +x "$BIN_DIR/vaudio-debug-window"
 
 copy_to() {
-    local dest="$1/bin"
-    [ -d "$dest" ] || { echo "$dest missing - skipping"; return; }
+    local dest="$1/bin/$FOLDER"
+    [ -d "$1" ] || { echo "$1 missing - skipping"; return; }
     echo "Copying build output to $dest"
-    cp -f "$BIN_DIR/$EDITOR_LIB" "$BIN_DIR/$DEBUG_LIB" "$BIN_DIR/$RELEASE_LIB" "$dest/"
-    for lib in "${RUNTIME_LIBS[@]}"; do
-        [ -f "$BIN_DIR/$lib" ] && cp -f "$BIN_DIR/$lib" "$dest/"
-    done
-    [ -f "$BIN_DIR/vaudio-debug-window" ] && cp -f "$BIN_DIR/vaudio-debug-window" "$dest/"
-    cp -f "$ADDON_DIR/plugin.cfg" "$ADDON_DIR/plugin.gd" "$1/"
+    mkdir -p "$dest"
+    cp -f "$BIN_DIR"/* "$dest/"
+    cp -f "$ADDON_DIR/plugin.cfg" "$ADDON_DIR/plugin.gd" "$ADDON_DIR/vaudio_godot_native_openal_3d.gdextension" "$1/"
 }
 
 if [ -n "${VAUDIO_RELEASE_DIR:-}" ]; then copy_to "$VAUDIO_RELEASE_DIR"; else echo "VAUDIO_RELEASE_DIR not set - skipping copy to release repo"; fi

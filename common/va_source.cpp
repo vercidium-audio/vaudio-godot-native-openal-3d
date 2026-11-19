@@ -20,12 +20,11 @@ void VASource::_ready()
 
 bool VASource::play()
 {
-    if (playback.apply_on_play(*this, is_silenced_by_bounds()))
-        return false;
+    bool silenced = is_silenced_by_bounds();
 
-    // Wait for the muffling and reverb results, so the sound never starts unmuffled or without reverb
-    if (!is_ready_to_play())
-        return false;
+    // Returns true while waiting for the emitter to be ready, and false while silenced by the bounds, even for a loop that will play once inside
+    if (!playback.request_play(*this, silenced, is_ready_to_play()))
+        return !silenced;
 
     bool played = VARaytracedSource::play();
 
@@ -46,6 +45,6 @@ void VASource::_process(double delta)
     VARaytracedSource::_process(delta);
     process_raytracing(delta);
 
-    if (!playback.apply(*this, is_silenced_by_bounds()) && playback.is_pending(get_autoplay()) && is_ready_to_play())
+    if (playback.process(*this, is_silenced_by_bounds(), is_ready_to_play(), get_autoplay()))
         play();
 }

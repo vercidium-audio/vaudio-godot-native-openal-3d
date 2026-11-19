@@ -1,3 +1,5 @@
+// Human-reviewed
+
 #include "va_custom_material.h"
 
 #include <godot_cpp/classes/scene_tree.hpp>
@@ -8,8 +10,6 @@
 #include "va_engine_util.h"
 #include "va_world.h"
 #include "va_world_lookup.h"
-
-// Port of VACustomMaterial.cs. GetDebugColor/_GetConfigurationWarnings/_ValidateProperty are editor-only visualisation niceties with no SDK-facing behaviour, so they're left out.
 
 namespace va_godot
 {
@@ -87,6 +87,7 @@ void VACustomMaterial::_enter_tree()
         return;
     }
 
+    // TODO - warn if two VACustomMaterial nodes have the same name
     // Currently always succeeds - reserved for when material registration can fail (e.g. duplicate names)
     if (!va_world->register_custom_material(this))
         return;
@@ -124,6 +125,7 @@ void VACustomMaterial::_exit_tree()
 
     VAWorld *va_world = find_va_world(this);
 
+    // TODO - how could this be null? If it was moved out from a VAWorld at runtime?
     if (!va_world)
         return;
 
@@ -135,17 +137,17 @@ void VACustomMaterial::report_if_removed_at_runtime(uint64_t world_id, uint64_t 
 {
     VAWorld *va_world = Object::cast_to<VAWorld>(ObjectDB::get_instance(world_id));
 
-    // The world went too, e.g. a scene change
+    // All good if the world was removed too, e.g. a scene change
     if (!va_world || !va_world->is_inside_tree())
         return;
 
-    // Re-added (e.g. reparented), so it registered itself again
+    // All good if this node was re-added or re-parented, as it would have registered itself again
     Node *material = Object::cast_to<Node>(ObjectDB::get_instance(material_id));
 
     if (material && material->is_inside_tree())
         return;
 
-    VA_ERROR("VACustomMaterial '", material_name, "' was removed while its VAWorld is still running. Custom materials can't be removed at runtime - primitives using it keep its last values until the scene is reloaded");
+    VA_ERROR("VACustomMaterial '", material_name, "' was removed while its VAWorld is still running. Custom materials can't be removed at runtime. Primitives will continue using this material until the scene is reloaded");
 }
 
 int VACustomMaterial::get_material_type() const

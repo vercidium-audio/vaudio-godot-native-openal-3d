@@ -50,6 +50,18 @@
 				Returns [code]true[/code] while this source is stopped by the world bounds. See [method VAEmitter.is_silenced_by_bounds].
 			</description>
 		</method>
+		<method name="is_ambient_occlusion_enabled" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if both [member ambient_occlusion_ray_count] and [member ambient_occlusion_bounce_count] are above 0.
+			</description>
+		</method>
+		<method name="is_ambient_permeation_enabled" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if both [member ambient_permeation_ray_count] and [member ambient_permeation_bounce_count] are above 0.
+			</description>
+		</method>
 	</methods>
 	<members>
 		<member name="raytrace_once" type="bool" setter="set_raytrace_once" getter="get_raytrace_once" default="true">

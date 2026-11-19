@@ -13,6 +13,12 @@
 				Returns [code]true[/code] if this source currently sends to a reverb effect. A raytraced source outside the world bounds has none.
 			</description>
 		</method>
+		<method name="is_dry_output_enabled" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if this source's direct sound is heard, i.e. neither this source's [member reverb_only] nor [member VAWorld.reverb_only] is set. Updated each frame.
+			</description>
+		</method>
 	</methods>
 	<members>
 		<member name="streams" type="Array" setter="set_streams" getter="get_streams">
@@ -32,6 +38,9 @@
 		</member>
 		<member name="playback_no_repeat" type="bool" setter="set_playback_no_repeat" getter="get_playback_no_repeat" default="true">
 			If [code]true[/code] and [member streams] has more than one entry, the same entry is never picked twice in a row.
+		</member>
+		<member name="reverb_only" type="bool" setter="set_reverb_only" getter="get_reverb_only" default="false">
+			If [code]true[/code], this source's direct sound is silenced so only its reverb is audible, e.g. to hear your own microphone in the room without the dry signal. [VASourceAmbient] has no reverb, so this silences it entirely. [member VAWorld.reverb_only] does this for every source. Applied on the next frame.
 		</member>
 		<member name="looping" type="bool" setter="set_looping" getter="get_looping" default="false">
 			If [code]true[/code], the sound restarts automatically when it finishes playing.

@@ -1,3 +1,5 @@
+// Human-reviewed
+
 #include "al_stream_buffer.h"
 
 #include "../va_engine_util.h"
@@ -16,10 +18,7 @@ void ALStreamBuffer::destroy()
     ALManager *manager = ALManager::get_singleton();
 
     if (handle != 0 && manager)
-    {
-        ALuint handles[1] = {handle};
-        manager->al_delete_buffers()(1, handles);
-    }
+        manager->delete_buffer(handle);
 
     handle = 0;
 
@@ -38,30 +37,38 @@ void ALStreamBuffer::clear()
 
 bool ALStreamBuffer::create(ALenum format, int frequency)
 {
-    ALManager *manager = ALManager::get_singleton();
+    ALManager *manager = ALManager::get_initialized_singleton("open the stream");
 
-    if (!manager || !manager->is_initialized())
+    if (!manager)
+        return false;
+
+    // Only missing if the bundled OpenAL Soft (1.21+) was swapped for another OpenAL library, which the startup warning already reported. Logged once since every stream would fail the same way
+    if (!manager->al_buffer_callback_soft())
     {
-        VA_ERROR("ALStreamBuffer::create called before the OpenAL device is initialized");
+        static bool logged = false;
+
+        if (!logged)
+        {
+            logged = true;
+            VA_ERROR("Can't open streams because the OpenAL library doesn't support AL_SOFT_callback_buffer. Use the OpenAL Soft library that ships in the plugin's bin folder");
+        }
+
         return false;
     }
 
-    if (!manager->al_buffer_callback_soft())
+    // alBufferCallbackSOFT also rejects this with AL_INVALID_VALUE, but checking first gives a clearer error
+    if (frequency <= 0)
     {
-        VA_ERROR("AL_SOFT_callback_buffer isn't available on this device - streaming sources aren't supported");
+        VA_ERROR("Can't open the stream because its frequency is ", frequency, " Hz. It must be the sample rate of the pushed audio, e.g. 44100");
         return false;
     }
 
     destroy();
 
-    ALuint new_handle = 0;
-    manager->al_gen_buffers()(1, &new_handle);
+    ALuint new_handle = manager->gen_buffer();
 
     if (new_handle == 0)
-    {
-        VA_ERROR("alGenBuffers failed, AL error ", (int)manager->al_get_error()());
         return false;
-    }
 
     // Clear any error left over from an earlier AL call so it isn't misattributed to alBufferCallbackSOFT below
     manager->al_get_error()();
@@ -72,9 +79,13 @@ bool ALStreamBuffer::create(ALenum format, int frequency)
 
     if (error != AL_NO_ERROR)
     {
-        VA_ERROR("alBufferCallbackSOFT failed: ", ALErrorToString(error));
-        ALuint handles[1] = {new_handle};
-        manager->al_delete_buffers()(1, handles);
+        // The buffer is new and the callback isn't null, so AL_INVALID_ENUM (unknown or non-PCM format) is the only error the caller can cause
+        if (error == AL_INVALID_ENUM)
+            VA_ERROR("Can't open the stream because format ", (int)format, " isn't supported. Use 4353 (AL_FORMAT_MONO16), 4355 (AL_FORMAT_STEREO16), 4352 (AL_FORMAT_MONO8) or 4354 (AL_FORMAT_STEREO8)");
+        else
+            VA_ERROR("Failed to open the stream. Error code: ", ALErrorToString(error));
+
+        manager->delete_buffer(new_handle);
         return false;
     }
 
@@ -85,15 +96,14 @@ bool ALStreamBuffer::create(ALenum format, int frequency)
 void ALStreamBuffer::enqueue(const uint8_t *data, int length)
 {
     if (length <= 0)
-    {
         return;
-    }
 
     Chunk chunk;
     chunk.data.assign(data, data + length);
     chunk.offset = 0;
     chunk.length = length;
 
+    // Called on the main thread, while on_buffer_callback pops pending_chunks on OpenAL Soft's mixer thread
     std::lock_guard<std::mutex> lock(chunks_mutex);
     pending_chunks.push_back(std::move(chunk));
 }
@@ -103,9 +113,7 @@ bool ALStreamBuffer::try_get_used_chunk(std::vector<uint8_t> &out_data)
     std::lock_guard<std::mutex> lock(chunks_mutex);
 
     if (used_chunks.empty())
-    {
         return false;
-    }
 
     out_data = std::move(used_chunks.front().data);
     used_chunks.pop_front();
@@ -136,9 +144,7 @@ ALsizei ALStreamBuffer::on_buffer_callback(ALvoid *sampledata, ALsizei numbytes)
             std::lock_guard<std::mutex> lock(chunks_mutex);
 
             if (pending_chunks.empty())
-            {
                 break;
-            }
 
             chunk = std::move(pending_chunks.front());
             pending_chunks.pop_front();

@@ -1,3 +1,5 @@
+// Human-reviewed
+
 #include "al_source_handle.h"
 
 #include "../va_engine_util.h"
@@ -14,41 +16,49 @@ ALSourceHandle::~ALSourceHandle()
 
 bool ALSourceHandle::create()
 {
-    ALManager *manager = ALManager::get_singleton();
+    ALManager *manager = ALManager::get_initialized_singleton("play sound");
 
-    if (!manager || !manager->is_initialized())
-    {
-        VA_ERROR("ALSourceHandle::create called before the OpenAL device is initialized");
+    if (!manager)
         return false;
-    }
+
+    // alGetError is a single sticky flag, so clear any stale error before reading the result of alGenSources below
+    manager->al_get_error()();
 
     ALuint new_handle = 0;
     manager->al_gen_sources()(1, &new_handle);
 
-    if (new_handle == 0)
+    ALenum error = manager->al_get_error()();
+
+    if (new_handle == 0 || error != AL_NO_ERROR)
     {
-        VA_ERROR("alGenSources failed, AL error ", (int)manager->al_get_error()());
+        // OpenAL Soft reports AL_OUT_OF_MEMORY when the device's source limit (mono + stereo sources) is reached
+        if (error == AL_OUT_OF_MEMORY)
+            VA_ERROR("Can't play sound because too many sounds are playing at once. Increase audio/vaudio/max_stereo_sources in Project Settings. Error code: ", ALErrorToString(error));
+        else
+            VA_ERROR("Failed to create an OpenAL source. Error code: ", ALErrorToString(error));
+
         return false;
     }
 
     handle = new_handle;
 
-    // Every buffer this plugin uploads is stereo (ALBuffer::load always uploads AL_FORMAT_STEREO16), and OpenAL Soft's
-    // default AL_AUTO spatialize mode leaves stereo sources unspatialized - AL_SOURCE_SPATIALIZE_SOFT forces 3D spatialization regardless of channel count.
-    ALManager::get_singleton()->al_sourcei()(handle, AL_SOURCE_SPATIALIZE_SOFT, AL_TRUE);
+    // Godot's mix_audio always returns stereo frames, so every buffer is AL_FORMAT_STEREO16 (see ALBuffer::upload). OpenAL Soft leaves stereo sources unspatialized by default, so force it on
+    manager->al_sourcei()(handle, AL_SOURCE_SPATIALIZE_SOFT, AL_TRUE);
 
     return true;
 }
 
 void ALSourceHandle::destroy()
 {
+    // Never created (create() failed) or already destroyed - the destructor always calls this, so it's expected
+    if (handle == 0)
+        return;
+
     ALManager *manager = ALManager::get_singleton();
 
-    if (handle != 0 && manager)
-    {
-        ALuint handles[1] = {handle};
-        manager->al_delete_sources()(1, handles);
-    }
+    // No manager means OpenAL already shut down (plugin unloading, or a failed device switch), which destroyed every source along with its context
+    if (manager && manager->is_initialized())
+        manager->delete_source(handle);
 
     handle = 0;
 }
@@ -71,13 +81,23 @@ void ALSourceHandle::stop()
 
 bool ALSourceHandle::is_finished() const
 {
-    if (looping)
+    ALManager *manager = ALManager::get_singleton();
+
+    // OpenAL shut down (e.g. a failed device switch), which destroyed this source
+    if (!manager)
+        return true;
+
+    // 0 isn't a valid AL_SOURCE_STATE, and alGetSourcei leaves it untouched if it fails (e.g. the source was invalidated by a device switch)
+    ALint state = 0;
+    manager->al_get_sourcei()(handle, AL_SOURCE_STATE, &state);
+
+    if (state == 0)
     {
-        return false;
+        VA_WARN("Lost track of a playing sound, it will be stopped. Error code: ", ALErrorToString(manager->al_get_error()()));
+        return true;
     }
 
-    ALint state = AL_STOPPED;
-    ALManager::get_singleton()->al_get_sourcei()(handle, AL_SOURCE_STATE, &state);
+    // Looping sources stay AL_PLAYING, so they only finish when stopped (or when OpenAL stops them, e.g. the output device was unplugged)
     return state == AL_STOPPED;
 }
 
@@ -93,7 +113,6 @@ void ALSourceHandle::set_pitch(float pitch)
 
 void ALSourceHandle::set_looping(bool value)
 {
-    looping = value;
     ALManager::get_singleton()->al_sourcei()(handle, AL_LOOPING, value ? 1 : 0);
 }
 
@@ -130,7 +149,5 @@ void ALSourceHandle::set_direct_filter(ALuint filter_handle)
 
 void ALSourceHandle::set_reverb_send(ALuint effect_slot_handle, ALuint reverb_filter_handle)
 {
-    ALManager::get_singleton()->al_source3i()(
-        handle, AL_AUXILIARY_SEND_FILTER,
-        (ALint)effect_slot_handle, 0, (ALint)reverb_filter_handle);
+    ALManager::get_singleton()->al_source3i()(handle, AL_AUXILIARY_SEND_FILTER, (ALint)effect_slot_handle, 0, (ALint)reverb_filter_handle);
 }

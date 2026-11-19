@@ -25,13 +25,13 @@
 namespace va_godot
 {
 
-bool VAWorld::passes_propagate_filter(Node *node, PropagateMode filter)
+bool VAWorld::passes_propagation_filter(Node *node, PropagateMode propagateMode)
 {
     bool is_collider = Object::cast_to<CollisionShape3D>(node) != nullptr;
 
-    if (filter == PropagateMode::Colliders && !is_collider)
+    if (propagateMode == PropagateMode::Colliders && !is_collider)
         return false;
-    if (filter == PropagateMode::Visuals && is_collider)
+    if (propagateMode == PropagateMode::Visuals && is_collider)
         return false;
 
     // The VAWorld's render/collision layer masks control which nodes an inherited material is applied to.
@@ -1039,7 +1039,7 @@ void VAWorld::update_collision_shape_primitive(CollisionShape3D *collision_shape
     }
 }
 
-void VAWorld::add_primitive(Node *node, VAMaterialType material, bool use_flat_transmission, PropagateMode filter, bool recursive)
+void VAWorld::add_primitive(Node *node, VAMaterialType material, bool use_flat_transmission, PropagateMode propagateMode, bool recursive)
 {
     // A node's own material meta always wins.
     bool has_own_material = node->has_meta(MaterialMetaKey());
@@ -1049,8 +1049,8 @@ void VAWorld::add_primitive(Node *node, VAMaterialType material, bool use_flat_t
         material = get_material(node);
     }
 
-    // A propagation filter declared here constrains the cascade into this node's descendants. Defaults to the inherited filter.
-    filter = read_propagate_filter(node, filter);
+    // A propagation propagateMode declared here constrains the cascade into this node's descendants. Defaults to the inherited propagateMode.
+    propagateMode = read_propagate_mode(node, propagateMode);
 
     // Use this specific transmission override rather than the parent's.
     if (node->has_meta(UseFlatTransmissionMetaKey()))
@@ -1061,8 +1061,8 @@ void VAWorld::add_primitive(Node *node, VAMaterialType material, bool use_flat_t
     // Ignore nodes without materials.
     if (material != VAMaterialAir)
     {
-        // An inherited material only applies to this node if it passes the inherited filter. The cascade into children still uses the unfiltered material - a filtered-out mesh can still have a collider descendant that should receive the material.
-        if (has_own_material || passes_propagate_filter(node, filter))
+        // An inherited material only applies to this node if it passes the inherited propagateMode. The cascade into children still uses the unfiltered material - a filtered-out mesh can still have a collider descendant that should receive the material.
+        if (has_own_material || passes_propagation_filter(node, propagateMode))
         {
             if (CSGBox3D *csg_box = Object::cast_to<CSGBox3D>(node))
                 create_primitive(csg_box, material);
@@ -1082,7 +1082,7 @@ void VAWorld::add_primitive(Node *node, VAMaterialType material, bool use_flat_t
         TypedArray<Node> children = node->get_children();
         for (int i = 0; i < children.size(); i++)
         {
-            add_primitive(Object::cast_to<Node>(children[i]), material, use_flat_transmission, filter, true);
+            add_primitive(Object::cast_to<Node>(children[i]), material, use_flat_transmission, propagateMode, true);
         }
     }
 }

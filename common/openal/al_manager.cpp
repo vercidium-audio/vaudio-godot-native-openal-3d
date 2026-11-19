@@ -3,6 +3,7 @@
 #include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/classes/time.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
 #include "../va_device_name.h"
@@ -22,6 +23,37 @@ static ALManager *singleton = nullptr;
 ALManager *ALManager::get_singleton()
 {
     return singleton;
+}
+
+ALManager *ALManager::get_initialized_singleton(const char *action)
+{
+    if (singleton && singleton->is_initialized())
+        return singleton;
+
+    // The reason OpenAL didn't start was already logged at startup (or by the failed device switch)
+    VA_ERROR("Can't ", action, " because OpenAL failed to start. Check the earlier vaudio errors in the Output panel, e.g. the OpenAL library is missing from the plugin's bin folder, or no audio output device was found");
+    return nullptr;
+}
+
+ALuint ALManager::gen_buffer()
+{
+    // alGetError is a single sticky flag, so clear any stale error before reading the result of alGenBuffers below
+    alGetError_();
+
+    ALuint new_handle = 0;
+    alGenBuffers_(1, &new_handle);
+
+    ALenum error = alGetError_();
+
+    if (new_handle != 0 && error == AL_NO_ERROR)
+        return new_handle;
+
+    if (error == AL_OUT_OF_MEMORY)
+        VA_ERROR("Failed to create an OpenAL buffer because the system is out of memory");
+    else
+        VA_ERROR("Failed to create an OpenAL buffer. Error code: ", ALErrorToString(error));
+
+    return 0;
 }
 
 // get_available_devices()/get_available_capture_devices() plus the runtime device-switching and mixer-property methods
@@ -759,6 +791,48 @@ bool ALManager::reset_device()
         singleton = this;
 
     return ok;
+}
+
+// Once the output device is lost (e.g. headphones unplugged), OpenAL Soft stops every source and new ones stop as soon as they play, so reopen it in place, which keeps every AL object valid. Throttled, since every VAWorld calls it each frame
+void ALManager::check_device_connected()
+{
+    if (!is_initialized())
+        return;
+
+    uint64_t now = Time::get_singleton()->get_ticks_msec();
+    if (now < next_connection_check_ms)
+        return;
+
+    next_connection_check_ms = now + 1000;
+
+    if (alcIsExtensionPresent_(device, "ALC_EXT_disconnect") == ALC_FALSE)
+        return;
+
+    ALCint connected = ALC_TRUE;
+    alcGetIntegerv_(device, ALC_CONNECTED, 1, &connected);
+
+    if (connected)
+    {
+        device_lost = false;
+        return;
+    }
+
+    if (!device_lost)
+        VA_WARN("The audio output device was disconnected, reopening it");
+
+    ALCint attributes[13];
+    build_attributes(attributes);
+
+    if (alcReopenDeviceSOFT_ && alcReopenDeviceSOFT_(device, device_name.empty() ? nullptr : device_name.c_str(), attributes) == ALC_TRUE)
+    {
+        device_lost = false;
+        return;
+    }
+
+    if (!device_lost)
+        VA_ERROR("Failed to reopen the audio output device after it was disconnected, retrying every second");
+
+    device_lost = true;
 }
 
 void ALManager::shutdown()

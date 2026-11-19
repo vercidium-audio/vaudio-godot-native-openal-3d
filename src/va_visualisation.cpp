@@ -66,6 +66,14 @@ void VAVisualisation::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_update_frequency_ms", "value"), &VAVisualisation::set_update_frequency_ms);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "update_frequency_ms"), "set_update_frequency_ms", "get_update_frequency_ms");
 
+    ClassDB::bind_method(D_METHOD("get_random_visualisation_seed"), &VAVisualisation::get_random_visualisation_seed);
+    ClassDB::bind_method(D_METHOD("set_random_visualisation_seed", "value"), &VAVisualisation::set_random_visualisation_seed);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "random_visualisation_seed"), "set_random_visualisation_seed", "get_random_visualisation_seed");
+
+    ClassDB::bind_method(D_METHOD("get_visualisation_seed"), &VAVisualisation::get_visualisation_seed);
+    ClassDB::bind_method(D_METHOD("set_visualisation_seed", "value"), &VAVisualisation::set_visualisation_seed);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "visualisation_seed"), "set_visualisation_seed", "get_visualisation_seed");
+
     ClassDB::bind_method(D_METHOD("get_fade_in_ms"), &VAVisualisation::get_fade_in_ms);
     ClassDB::bind_method(D_METHOD("set_fade_in_ms", "value"), &VAVisualisation::set_fade_in_ms);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "fade_in_ms"), "set_fade_in_ms", "get_fade_in_ms");
@@ -93,6 +101,8 @@ void VAVisualisation::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_max_distance"), &VAVisualisation::get_max_distance);
     ClassDB::bind_method(D_METHOD("set_max_distance", "value"), &VAVisualisation::set_max_distance);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_distance", PROPERTY_HINT_RANGE, "0.0,500.0,0.1,or_greater"), "set_max_distance", "get_max_distance");
+
+    ADD_SIGNAL(MethodInfo("visualisation_data_received", PropertyInfo(Variant::PACKED_VECTOR3_ARRAY, "positions"), PropertyInfo(Variant::PACKED_VECTOR3_ARRAY, "normals")));
 }
 
 VAVisualisation::VAVisualisation()
@@ -196,6 +206,7 @@ void VAVisualisation::teardown_visualisation()
     {
         vaEmitterSetVisualisationCallback(emitter->get_handle(), nullptr);
         vaEmitterSetVisualisationRayCount(emitter->get_handle(), 0);
+        vaEmitterClearVisualisationSeed(emitter->get_handle());
     }
 
     callback_registered = false;
@@ -223,6 +234,25 @@ void VAVisualisation::apply_properties_to_emitter()
     vaEmitterSetVisualisationRayCount(emitter->get_handle(), ray_count);
     vaEmitterSetVisualisationBounceCount(emitter->get_handle(), bounce_count);
     vaEmitterSetVisualisationUpdateFrequency(emitter->get_handle(), update_frequency_ms);
+    apply_seed_to_emitter();
+}
+
+void VAVisualisation::apply_seed_to_emitter()
+{
+    if (!emitter || !emitter->get_handle())
+        return;
+
+    if (random_visualisation_seed)
+        vaEmitterClearVisualisationSeed(emitter->get_handle());
+    else
+        vaEmitterSetVisualisationSeed(emitter->get_handle(), visualisation_seed);
+}
+
+// Hidden rather than removed, so the seed is still saved while unused
+void VAVisualisation::_validate_property(PropertyInfo &p_property) const
+{
+    if (p_property.name == StringName("visualisation_seed") && random_visualisation_seed)
+        p_property.usage &= ~PROPERTY_USAGE_EDITOR;
 }
 
 int VAVisualisation::required_instance_count() const
@@ -320,7 +350,7 @@ void VAVisualisation::visualisation_callback_trampoline(::VAEmitter *emitter, VA
 
 void VAVisualisation::on_visualisation_data(VAVisualisationData *data, int count)
 {
-    if (!multimesh.is_valid() || count <= 0)
+    if (count <= 0)
         return;
 
     if (!data)
@@ -328,6 +358,11 @@ void VAVisualisation::on_visualisation_data(VAVisualisationData *data, int count
         VA_ERROR_NAMED("Received visualisation data with a null buffer but a non-zero count.");
         return;
     }
+
+    emit_visualisation_data(data, count);
+
+    if (!multimesh.is_valid())
+        return;
 
     int capacity = multimesh->get_instance_count();
     int needed = MAX(count, required_instance_count());
@@ -373,6 +408,22 @@ void VAVisualisation::on_visualisation_data(VAVisualisationData *data, int count
     multimesh->set_visible_instance_count(capacity);
 }
 
+void VAVisualisation::emit_visualisation_data(VAVisualisationData *data, int count)
+{
+    PackedVector3Array positions;
+    PackedVector3Array normals;
+    positions.resize(count);
+    normals.resize(count);
+
+    for (int i = 0; i < count; i++)
+    {
+        positions.set(i, FromVAudio(data[i].position));
+        normals.set(i, FromVAudio(data[i].normal));
+    }
+
+    emit_signal("visualisation_data_received", positions, normals);
+}
+
 int VAVisualisation::get_ray_count() const
 {
     return ray_count;
@@ -410,6 +461,29 @@ void VAVisualisation::set_update_frequency_ms(int value)
 
     if (emitter && emitter->get_handle())
         vaEmitterSetVisualisationUpdateFrequency(emitter->get_handle(), update_frequency_ms);
+}
+
+bool VAVisualisation::get_random_visualisation_seed() const
+{
+    return random_visualisation_seed;
+}
+
+void VAVisualisation::set_random_visualisation_seed(bool value)
+{
+    random_visualisation_seed = value;
+    apply_seed_to_emitter();
+    notify_property_list_changed();
+}
+
+int VAVisualisation::get_visualisation_seed() const
+{
+    return visualisation_seed;
+}
+
+void VAVisualisation::set_visualisation_seed(int value)
+{
+    visualisation_seed = value;
+    apply_seed_to_emitter();
 }
 
 int VAVisualisation::get_fade_in_ms() const

@@ -33,6 +33,8 @@ void VAEmitter::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_va_position"), &VAEmitter::get_va_position);
     ClassDB::bind_method(D_METHOD("get_within_world_bounds"), &VAEmitter::get_within_world_bounds);
     ClassDB::bind_method(D_METHOD("is_raytraced"), &VAEmitter::is_raytraced);
+    ClassDB::bind_method(D_METHOD("is_ambient_occlusion_enabled"), &VAEmitter::is_ambient_occlusion_enabled);
+    ClassDB::bind_method(D_METHOD("is_ambient_permeation_enabled"), &VAEmitter::is_ambient_permeation_enabled);
     ClassDB::bind_method(D_METHOD("is_ready_to_play"), &VAEmitter::is_ready_to_play);
     ClassDB::bind_method(D_METHOD("is_outside_bounds"), &VAEmitter::is_outside_bounds);
     ClassDB::bind_method(D_METHOD("is_silenced_by_bounds"), &VAEmitter::is_silenced_by_bounds);
@@ -548,7 +550,7 @@ bool VAEmitter::has_listener_results(bool wait_for_own_eax) const
 
 bool VAEmitter::is_ready_to_play() const
 {
-    return has_listener_results(!is_outside_bounds());
+    return is_raytraced() && has_listener_results(!is_outside_bounds());
 }
 
 bool VAEmitter::has_listener_results() const
@@ -735,6 +737,8 @@ void VAEmitter::apply_raytracing_results()
     if (this != listener && listener->has_raytraced_target(this))
     {
         VALowPassFilter vaudio_filter = listener->get_target_filter(this);
+        muffling_gain_lf = vaudio_filter.gainLF;
+        muffling_gain_hf = vaudio_filter.gainHF;
 
         if (filter)
         {

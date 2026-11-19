@@ -2,6 +2,7 @@
 .scons_cache/
 *.os
 *.obj
+obj/
 addons/vaudio-godot-native-openal-3d/bin/
 devproject/.godot/
 devproject/addons/
@@ -32,3 +33,5 @@ addons/vaudio-godot-native-openal-3d/.DS_Store
 
 # cmake settings
 .vscode/settings.json
+
+build/

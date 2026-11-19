@@ -28,4 +28,45 @@ void VAHRTFExportPlugin::_export_begin(const PackedStringArray &features, bool i
     }
 }
 
+void VAHRTFExportPlugin::_export_file(const String &path, const String &type, const PackedStringArray &features)
+{
+    if (path.get_extension() != "gdextension" || !path.get_file().begins_with("vaudio_godot_native_openal"))
+        return;
+
+    // Same folder names as the .gdextension's [libraries] and SConstruct
+    String folder;
+    PackedStringArray debug_window_files;
+
+    if (features.has("macos"))
+    {
+        folder = "mac";
+        debug_window_files = { "vaudio-debug-window", "libglfw.3.dylib" };
+    }
+    else if (features.has("windows"))
+    {
+        folder = "windows";
+        debug_window_files = { "vaudio-debug-window.exe", "glfw3.dll" };
+    }
+    else if (features.has("linux"))
+    {
+        folder = "linux";
+        debug_window_files = { "vaudio-debug-window", "libglfw.so.3" };
+    }
+    else
+        return;
+
+    if (folder != "mac" && features.has("arm64"))
+        folder += "-arm64";
+
+    String bin_dir = path.get_base_dir().path_join("bin").path_join(folder);
+
+    for (const String &name : debug_window_files)
+    {
+        String file_path = bin_dir.path_join(name);
+
+        if (FileAccess::file_exists(file_path))
+            add_shared_object(file_path, PackedStringArray(), "");
+    }
+}
+
 } // namespace va_godot

@@ -71,6 +71,20 @@ protected:
 
     bool playback_no_repeat = true;
 
+    bool reverb_only = false;
+
+    // The fullReverb last passed to update_filter
+    bool full_reverb = true;
+
+    // !(reverb_only || ALManager's reverb_only), as last applied to the sources
+    bool dry_output_enabled = true;
+
+    // Recalculates dry_output_enabled, returning whether it changed
+    bool update_dry_output();
+
+    // Applies the direct filter (or the silence filter while reverb-only) and the reverb send
+    void apply_filters(ALSourceHandle &source) const;
+
     virtual void configure_source(ALSourceHandle &source) = 0;
 
     // A play() waiting for its streams to decode, which isn't playing yet. Not public, so it stays out of the generated docs
@@ -160,6 +174,23 @@ public:
     void set_playback_no_repeat(bool value)
     {
         playback_no_repeat = value;
+    }
+
+    bool get_reverb_only() const
+    {
+        return reverb_only;
+    }
+
+    // Applied on the next _process
+    void set_reverb_only(bool value)
+    {
+        reverb_only = value;
+    }
+
+    // Whether the direct sound is heard, i.e. neither this source's nor the VAWorld's reverb_only is set
+    bool is_dry_output_enabled() const
+    {
+        return dry_output_enabled;
     }
 
     TypedArray<AudioStream> get_streams() const

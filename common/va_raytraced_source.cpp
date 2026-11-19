@@ -20,6 +20,8 @@ void VARaytracedSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_muffling_gain_lf"), &VARaytracedSource::get_muffling_gain_lf);
     ClassDB::bind_method(D_METHOD("get_muffling_gain_hf"), &VARaytracedSource::get_muffling_gain_hf);
     ClassDB::bind_method(D_METHOD("is_raytraced"), &VARaytracedSource::is_raytraced);
+    ClassDB::bind_method(D_METHOD("is_ambient_occlusion_enabled"), &VARaytracedSource::is_ambient_occlusion_enabled);
+    ClassDB::bind_method(D_METHOD("is_ambient_permeation_enabled"), &VARaytracedSource::is_ambient_permeation_enabled);
     ClassDB::bind_method(D_METHOD("is_raytraced_by_listener"), &VARaytracedSource::is_raytraced_by_listener);
     ClassDB::bind_method(D_METHOD("is_ready_to_play"), &VARaytracedSource::is_ready_to_play);
     ClassDB::bind_method(D_METHOD("is_silenced_by_bounds"), &VARaytracedSource::is_silenced_by_bounds);
@@ -328,28 +330,14 @@ int VARaytracedSource::get_grouped_eax_index() const
 
 void VARaytracedSource::process_raytracing(double delta)
 {
-    if (!is_raytraced())
-    {
+    if (!is_ready_to_play())
         return;
-    }
 
-    va_godot::VAEmitter *listener = va_world->get_listener();
-
-    if (listener)
-    {
-        apply_raytracing_results(listener);
-    }
-}
-
-void VARaytracedSource::apply_raytracing_results(va_godot::VAEmitter *other)
-{
+    // Read from the listener rather than the child VAEmitter, which processes after this node. The effect is null if it casts no reverb rays
     effect = va_world->get_reverb_effect(emitter->get_handle());
 
-    if (other->has_raytraced_target(emitter))
-    {
-        VALowPassFilter vaudio_filter = other->get_target_filter(emitter);
-        update_filter(vaudio_filter.gainLF, vaudio_filter.gainHF, true);
-    }
+    VALowPassFilter vaudio_filter = va_world->get_listener()->get_target_filter(emitter);
+    update_filter(vaudio_filter.gainLF, vaudio_filter.gainHF, true);
 }
 
 // Exported tuning-knob getter/setter bodies - direct port of VASourceProperties.cs including its clamps. Each setter stores

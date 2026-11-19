@@ -43,8 +43,7 @@ bool ALReverbEffect::create()
     if (new_slot == 0)
     {
         VA_ERROR("alGenAuxiliaryEffectSlots failed, AL error ", (int)manager->al_get_error()());
-        ALuint effects[1] = {new_effect};
-        manager->al_delete_effects()(1, effects);
+        manager->delete_effect(new_effect);
         return false;
     }
 
@@ -64,16 +63,10 @@ void ALReverbEffect::destroy()
     if (manager && manager->has_efx())
     {
         if (slot_handle != 0)
-        {
-            ALuint slots[1] = {slot_handle};
-            manager->al_delete_auxiliary_effect_slots()(1, slots);
-        }
+            manager->delete_auxiliary_effect_slot(slot_handle);
 
         if (effect_handle != 0)
-        {
-            ALuint effects[1] = {effect_handle};
-            manager->al_delete_effects()(1, effects);
-        }
+            manager->delete_effect(effect_handle);
     }
 
     slot_handle = 0;

@@ -30,8 +30,7 @@ ALBuffer::~ALBuffer()
     {
         manager->al_get_error()();
 
-        ALuint handles[1] = {handle};
-        manager->al_delete_buffers()(1, handles);
+        manager->delete_buffer(handle);
 
         // Fails if a source still has this buffer attached, which leaks it
         ALenum error = manager->al_get_error()();
@@ -127,29 +126,21 @@ bool ALBuffer::upload()
         return false;
     }
 
-    ALManager *manager = ALManager::get_singleton();
+    ALManager *manager = ALManager::get_initialized_singleton("load sound");
 
-    if (!manager || !manager->is_initialized())
-    {
-        VA_ERROR("ALBuffer::upload called before the OpenAL device is initialized");
+    if (!manager)
         return false;
-    }
 
     if (handle != 0)
     {
-        ALuint old_handles[1] = {handle};
-        manager->al_delete_buffers()(1, old_handles);
+        manager->delete_buffer(handle);
         handle = 0;
     }
 
-    ALuint new_handle = 0;
-    manager->al_gen_buffers()(1, &new_handle);
+    ALuint new_handle = manager->gen_buffer();
 
     if (new_handle == 0)
-    {
-        VA_ERROR("alGenBuffers failed, AL error ", (int)manager->al_get_error()());
         return false;
-    }
 
     // Clear any error left over from an earlier AL call - alGetError() is a single sticky flag, not a queue, so a stale error here would be misattributed to alBufferData below.
     manager->al_get_error()();
@@ -168,8 +159,7 @@ bool ALBuffer::upload()
     {
         VA_ERROR("Failed to upload decoded audio to OpenAL: ", ALErrorToString(error),
             " (", (int)pending_frames_pulled, " frames at ", sample_rate, " Hz)");
-        ALuint handles[1] = {new_handle};
-        manager->al_delete_buffers()(1, handles);
+        manager->delete_buffer(new_handle);
         return false;
     }
 

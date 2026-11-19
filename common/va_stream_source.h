@@ -19,7 +19,7 @@ private:
 
     bool stream_open = false;
 
-    // Latched once the emitter is first ready to play, so a raytrace_once stream keeps accepting data after its emitter leaves the world
+    // Set once the emitter is first ready to play and stays true, so a raytrace_once stream keeps accepting data after its emitter leaves the world
     bool stream_ready = false;
 
     // Set when the bounds stopped the sound, or the stream was opened outside them, so it only restarts once inside if the bounds were the reason

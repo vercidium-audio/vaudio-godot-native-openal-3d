@@ -12,7 +12,6 @@ class ALSourceHandle
 private:
     ALuint handle = 0;
     ALuint buffer = 0;
-    bool looping = false;
 
 public:
     ALSourceHandle() = default;
@@ -30,7 +29,7 @@ public:
     void play();
     void stop();
 
-    // Looping sources are never considered finished, otherwise true once AL_SOURCE_STATE reports AL_STOPPED.
+    // True once AL_SOURCE_STATE reports AL_STOPPED, or the source is no longer valid. Looping sources only finish once stopped.
     bool is_finished() const;
 
     void set_gain(float gain);

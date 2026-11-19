@@ -124,7 +124,7 @@ void VAWorld::register_listener(va_godot::VAListener *node)
         return;
     }
 
-    // A listener added with current=true takes over, e.g. a player scene that was spawned with  VAListener.current=true
+    // A listener added with current=true takes over, e.g. a player scene that was spawned with its VAListener's current property enabled
     if (node->is_current())
     {
         VA_WARN_NAMED("VAListener '", node->get_name(), "' has current enabled, so it replaced '", listener->get_name(), "' as the current listener. Disable current on listeners that shouldn't take over when added, and call make_current() on the one that should be used.");

@@ -12,39 +12,54 @@ env = SConscript("extern/godot-cpp/SConstruct")
 # - LINKFLAGS are for linking flags
 
 env.Append(CPPPATH=["src/", "common/", "thirdparty/vaudio/include/", "thirdparty/openal/include/"])
-sources = Glob("src/*.cpp") + Glob("src/openal/*.cpp") + Glob("common/*.cpp") + Glob("common/openal/*.cpp")
+
+# Object files go in obj/ instead of beside the sources, since the 2D plugin's common/ is a junction to this one and both would write the same object file names into it. Each platform/arch/target gets its own folder, or every build would overwrite the last one's objects and recompile everything
+obj_dir = "obj/" + env["platform"] + "-" + env["arch"] + "/" + env["target"]
+VariantDir(obj_dir + "/src", "src", duplicate=0)
+VariantDir(obj_dir + "/common", "common", duplicate=0)
+sources = Glob(obj_dir + "/src/*.cpp") + Glob(obj_dir + "/src/openal/*.cpp") + Glob(obj_dir + "/common/*.cpp") + Glob(obj_dir + "/common/openal/*.cpp")
 
 if env["target"] in ["editor", "template_debug"]:
-    doc_data = env.GodotCPPDocData("src/gen/doc_data.gen.cpp", source=Glob("doc_classes/*.xml"))
+    doc_data = env.GodotCPPDocData(obj_dir + "/gen/doc_data.gen.cpp", source=Glob("doc_classes/*.xml"))
     sources.append(doc_data)
 
 platform = env["platform"]
+arch = env["arch"]
 
+# Runtime file names per platform: vaudionative, OpenAL Soft, the dev-only debug window and the GLFW library it loads
 if platform == "windows":
-    vaudio_libdir = "thirdparty/vaudio/lib/win64/"
-    vaudio_link_lib = "vaudionative"
     vaudio_runtime_lib = "vaudionative.dll"
-    openal_libdir = "thirdparty/openal/lib/win64/"
     openal_runtime_lib = "soft_oal.dll"
+    debug_window_files = ["vaudio-debug-window.exe", "glfw3.dll"]
 elif platform == "linux":
-    vaudio_libdir = "thirdparty/vaudio/lib/linux/"
-    vaudio_link_lib = "vaudionative"
     vaudio_runtime_lib = "libvaudionative.so"
-    openal_libdir = "thirdparty/openal/lib/linux/"
     openal_runtime_lib = "libopenal.so.1"
+    debug_window_files = ["vaudio-debug-window", "libglfw.so.3"]
 elif platform == "macos":
-    vaudio_libdir = "thirdparty/vaudio/lib/mac/"
-    vaudio_link_lib = "vaudionative"
     vaudio_runtime_lib = "libvaudionative.dylib"
-    openal_libdir = "thirdparty/openal/lib/mac/"
     openal_runtime_lib = "libopenal.1.dylib"
+    debug_window_files = ["vaudio-debug-window", "libglfw.3.dylib"]
 else:
     raise SCons.Errors.UserError(
         "vaudio-godot-native-openal-3d only supports the 'windows', 'linux' and 'macos' platforms."
     )
 
+# Every platform + arch gets its own folder, named like the vaudio SDK package's folders (windows, windows-arm64, linux, linux-arm64, mac), since the x64 and arm64 libraries share file names
+if platform == "macos":
+    folder = "mac"
+elif arch == "x86_64":
+    folder = platform
+elif arch == "arm64":
+    folder = platform + "-arm64"
+else:
+    raise SCons.Errors.UserError("vaudio-godot-native-openal-3d only supports x86_64 and arm64 on " + platform + ", not " + arch + ".")
+
+vaudio_libdir = "thirdparty/vaudio/lib/" + folder + "/"
+openal_libdir = "thirdparty/openal/lib/" + folder + "/"
+bin_dir = "addons/vaudio-godot-native-openal-3d/bin/" + folder + "/"
+
 env.Append(LIBPATH=[vaudio_libdir])
-env.Append(LIBS=[vaudio_link_lib])
+env.Append(LIBS=["vaudionative"])
 
 # Delay-load vaudionative.dll so a missing SDK doesn't stop the extension loading - common/va_sdk_check.cpp loads it at init and logs a readable error instead
 if platform == "windows":
@@ -55,43 +70,22 @@ if platform == "windows":
 if platform == "macos":
     env.Append(LINKFLAGS=["-Wl,-rpath,@loader_path"])
 
-bin_dir = "addons/vaudio-godot-native-openal-3d/bin/"
-
 library = env.SharedLibrary(
     bin_dir + "libvaudiogodotnativeopenal3d{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
     source=sources,
 )
 
-# Keep the vaudionative shared library alongside the plugin binary so the loader finds it at runtime (win64: next to the import lib; Linux/macOS: via the $ORIGIN / @loader_path rpath added above).
-vaudio_dll_copy = env.Command(
-    bin_dir + vaudio_runtime_lib,
-    vaudio_libdir + vaudio_runtime_lib,
-    Copy("$TARGET", "$SOURCE"),
-)
-env.Depends(library, vaudio_dll_copy)
+def copy_beside_library(src_dir, name):
+    env.Depends(library, env.Command(bin_dir + name, src_dir + name, Copy("$TARGET", "$SOURCE")))
 
-# OpenAL Soft is loaded at runtime via LoadLibrary / dlopen, not linked against an import lib - see src/openal/al_manager.cpp. It still needs to be alongside the built extension so the load-from-beside-our-own-module path resolves.
-openal_dll_copy = env.Command(
-    bin_dir + openal_runtime_lib,
-    openal_libdir + openal_runtime_lib,
-    Copy("$TARGET", "$SOURCE"),
-)
-env.Depends(library, openal_dll_copy)
+# vaudionative and OpenAL Soft are loaded from beside the plugin binary (delay-load / $ORIGIN / @loader_path for vaudionative, LoadLibrary / dlopen for OpenAL - see src/openal/al_manager.cpp)
+copy_beside_library(vaudio_libdir, vaudio_runtime_lib)
+copy_beside_library(openal_libdir, openal_runtime_lib)
 
-# vaudio-debug-window (the out-of-process debug renderer) only ships in vaudio's dev package, so it may not be vendored here - copy it into bin/ if present, skip silently otherwise.
-debug_window_name = "vaudio-debug-window.exe" if platform == "windows" else "vaudio-debug-window"
-debug_window_src = vaudio_libdir + debug_window_name
-if os.path.isfile(debug_window_src):
-    debug_window_copy = env.Command(bin_dir + debug_window_name, debug_window_src, Copy("$TARGET", "$SOURCE"))
-    env.Depends(library, debug_window_copy)
-
-# vaudio-debug-window on Linux/macOS is dynamically linked against GLFW via @loader_path/$ORIGIN - vendor it alongside when present (dev builds only, not shipped on Windows where GLFW is statically linked).
-if platform in ("linux", "macos"):
-    glfw_lib_name = "libglfw.so.3" if platform == "linux" else "libglfw.3.dylib"
-    glfw_lib_src = vaudio_libdir + glfw_lib_name
-    if os.path.isfile(glfw_lib_src):
-        glfw_lib_copy = env.Command(bin_dir + glfw_lib_name, glfw_lib_src, Copy("$TARGET", "$SOURCE"))
-        env.Depends(library, glfw_lib_copy)
+# The debug window only ships in vaudio's dev package, so copy it (and GLFW) only if vendored
+for name in debug_window_files:
+    if os.path.isfile(vaudio_libdir + name):
+        copy_beside_library(vaudio_libdir, name)
 
 env.NoCache(library)
 Default(library)

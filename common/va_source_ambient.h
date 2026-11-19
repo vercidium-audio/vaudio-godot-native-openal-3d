@@ -16,6 +16,7 @@ class VASourceAmbient : public ALSourceRelative
 private:
     va_godot::VAWorld *va_world = nullptr;
     bool played = false;
+    bool warned_no_ambience = false;
 
     bool waiting_for_world = false;
 
@@ -31,6 +32,4 @@ public:
     void _enter_tree() override;
     void _exit_tree() override;
     void _process(double delta) override;
-
-    bool play() override;
 };

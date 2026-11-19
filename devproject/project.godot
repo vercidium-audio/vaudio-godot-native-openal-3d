@@ -17,3 +17,7 @@ config/features=PackedStringArray("4.7")
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/vaudio-godot-native-openal-3d/plugin.cfg")
+
+[rendering]
+
+textures/vram_compression/import_etc2_astc=true

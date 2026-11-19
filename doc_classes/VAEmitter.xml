@@ -10,7 +10,7 @@
 		<method name="is_ready_to_play" qualifiers="const">
 			<return type="bool" />
 			<description>
-				Returns [code]true[/code] once the listener has raytraced this emitter and, if it casts reverb rays and [member affects_grouped_eax] is on, its own reverb is ready. Outside the bounds it doesn't wait for its own reverb, which it can't get there.
+				Returns [code]true[/code] once this emitter has cast its own rays and the listener has raytraced it, and, if it casts reverb rays and [member affects_grouped_eax] is on, its own reverb is ready. Outside the bounds it doesn't wait for its own reverb, which it can't get there.
 			</description>
 		</method>
 		<method name="is_outside_bounds" qualifiers="const">
@@ -23,6 +23,18 @@
 			<return type="bool" />
 			<description>
 				Returns [code]true[/code] if [method is_outside_bounds] and [member VAWorld.emitters_outside_the_world_are_muffled] is on, i.e. sounds here are stopped and aren't started.
+			</description>
+		</method>
+		<method name="is_ambient_occlusion_enabled" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if both [member ambient_occlusion_ray_count] and [member ambient_occlusion_bounce_count] are above 0.
+			</description>
+		</method>
+		<method name="is_ambient_permeation_enabled" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if both [member ambient_permeation_ray_count] and [member ambient_permeation_bounce_count] are above 0.
 			</description>
 		</method>
 	</methods>

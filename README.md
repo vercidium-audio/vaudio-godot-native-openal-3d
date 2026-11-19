@@ -7,9 +7,11 @@
 
 For Mono Godot (C#), please use [this plugin](https://github.com/vercidium-audio/vaudio-godot-mono-openal-3d/releases).
 
-This repository requires Vercidium Audio v1.11.1 and OpenAL Soft to run.
+This repository requires Vercidium Audio v1.11.2 and OpenAL Soft to run.
 - Download the Vercidium Audio SDK from [vercidium.com](https://vercidium.com)
-- Download OpenAL Soft from [github.com/kcat/openal-soft](https://github.com/kcat/openal-soft/releases/tag/1.25.2)
+- Download OpenAL Soft 1.25.2 from [github.com/kcat/openal-soft](https://github.com/kcat/openal-soft/releases/tag/1.25.2). Linux, Mac and ARM64 libraries are available in the latest [Releases](/releases)
+
+Windows (x64 and ARM64), Linux (x64 and ARM64) and macOS (universal: Apple Silicon and Intel) are supported. The Windows ARM64 build needs the ARM64 Visual C++ redistributable.
 
 > Please note that the Vercidium Audio SDK is not free for commercial use. See [vercidium.com/eula](https://vercidium.com/eula)
 
@@ -26,10 +28,14 @@ This repository requires Vercidium Audio v1.11.1 and OpenAL Soft to run.
 
 ## Building
 
-On Windows, run `build.bat`. On Linux/macOS, run `build-unix.sh` (auto-detects the host - Linux builds an x86_64 `.so`, macOS builds a universal `.dylib`).
+On Windows, run `build.bat` (builds x86_64 and arm64). On Linux/macOS, run `build-unix.sh` (auto-detects the host - Linux builds an x86_64 or arm64 `.so` for the host, macOS builds a universal `.dylib`).
+
+The build expects the Vercidium Audio SDK in `thirdparty/vaudio/lib/{folder}` and OpenAL Soft in `thirdparty/openal/lib/{folder}`, where `{folder}` is the SDK's platform folder name (`windows`, `windows-arm64`, `linux`, `linux-arm64` or `mac`). The output goes into `addons/vaudio-godot-native-openal-3d/bin/{folder}`, along with copies of `vaudionative` and OpenAL Soft.
 
 To automatically copy the plugin to your game, add your game's path to `.env`, e.g. `VAUDIO_RELEASE_DIR=your-godot-game\addons\vaudio-godot-native-openal-3d`
 
 ## Licencing
 
 The Vercidium Audio SDK is free for non-commercial products only. To purchase a licence for commercial use, head over to the [Vercidium Audio website](https://vercidium.com).
+
+This plugin uses OpenAL Soft, which is licensed under LGPL v2.1. Source is available at https://github.com/kcat/openal-soft.

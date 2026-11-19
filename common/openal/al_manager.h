@@ -108,6 +108,10 @@ private:
     // Empty means OpenAL Soft's default HRTF
     std::string hrtf_name;
 
+    // check_device_connected() state, so a lost device is only reported once while it keeps retrying
+    uint64_t next_connection_check_ms = 0;
+    bool device_lost = false;
+
     ALenum distance_model = AL_INVERSE_DISTANCE_CLAMPED;
 
     float meters_per_unit = 1.0f;
@@ -139,11 +143,46 @@ private:
     // Reads device_name/max_auxiliary_sends/sample_rate/hrtf_enabled/hrtf from Project Settings.
     void read_settings_from_project_settings();
 
+    // See get_cached_capture_devices()
+    PackedStringArray cached_capture_devices;
+    bool capture_devices_cached = false;
+
 protected:
     static void _bind_methods();
 
 public:
     static ALManager *get_singleton();
+
+    // The singleton, or nullptr after logging "Can't <action> because OpenAL failed to start" if OpenAL isn't running
+    static ALManager *get_initialized_singleton(const char *action);
+
+    // Generates one buffer, or logs a readable error and returns 0
+    ALuint gen_buffer();
+
+    void delete_buffer(ALuint handle)
+    {
+        alDeleteBuffers_(1, &handle);
+    }
+
+    void delete_source(ALuint handle)
+    {
+        alDeleteSources_(1, &handle);
+    }
+
+    void delete_filter(ALuint handle)
+    {
+        alDeleteFilters_(1, &handle);
+    }
+
+    void delete_effect(ALuint handle)
+    {
+        alDeleteEffects_(1, &handle);
+    }
+
+    void delete_auxiliary_effect_slot(ALuint handle)
+    {
+        alDeleteAuxiliaryEffectSlots_(1, &handle);
+    }
 
     ALManager() = default;
     ~ALManager();
@@ -222,6 +261,23 @@ public:
 
     PackedStringArray get_available_capture_devices();
 
+    // Enumerating capture devices can be slow, and Godot calls _validate_property every time it fetches the property list, so VAInputStreamSource's dropdown reuses this until refresh_capture_devices()
+    const PackedStringArray &get_cached_capture_devices()
+    {
+        if (!capture_devices_cached)
+        {
+            cached_capture_devices = get_available_capture_devices();
+            capture_devices_cached = true;
+        }
+
+        return cached_capture_devices;
+    }
+
+    void refresh_capture_devices()
+    {
+        capture_devices_cached = false;
+    }
+
     PackedStringArray get_available_hrtfs();
 
     bool set_hrtf(const String &name);
@@ -242,6 +298,8 @@ public:
 
     void shutdown();
 
+    void check_device_connected();
+
     bool is_initialized() const
     {
         return device && context;
@@ -257,6 +315,7 @@ public:
         return context;
     }
 
+    // OpenAL is loaded at runtime (see load_library), so these return the resolved function pointer and call sites read manager->al_sourcei()(args)
     alGenBuffersFn al_gen_buffers() const
     {
         return alGenBuffers_;

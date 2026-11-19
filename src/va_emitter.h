@@ -98,6 +98,10 @@ private:
 
     ALFilter *filter = nullptr;
 
+    // Absolute gains, as ALFilter stores HF relative to LF
+    float muffling_gain_lf = 1.0f;
+    float muffling_gain_hf = 1.0f;
+
     float ambient_filter_gain_lf = 1.0f;
     float ambient_filter_gain_hf = 1.0f;
     bool ambient_filter_ready = false;
@@ -164,9 +168,19 @@ public:
 
     bool is_raytraced() const;
 
-    // True once the listener has raytraced this emitter, and this emitter has cast its own reverb rays.
-	// If this emitter is outside the world bounds, it does not cast reverb rays and this field does not wait for the reverb rays to be cast.
-	// Sources don't play until this field is true
+    // The SDK only casts ambient rays when both the ray and bounce counts are above 0
+    bool is_ambient_occlusion_enabled() const
+    {
+        return ambient_occlusion_ray_count > 0 && ambient_occlusion_bounce_count > 0;
+    }
+
+    bool is_ambient_permeation_enabled() const
+    {
+        return ambient_permeation_ray_count > 0 && ambient_permeation_bounce_count > 0;
+    }
+
+    // True once this emitter has cast its own rays and the listener has raytraced it. Sources don't play until this is true
+    // Inside the bounds it also waits for its own grouped EAX, which doesn't exist outside them
     bool is_ready_to_play() const;
 
     // is_ready_to_play, but always waiting for its own reverb rays. raytrace_once waits for this, so a sound started outside the bounds still gets reverb once inside
@@ -203,6 +217,17 @@ public:
     float get_ambient_filter_gain_hf() const
     {
         return ambient_filter_gain_hf;
+    }
+
+    // How muffled this emitter sounds to the listener. 1.0/1.0 until the listener raytraces it
+    float get_muffling_gain_lf() const
+    {
+        return muffling_gain_lf;
+    }
+
+    float get_muffling_gain_hf() const
+    {
+        return muffling_gain_hf;
     }
 
     ALFilter *get_filter() const

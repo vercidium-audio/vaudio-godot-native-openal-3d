@@ -1,3 +1,5 @@
+// Human-reviewed
+
 #pragma once
 
 #include <godot_cpp/classes/node.hpp>
@@ -37,7 +39,7 @@ private:
     // Cached handle of the owning VAWorld
     ::VAWorld *va_world_handle = nullptr;
 
-    // Deferred from _exit_tree, once it's known whether the whole scene is unloading or just this node was removed
+    // Deferred from _exit_tree, so we can tell whether the whole scene is unloading or just this node was removed
     static void report_if_removed_at_runtime(uint64_t world_id, uint64_t material_id, const String &material_name);
 
 protected:
@@ -103,9 +105,7 @@ public:
     Color get_color() const;
 
     // Apply the editor properties to the underlying VA material
-    void apply_properties_from_editor(float new_absorption_lf, float new_absorption_hf, float new_scattering,
-        float new_transmission_lf, float new_transmission_hf, float new_flat_transmission_lf,
-        float new_flat_transmission_hf, const Color &new_color);
+    void apply_properties_from_editor(float new_absorption_lf, float new_absorption_hf, float new_scattering, float new_transmission_lf, float new_transmission_hf, float new_flat_transmission_lf, float new_flat_transmission_hf, const Color &new_color);
 };
 
 } // namespace va_godot

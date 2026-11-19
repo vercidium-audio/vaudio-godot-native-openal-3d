@@ -66,8 +66,6 @@ private:
 
     void retry_find_va_world(Node *node);
 
-    void apply_raytracing_results(va_godot::VAEmitter *other);
-
 protected:
     static void _bind_methods();
 
@@ -84,6 +82,17 @@ public:
     void process_raytracing(double delta);
 
     bool is_raytraced() const;
+
+    // The SDK only casts ambient rays when both the ray and bounce counts are above 0
+    bool is_ambient_occlusion_enabled() const
+    {
+        return ambient_occlusion_ray_count > 0 && ambient_occlusion_bounce_count > 0;
+    }
+
+    bool is_ambient_permeation_enabled() const
+    {
+        return ambient_permeation_ray_count > 0 && ambient_permeation_bounce_count > 0;
+    }
 
     bool is_raytraced_by_listener() const;
 
