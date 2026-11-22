@@ -18,15 +18,15 @@ void VASource::_ready()
 {
 }
 
-bool VASource::play()
+bool VASource::play(float start_time)
 {
     bool silenced = is_silenced_by_bounds();
 
     // Returns true while waiting for the emitter to be ready, and false while silenced by the bounds, even for a loop that will play once inside
-    if (!playback.request_play(*this, silenced, is_ready_to_play()))
+    if (!playback.request_play(*this, silenced, is_ready_to_play(), start_time))
         return !silenced;
 
-    bool played = VARaytracedSource::play();
+    bool played = VARaytracedSource::play(start_time);
 
     if (played)
         playback.on_played();
@@ -46,5 +46,5 @@ void VASource::_process(double delta)
     process_raytracing(delta);
 
     if (playback.process(*this, is_silenced_by_bounds(), is_ready_to_play(), get_autoplay()))
-        play();
+        play(playback.get_pending_start_time());
 }

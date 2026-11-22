@@ -24,7 +24,7 @@ public:
 
     void _process(double delta) override;
 
-    bool play() override;
+    bool play(float start_time = 0.0f) override;
 
     // Also cancels a play that's waiting, e.g. a loop waiting outside the bounds
     void stop() override;

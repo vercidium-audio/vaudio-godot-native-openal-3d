@@ -243,6 +243,7 @@ bool ALManager::resolve_functions()
     ok &= resolve(library, "alGenBuffers", alGenBuffers_);
     ok &= resolve(library, "alDeleteBuffers", alDeleteBuffers_);
     ok &= resolve(library, "alIsBuffer", alIsBuffer_);
+    ok &= resolve(library, "alGetBufferi", alGetBufferi_);
     ok &= resolve(library, "alBufferData", alBufferData_);
 
     ok &= resolve(library, "alGenSources", alGenSources_);
@@ -252,8 +253,10 @@ bool ALManager::resolve_functions()
     ok &= resolve(library, "alSourcef", alSourcef_);
     ok &= resolve(library, "alSourcefv", alSourcefv_);
     ok &= resolve(library, "alGetSourcei", alGetSourcei_);
+    ok &= resolve(library, "alGetSourcef", alGetSourcef_);
     ok &= resolve(library, "alSourcePlay", alSourcePlay_);
     ok &= resolve(library, "alSourceStop", alSourceStop_);
+    ok &= resolve(library, "alSourcePause", alSourcePause_);
     ok &= resolve(library, "alSource3i", alSource3i_);
 
     ok &= resolve(library, "alGetProcAddress", alGetProcAddress_);

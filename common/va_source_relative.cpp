@@ -73,7 +73,7 @@ void VASourceRelative::retry_find_va_world(Node *node)
     waiting_for_world = false;
 }
 
-bool VASourceRelative::play()
+bool VASourceRelative::play(float start_time)
 {
     if (IS_EDITOR_HINT())
     {
@@ -89,5 +89,5 @@ bool VASourceRelative::play()
 
     update_filter(1.0f, 1.0f);
 
-    return ALSourceRelative::play();
+    return ALSourceRelative::play(start_time);
 }

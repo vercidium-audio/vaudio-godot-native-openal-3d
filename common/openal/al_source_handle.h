@@ -12,6 +12,7 @@ class ALSourceHandle
 private:
     ALuint handle = 0;
     ALuint buffer = 0;
+    bool looping = false;
 
 public:
     ALSourceHandle() = default;
@@ -28,6 +29,22 @@ public:
     void set_buffer(ALuint buffer_handle);
     void play();
     void stop();
+    void pause();
+
+    // AL_SOURCE_STATE, or 0 if the source is no longer valid
+    ALint get_state() const;
+
+    // Moves to this many seconds in, or the start time once played if it hasn't started yet
+    void set_seconds_offset(float seconds);
+    float get_seconds_offset() const;
+
+    // The length of the attached buffer in seconds, or 0 if there isn't one
+    float get_buffer_length() const;
+
+    bool get_looping() const
+    {
+        return looping;
+    }
 
     // True once AL_SOURCE_STATE reports AL_STOPPED, or the source is no longer valid. Looping sources only finish once stopped.
     bool is_finished() const;

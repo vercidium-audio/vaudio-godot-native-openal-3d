@@ -47,7 +47,7 @@ public:
     bool is_silenced_by_bounds() const;
 
     // Matches VASource's Play() override: waits until the parent emitter is ready to play, and follows the same bounds rules
-    bool play() override;
+    bool play(float start_time = 0.0f) override;
 
     // Stop playback and cancel pending playback
     void stop() override;

@@ -31,5 +31,5 @@ public:
     void _enter_tree() override;
     void _exit_tree() override;
 
-    bool play() override;
+    bool play(float start_time = 0.0f) override;
 };

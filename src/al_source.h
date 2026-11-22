@@ -47,6 +47,11 @@ protected:
     ALBuffer decoding_buffer;
     bool decode_succeeded = false;
     bool play_requested = false;
+    float requested_start_time = 0.0f;
+    bool stream_paused = false;
+
+    // Moves one sound to this many seconds in. A looping sound wraps around, and one that doesn't loop stops if it's past the end
+    static void seek_source(ALSourceHandle &source, float time);
 
     int last_played_index = -1;
 
@@ -58,7 +63,13 @@ protected:
 
     int pick_stream_index() const;
 
-    bool start_playing();
+    bool start_playing(float start_time);
+
+    // Pauses or resumes the sound to match stream_paused
+    void apply_paused(ALSourceHandle &source) const;
+
+    // Whether a sound is playing or paused
+    bool has_sound() const;
 
     float gain = 1.0f;
     float pitch = 1.0f;
@@ -107,11 +118,27 @@ public:
 
     ALReverbEffect *effect = nullptr;
 
-    virtual bool play();
+    // Plays a new sound, starting start_time seconds in. While stream_paused is set it starts paused, and plays once unpaused
+    virtual bool play(float start_time = 0.0f);
 
     virtual void stop();
 
+    // False while paused, matching AudioStreamPlayer
     bool is_playing() const;
+
+    // Pauses every sound this source is playing, and resumes them from the same time when set back to false. Matches AudioStreamPlayer's stream_paused
+    void set_stream_paused(bool value);
+
+    bool get_stream_paused() const
+    {
+        return stream_paused;
+    }
+
+    // Moves every sound this source is playing to this many seconds in, while playing or paused. Matches AudioStreamPlayer's seek()
+    virtual void seek(float time);
+
+    // How many seconds into the most recently played sound it is, or 0 if nothing is playing. Matches AudioStreamPlayer's get_playback_position()
+    float get_playback_time() const;
 
     // Whether the sound is sent to a reverb effect (grouped or the listener's). A raytraced source outside the bounds has none
     bool has_reverb() const

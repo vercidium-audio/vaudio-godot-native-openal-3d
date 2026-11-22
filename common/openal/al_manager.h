@@ -61,6 +61,7 @@ private:
     alGenBuffersFn alGenBuffers_ = nullptr;
     alDeleteBuffersFn alDeleteBuffers_ = nullptr;
     alIsBufferFn alIsBuffer_ = nullptr;
+    alGetBufferiFn alGetBufferi_ = nullptr;
     alBufferDataFn alBufferData_ = nullptr;
 
     alGenSourcesFn alGenSources_ = nullptr;
@@ -70,8 +71,10 @@ private:
     alSourcefFn alSourcef_ = nullptr;
     alSourcefvFn alSourcefv_ = nullptr;
     alGetSourceiFn alGetSourcei_ = nullptr;
+    alGetSourcefFn alGetSourcef_ = nullptr;
     alSourcePlayFn alSourcePlay_ = nullptr;
     alSourceStopFn alSourceStop_ = nullptr;
+    alSourcePauseFn alSourcePause_ = nullptr;
     alSource3iFn alSource3i_ = nullptr;
 
     alGetProcAddressFn alGetProcAddress_ = nullptr;
@@ -404,6 +407,21 @@ public:
     alSourceStopFn al_source_stop() const
     {
         return alSourceStop_;
+    }
+
+    alSourcePauseFn al_source_pause() const
+    {
+        return alSourcePause_;
+    }
+
+    alGetSourcefFn al_get_sourcef() const
+    {
+        return alGetSourcef_;
+    }
+
+    alGetBufferiFn al_get_bufferi() const
+    {
+        return alGetBufferi_;
     }
 
     alSource3iFn al_source3i() const

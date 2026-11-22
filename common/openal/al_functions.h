@@ -61,6 +61,7 @@ using alListenerfvFn = void(AL_APIENTRY *)(ALenum, const ALfloat *);
 using alGenBuffersFn = void(AL_APIENTRY *)(ALsizei, ALuint *);
 using alDeleteBuffersFn = void(AL_APIENTRY *)(ALsizei, const ALuint *);
 using alIsBufferFn = ALboolean(AL_APIENTRY *)(ALuint);
+using alGetBufferiFn = void(AL_APIENTRY *)(ALuint, ALenum, ALint *);
 using alBufferDataFn = void(AL_APIENTRY *)(ALuint, ALenum, const ALvoid *, ALsizei, ALsizei);
 
 using alGenSourcesFn = void(AL_APIENTRY *)(ALsizei, ALuint *);
@@ -70,8 +71,10 @@ using alSourceiFn = void(AL_APIENTRY *)(ALuint, ALenum, ALint);
 using alSourcefFn = void(AL_APIENTRY *)(ALuint, ALenum, ALfloat);
 using alSourcefvFn = void(AL_APIENTRY *)(ALuint, ALenum, const ALfloat *);
 using alGetSourceiFn = void(AL_APIENTRY *)(ALuint, ALenum, ALint *);
+using alGetSourcefFn = void(AL_APIENTRY *)(ALuint, ALenum, ALfloat *);
 using alSourcePlayFn = void(AL_APIENTRY *)(ALuint);
 using alSourceStopFn = void(AL_APIENTRY *)(ALuint);
+using alSourcePauseFn = void(AL_APIENTRY *)(ALuint);
 using alSource3iFn = void(AL_APIENTRY *)(ALuint, ALenum, ALint, ALint, ALint);
 
 // EFX (extension) entry points - resolved via alGetProcAddress rather than GetProcAddress, since EFX is an AL extension, not a core export.

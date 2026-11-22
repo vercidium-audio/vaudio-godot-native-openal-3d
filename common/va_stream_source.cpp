@@ -66,9 +66,15 @@ bool VAStreamSource::start_sound()
 
     // The is_ready_to_play() check happens below in push_audio_data()
     source->play();
+    apply_paused(*source);
 
     get_sources().push_back(std::move(source));
     return true;
+}
+
+void VAStreamSource::seek(float time)
+{
+    VA_WARN_NAMED("A VAStreamSource can't seek, as it only plays the audio pushed to it");
 }
 
 void VAStreamSource::apply_bounds_rules()
@@ -78,7 +84,7 @@ void VAStreamSource::apply_bounds_rules()
 
     if (is_silenced_by_bounds())
     {
-        if (!is_playing())
+        if (!has_sound())
             return;
 
         ALSource::stop();
@@ -113,8 +119,8 @@ void VAStreamSource::push_audio_data(const uint8_t *data, int num_bytes)
         return;
     }
 
-    // Nothing plays it while the bounds have stopped it
-    if (num_bytes == 0 || stopped_by_bounds)
+    // Nothing plays it while the bounds have stopped it, and audio queued while paused would play late
+    if (num_bytes == 0 || stopped_by_bounds || get_stream_paused())
         return;
 
     // Ignore data that arrives before raytracing completed, so the stream never plays unmuffled or without reverb

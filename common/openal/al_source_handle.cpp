@@ -79,6 +79,55 @@ void ALSourceHandle::stop()
     ALManager::get_singleton()->al_source_stop()(handle);
 }
 
+void ALSourceHandle::pause()
+{
+    ALManager::get_singleton()->al_source_pause()(handle);
+}
+
+ALint ALSourceHandle::get_state() const
+{
+    ALManager *manager = ALManager::get_singleton();
+
+    if (!manager)
+        return 0;
+
+    ALint state = 0;
+    manager->al_get_sourcei()(handle, AL_SOURCE_STATE, &state);
+    return state;
+}
+
+void ALSourceHandle::set_seconds_offset(float seconds)
+{
+    ALManager::get_singleton()->al_sourcef()(handle, AL_SEC_OFFSET, seconds);
+}
+
+float ALSourceHandle::get_seconds_offset() const
+{
+    ALfloat seconds = 0;
+    ALManager::get_singleton()->al_get_sourcef()(handle, AL_SEC_OFFSET, &seconds);
+    return seconds;
+}
+
+float ALSourceHandle::get_buffer_length() const
+{
+    if (buffer == 0)
+        return 0;
+
+    ALManager *manager = ALManager::get_singleton();
+    ALint channels = 0, bits = 0, frequency = 0, size = 0;
+    manager->al_get_bufferi()(buffer, AL_CHANNELS, &channels);
+    manager->al_get_bufferi()(buffer, AL_BITS, &bits);
+    manager->al_get_bufferi()(buffer, AL_FREQUENCY, &frequency);
+    manager->al_get_bufferi()(buffer, AL_SIZE, &size);
+
+    int bytes_per_frame = channels * bits / 8;
+
+    if (bytes_per_frame <= 0 || frequency <= 0)
+        return 0;
+
+    return (float)size / bytes_per_frame / frequency;
+}
+
 bool ALSourceHandle::is_finished() const
 {
     ALManager *manager = ALManager::get_singleton();
@@ -113,6 +162,7 @@ void ALSourceHandle::set_pitch(float pitch)
 
 void ALSourceHandle::set_looping(bool value)
 {
+    looping = value;
     ALManager::get_singleton()->al_sourcei()(handle, AL_LOOPING, value ? 1 : 0);
 }
 

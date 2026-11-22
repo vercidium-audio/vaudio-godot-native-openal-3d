@@ -73,15 +73,15 @@ bool VASourceLeech::is_silenced_by_bounds() const
     return emitter && emitter->is_silenced_by_bounds();
 }
 
-bool VASourceLeech::play()
+bool VASourceLeech::play(float start_time)
 {
     bool silenced = is_silenced_by_bounds();
 
     // Returns true while waiting for the parent emitter to be ready, and false while silenced by the bounds, even for a loop that will play once inside
-    if (!playback.request_play(*this, silenced, is_ready_to_play()))
+    if (!playback.request_play(*this, silenced, is_ready_to_play(), start_time))
         return !silenced;
 
-    bool played = ALSource3D::play();
+    bool played = ALSource3D::play(start_time);
 
     if (played)
         playback.on_played();
@@ -105,7 +105,7 @@ void VASourceLeech::_process(double delta)
 
     // Stops the sound while the parent emitter is outside the bounds, and starts a queued play or autoplay once it's ready
     if (playback.process(*this, is_silenced_by_bounds(), is_ready_to_play(), get_autoplay()))
-        play();
+        play(playback.get_pending_start_time());
 
     if (!is_ready_to_play())
         return;
