@@ -14,6 +14,9 @@
 
 void VASourceAmbient::_bind_methods()
 {
+    ClassDB::bind_method(D_METHOD("get_use_listener_reverb"), &VASourceAmbient::get_use_listener_reverb);
+    ClassDB::bind_method(D_METHOD("set_use_listener_reverb", "value"), &VASourceAmbient::set_use_listener_reverb);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_listener_reverb"), "set_use_listener_reverb", "get_use_listener_reverb");
 }
 
 VASourceAmbient::VASourceAmbient()
@@ -90,11 +93,12 @@ void VASourceAmbient::_process(double delta)
     if (!listener->is_ambient_filter_ready())
         return;
 
-    // No reverb, only muffling
-    effect = nullptr;
+    // nullptr gets the listener's reverb effect. The reverb send is muffled by the ambient filter too
+    effect = use_listener_reverb ? va_world->get_reverb_effect(nullptr) : nullptr;
     update_filter(listener->get_ambient_filter_gain_lf(), listener->get_ambient_filter_gain_hf());
 
-    if (!played)
+    // Waits for the listener's first EAX, so it never starts in OpenAL's default reverb
+    if (!played && (!use_listener_reverb || va_world->is_listener_reverb_ready()))
     {
         played = ALSourceRelative::play();
     }
