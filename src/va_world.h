@@ -215,6 +215,9 @@ public:
 
     ALReverbEffect *get_reverb_effect(::VAEmitter *emitter);
 
+    // Whether the current listener's reverb effect has its first EAX, or never will: no reverb effect, no reverb rays, or outside the bounds. False with no listener. VASourceRelative waits for this
+    bool is_listener_reverb_ready() const;
+
     int get_grouped_eax_count() const;
     float get_grouped_eax_gain_lf(int index) const;
     float get_grouped_eax_gain_hf(int index) const;

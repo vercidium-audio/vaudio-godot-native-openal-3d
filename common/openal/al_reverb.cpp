@@ -53,6 +53,9 @@ bool ALReverbEffect::create()
     manager->al_effecti()(effect_handle, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB);
     manager->al_auxiliary_effect_sloti()(slot_handle, AL_EFFECTSLOT_EFFECT, (ALint)effect_handle);
 
+    // Silent until set_params() applies the first EAX, so nothing plays through OpenAL's default reverb
+    manager->al_auxiliary_effect_slotf()(slot_handle, AL_EFFECTSLOT_GAIN, 0.0f);
+
     return true;
 }
 

@@ -189,6 +189,9 @@ public:
     // Unclamped and outside the VAWorld's bounds, so the SDK doesn't raytrace it and it has no reverb
     bool is_outside_bounds() const;
 
+    // Casts reverb rays but has no EAX yet
+    bool is_waiting_for_eax() const;
+
     // Outside the bounds while emitters_outside_the_world_are_muffled is on. Sources don't start or stop while this is true
     bool is_silenced_by_bounds() const;
 

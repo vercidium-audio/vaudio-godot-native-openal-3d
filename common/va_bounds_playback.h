@@ -2,7 +2,7 @@
 
 class ALSource;
 
-// Autoplay and world bounds rules shared by VASource and VASourceLeech, which have no raytraced base class in common
+// Autoplay and world bounds rules shared by VASource, VASourceLeech and VASourceRelative, which have no raytraced base class in common. VASourceRelative is never silenced
 struct VABoundsPlayback
 {
     // Call at the top of play(). Returns whether to play now, otherwise the play is queued until it's ready, and a loop waits until it's inside the bounds. A sound that doesn't loop isn't played outside the bounds, with a warning
