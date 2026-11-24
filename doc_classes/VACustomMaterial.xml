@@ -3,7 +3,7 @@
 	<brief_description>
 	</brief_description>
 	<description>
-		Defines a custom acoustic material that can be assigned to geometry in a [VAWorld], controlling how sound absorbs, scatters, and transmits through it. Must be added as a child of (or alongside) the level's [VAWorld]. It can't be removed while the [VAWorld] is running - doing so logs an error, and primitives keep using its last values until the scene is reloaded.
+		Defines a custom acoustic material that can be assigned to geometry in a [VAWorld], controlling how sound absorbs, scatters, and transmits through it. Must be added as a child of (or alongside) the level's [VAWorld]. The node's name is the material's name, which primitives reference in their [code]vercidium_audio_material[/code] metadata. Renaming it at runtime has no effect. It can't be removed while the [VAWorld] is running - doing so logs an error, and primitives keep using its last values until the scene is reloaded.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -16,9 +16,6 @@
 		</method>
 	</methods>
 	<members>
-		<member name="material_name" type="String" setter="set_material_name" getter="get_material_name" default="&quot;CustomMaterial&quot;">
-			The name of this material. Cannot be changed at runtime once the material has been created.
-		</member>
 		<member name="absorption_lf" type="float" setter="set_absorption_lf" getter="get_absorption_lf" default="0.02">
 			The percentage of low-frequency energy that is lost when a ray bounces off this material.
 		</member>

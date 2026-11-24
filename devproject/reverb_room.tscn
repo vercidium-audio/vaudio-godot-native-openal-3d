@@ -63,8 +63,7 @@ transform = Transform3D(1, 0, 0, 0, 0.642788, 0.766044, 0, -0.766044, 0.642788, 
 position = Vector3(-10, -3, -8)
 bounds_size = Vector3(20, 12, 16)
 
-[node name="RoomMaterial" type="VACustomMaterial" parent="VAWorld"]
-material_name = "room"
+[node name="Room" type="VACustomMaterial" parent="VAWorld"]
 absorption_lf = 0.1
 absorption_hf = 0.15
 scattering = 0.3

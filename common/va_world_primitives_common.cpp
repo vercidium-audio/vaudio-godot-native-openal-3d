@@ -155,7 +155,7 @@ void VAWorld::sync_primitive(Node *node)
 static void collect_editor_material_nodes(Node *node, PackedStringArray &custom_names, TypedArray<Node> &material_nodes)
 {
     if (VACustomMaterial *material = Object::cast_to<VACustomMaterial>(node))
-        custom_names.push_back(material->get_material_name());
+        custom_names.push_back(material->get_name());
 
     if (node->has_meta(MaterialMetaKey()))
         material_nodes.push_back(node);

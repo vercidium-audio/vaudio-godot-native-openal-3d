@@ -52,10 +52,8 @@ void VAMaterialPropertiesInspectorPlugin::sync_running_game(Node *node)
 
     bool is_custom_material = Object::cast_to<VACustomMaterial>(node) != nullptr;
 
-    // VADefaultMaterial has no material_name property and VACustomMaterial has no material_type property - only the
-    // one that applies to this node's actual type is meaningful, the receiving end ignores the other.
+    // VACustomMaterial has no material_type property, the receiving end ignores it for custom materials
     int material_type = is_custom_material ? 0 : (int)node->get("material_type");
-    String custom_material_name = is_custom_material ? (String)node->get("material_name") : String();
 
     NodePath node_path = scene_root->get_path_to(node);
 
@@ -69,6 +67,6 @@ void VAMaterialPropertiesInspectorPlugin::sync_running_game(Node *node)
     Color color = node->get("color");
 
     debugger_plugin->sync_material_properties(scene_root->get_name(), node_path, String(node->get_name()),
-        is_custom_material, material_type, custom_material_name, absorption_lf, absorption_hf,
+        is_custom_material, material_type, absorption_lf, absorption_hf,
         scattering, transmission_lf, transmission_hf, flat_transmission_lf, flat_transmission_hf, color);
 }

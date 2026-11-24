@@ -123,8 +123,7 @@ shadow_enabled = true
 position = Vector3(-28, -2, -16)
 bounds_size = Vector3(56, 14, 32)
 
-[node name="VACustomMaterial" type="VACustomMaterial" parent="VAWorld"]
-material_name = "carpet"
+[node name="Carpet" type="VACustomMaterial" parent="VAWorld"]
 absorption_lf = 0.4
 absorption_hf = 0.6
 

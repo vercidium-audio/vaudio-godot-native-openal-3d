@@ -16,22 +16,18 @@ namespace va_godot
 
 namespace
 {
-    void log_if_material_setter_failed(VAResult result, const char *property_name, const String &material_name)
+    void log_if_material_setter_failed(VAResult result, const char *property_name, const Node *material)
     {
         if (result == VA_SUCCESS || result == VA_UNCHANGED)
             return;
 
-        VA_ERROR_RESULT(result, "Failed to set ", property_name, " on custom material ", material_name);
+        VA_ERROR_RESULT(result, "Failed to set ", property_name, " on custom material ", material->get_name());
     }
 }
 
 void VACustomMaterial::_bind_methods()
 {
     ClassDB::bind_method(D_METHOD("get_material_type"), &VACustomMaterial::get_material_type);
-
-    ClassDB::bind_method(D_METHOD("get_material_name"), &VACustomMaterial::get_material_name);
-    ClassDB::bind_method(D_METHOD("set_material_name", "value"), &VACustomMaterial::set_material_name);
-    ADD_PROPERTY(PropertyInfo(Variant::STRING, "material_name"), "set_material_name", "get_material_name");
 
     ClassDB::bind_method(D_METHOD("get_absorption_lf"), &VACustomMaterial::get_absorption_lf);
     ClassDB::bind_method(D_METHOD("set_absorption_lf", "value"), &VACustomMaterial::set_absorption_lf);
@@ -87,8 +83,7 @@ void VACustomMaterial::_enter_tree()
         return;
     }
 
-    // TODO - warn if two VACustomMaterial nodes have the same name
-    // Currently always succeeds - reserved for when material registration can fail (e.g. duplicate names)
+    // Currently always succeeds - reserved for when material registration can fail
     if (!va_world->register_custom_material(this))
         return;
 
@@ -98,18 +93,18 @@ void VACustomMaterial::_enter_tree()
 
     if (create_result != VA_SUCCESS)
     {
-        VA_ERROR_RESULT(create_result, "Failed to create material ", material_name);
+        VA_ERROR_RESULT(create_result, "Failed to create material ", get_name());
         return;
     }
 
-    log_if_material_setter_failed(vaWorldSetMaterialAbsorptionLF(world, material_type, absorption_lf), "absorption_lf", material_name);
-    log_if_material_setter_failed(vaWorldSetMaterialAbsorptionHF(world, material_type, absorption_hf), "absorption_hf", material_name);
-    log_if_material_setter_failed(vaWorldSetMaterialScattering(world, material_type, scattering), "scattering", material_name);
-    log_if_material_setter_failed(vaWorldSetMaterialTransmissionLF(world, material_type, transmission_lf), "transmission_lf", material_name);
-    log_if_material_setter_failed(vaWorldSetMaterialTransmissionHF(world, material_type, transmission_hf), "transmission_hf", material_name);
-    log_if_material_setter_failed(vaWorldSetMaterialFlatTransmissionLF(world, material_type, flat_transmission_lf), "flat_transmission_lf", material_name);
-    log_if_material_setter_failed(vaWorldSetMaterialFlatTransmissionHF(world, material_type, flat_transmission_hf), "flat_transmission_hf", material_name);
-    log_if_material_setter_failed(vaWorldSetMaterialColor(world, material_type, ToVAudio(color)), "color", material_name);
+    log_if_material_setter_failed(vaWorldSetMaterialAbsorptionLF(world, material_type, absorption_lf), "absorption_lf", this);
+    log_if_material_setter_failed(vaWorldSetMaterialAbsorptionHF(world, material_type, absorption_hf), "absorption_hf", this);
+    log_if_material_setter_failed(vaWorldSetMaterialScattering(world, material_type, scattering), "scattering", this);
+    log_if_material_setter_failed(vaWorldSetMaterialTransmissionLF(world, material_type, transmission_lf), "transmission_lf", this);
+    log_if_material_setter_failed(vaWorldSetMaterialTransmissionHF(world, material_type, transmission_hf), "transmission_hf", this);
+    log_if_material_setter_failed(vaWorldSetMaterialFlatTransmissionLF(world, material_type, flat_transmission_lf), "flat_transmission_lf", this);
+    log_if_material_setter_failed(vaWorldSetMaterialFlatTransmissionHF(world, material_type, flat_transmission_hf), "flat_transmission_hf", this);
+    log_if_material_setter_failed(vaWorldSetMaterialColor(world, material_type, ToVAudio(color)), "color", this);
 
     va_world_handle = world;
     registered = true;
@@ -130,7 +125,7 @@ void VACustomMaterial::_exit_tree()
         return;
 
     // Children leave the tree before their VAWorld, so a scene unload looks the same as this node alone being removed until the end of the frame
-    callable_mp_static(&VACustomMaterial::report_if_removed_at_runtime).call_deferred(va_world->get_instance_id(), get_instance_id(), material_name);
+    callable_mp_static(&VACustomMaterial::report_if_removed_at_runtime).call_deferred(va_world->get_instance_id(), get_instance_id(), String(get_name()));
 }
 
 void VACustomMaterial::report_if_removed_at_runtime(uint64_t world_id, uint64_t material_id, const String &material_name)
@@ -160,16 +155,6 @@ void VACustomMaterial::set_material_type(int value)
     material_type = value;
 }
 
-String VACustomMaterial::get_material_name() const
-{
-    return material_name;
-}
-
-void VACustomMaterial::set_material_name(const String &value)
-{
-    material_name = value;
-}
-
 float VACustomMaterial::get_absorption_lf() const
 {
     return absorption_lf;
@@ -180,7 +165,7 @@ void VACustomMaterial::set_absorption_lf(float value)
     absorption_lf = value;
 
     if (registered)
-        log_if_material_setter_failed(vaWorldSetMaterialAbsorptionLF(va_world_handle, material_type, value), "absorption_lf", material_name);
+        log_if_material_setter_failed(vaWorldSetMaterialAbsorptionLF(va_world_handle, material_type, value), "absorption_lf", this);
 }
 
 float VACustomMaterial::get_absorption_hf() const
@@ -193,7 +178,7 @@ void VACustomMaterial::set_absorption_hf(float value)
     absorption_hf = value;
 
     if (registered)
-        log_if_material_setter_failed(vaWorldSetMaterialAbsorptionHF(va_world_handle, material_type, value), "absorption_hf", material_name);
+        log_if_material_setter_failed(vaWorldSetMaterialAbsorptionHF(va_world_handle, material_type, value), "absorption_hf", this);
 }
 
 float VACustomMaterial::get_scattering() const
@@ -206,7 +191,7 @@ void VACustomMaterial::set_scattering(float value)
     scattering = value;
 
     if (registered)
-        log_if_material_setter_failed(vaWorldSetMaterialScattering(va_world_handle, material_type, value), "scattering", material_name);
+        log_if_material_setter_failed(vaWorldSetMaterialScattering(va_world_handle, material_type, value), "scattering", this);
 }
 
 float VACustomMaterial::get_transmission_lf() const
@@ -219,7 +204,7 @@ void VACustomMaterial::set_transmission_lf(float value)
     transmission_lf = value;
 
     if (registered)
-        log_if_material_setter_failed(vaWorldSetMaterialTransmissionLF(va_world_handle, material_type, value), "transmission_lf", material_name);
+        log_if_material_setter_failed(vaWorldSetMaterialTransmissionLF(va_world_handle, material_type, value), "transmission_lf", this);
 }
 
 float VACustomMaterial::get_transmission_hf() const
@@ -232,7 +217,7 @@ void VACustomMaterial::set_transmission_hf(float value)
     transmission_hf = value;
 
     if (registered)
-        log_if_material_setter_failed(vaWorldSetMaterialTransmissionHF(va_world_handle, material_type, value), "transmission_hf", material_name);
+        log_if_material_setter_failed(vaWorldSetMaterialTransmissionHF(va_world_handle, material_type, value), "transmission_hf", this);
 }
 
 float VACustomMaterial::get_flat_transmission_lf() const
@@ -245,7 +230,7 @@ void VACustomMaterial::set_flat_transmission_lf(float value)
     flat_transmission_lf = value;
 
     if (registered)
-        log_if_material_setter_failed(vaWorldSetMaterialFlatTransmissionLF(va_world_handle, material_type, value), "flat_transmission_lf", material_name);
+        log_if_material_setter_failed(vaWorldSetMaterialFlatTransmissionLF(va_world_handle, material_type, value), "flat_transmission_lf", this);
 }
 
 float VACustomMaterial::get_flat_transmission_hf() const
@@ -258,7 +243,7 @@ void VACustomMaterial::set_flat_transmission_hf(float value)
     flat_transmission_hf = value;
 
     if (registered)
-        log_if_material_setter_failed(vaWorldSetMaterialFlatTransmissionHF(va_world_handle, material_type, value), "flat_transmission_hf", material_name);
+        log_if_material_setter_failed(vaWorldSetMaterialFlatTransmissionHF(va_world_handle, material_type, value), "flat_transmission_hf", this);
 }
 
 Color VACustomMaterial::get_color() const
@@ -271,7 +256,7 @@ void VACustomMaterial::set_color(const Color &value)
     color = value;
 
     if (registered)
-        log_if_material_setter_failed(vaWorldSetMaterialColor(va_world_handle, material_type, ToVAudio(value)), "color", material_name);
+        log_if_material_setter_failed(vaWorldSetMaterialColor(va_world_handle, material_type, ToVAudio(value)), "color", this);
 }
 
 void VACustomMaterial::apply_properties_from_editor(float new_absorption_lf, float new_absorption_hf, float new_scattering,

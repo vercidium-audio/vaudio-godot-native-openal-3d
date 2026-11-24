@@ -29,7 +29,7 @@ void VADebuggerPlugin::sync_primitive(const String &scene_root_name, const NodeP
 }
 
 void VADebuggerPlugin::sync_material_properties(const String &scene_root_name, const NodePath &node_path, const String &node_name,
-    bool is_custom_material, int material_type, const String &custom_material_name, float absorption_lf,
+    bool is_custom_material, int material_type, float absorption_lf,
     float absorption_hf, float scattering, float transmission_lf, float transmission_hf,
     float flat_transmission_lf, float flat_transmission_hf, const Color &color)
 {
@@ -47,7 +47,6 @@ void VADebuggerPlugin::sync_material_properties(const String &scene_root_name, c
             data.push_back(node_name);
             data.push_back(is_custom_material);
             data.push_back(material_type);
-            data.push_back(custom_material_name);
             data.push_back(absorption_lf);
             data.push_back(absorption_hf);
             data.push_back(scattering);

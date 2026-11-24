@@ -26,7 +26,7 @@ const int PROPAGATE_MODE_COUNT = 4;
 void find_custom_materials_recursive(Node *node, PackedStringArray &out_names)
 {
     if (VACustomMaterial *material = Object::cast_to<VACustomMaterial>(node))
-        out_names.push_back(material->get_material_name());
+        out_names.push_back(material->get_name());
 
     TypedArray<Node> children = node->get_children();
 

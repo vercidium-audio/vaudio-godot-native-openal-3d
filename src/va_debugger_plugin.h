@@ -25,7 +25,7 @@ public:
         const Variant &use_flat_transmission, const String &propagate);
 
     void sync_material_properties(const String &scene_root_name, const NodePath &node_path, const String &node_name,
-        bool is_custom_material, int material_type, const String &custom_material_name, float absorption_lf,
+        bool is_custom_material, int material_type, float absorption_lf,
         float absorption_hf, float scattering, float transmission_lf, float transmission_hf,
         float flat_transmission_lf, float flat_transmission_hf, const Color &color);
 

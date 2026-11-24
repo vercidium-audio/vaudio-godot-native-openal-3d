@@ -37,7 +37,7 @@ Node *find_child_named_recursive(Node *node, const StringName &name)
 }
 
 static Node *replace_with_material_node(Node *scene_root, const NodePath &node_path, Node *existing_node, const String &node_name,
-    bool is_custom_material, int material_type, const String &custom_material_name)
+    bool is_custom_material, int material_type)
 {
     Node *parent;
 
@@ -66,9 +66,7 @@ static Node *replace_with_material_node(Node *scene_root, const NodePath &node_p
 
     if (is_custom_material)
     {
-        va_godot::VACustomMaterial *custom_material = memnew(va_godot::VACustomMaterial);
-        custom_material->set_material_name(custom_material_name);
-        node = custom_material;
+        node = memnew(va_godot::VACustomMaterial);
     }
     else
     {
@@ -85,9 +83,8 @@ static Node *replace_with_material_node(Node *scene_root, const NodePath &node_p
 
 static bool on_sync_material_properties(const Array &data)
 {
-    // scene_root_name, node_path, node_name, is_custom_material, material_type, custom_material_name,
-    // 7 material floats, color
-    if (data.size() < 14)
+    // scene_root_name, node_path, node_name, is_custom_material, material_type, 7 material floats, color
+    if (data.size() < 13)
         return false;
 
     SceneTree *scene_tree = Object::cast_to<SceneTree>(Engine::get_singleton()->get_main_loop());
@@ -114,19 +111,18 @@ static bool on_sync_material_properties(const Array &data)
     String node_name = data[2];
     bool is_custom_material = data[3];
     int material_type = data[4];
-    String custom_material_name = data[5];
 
-    float absorption_lf = data[6];
-    float absorption_hf = data[7];
-    float scattering = data[8];
-    float transmission_lf = data[9];
-    float transmission_hf = data[10];
-    float flat_transmission_lf = data[11];
-    float flat_transmission_hf = data[12];
-    Color color = data[13];
+    float absorption_lf = data[5];
+    float absorption_hf = data[6];
+    float scattering = data[7];
+    float transmission_lf = data[8];
+    float transmission_hf = data[9];
+    float flat_transmission_lf = data[10];
+    float flat_transmission_hf = data[11];
+    Color color = data[12];
 
     if (!Object::cast_to<VADefaultMaterial>(node) && !Object::cast_to<va_godot::VACustomMaterial>(node))
-        node = replace_with_material_node(scene_root, node_path, node, node_name, is_custom_material, material_type, custom_material_name);
+        node = replace_with_material_node(scene_root, node_path, node, node_name, is_custom_material, material_type);
 
     if (VADefaultMaterial *default_material = Object::cast_to<VADefaultMaterial>(node))
         default_material->apply_properties_from_editor(absorption_lf, absorption_hf, scattering,

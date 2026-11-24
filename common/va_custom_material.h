@@ -22,7 +22,6 @@ class VACustomMaterial : public Node
 private:
     // Auto-assigned by VAWorld::register_custom_material, not user-facing
     int material_type = 0;
-    String material_name = "CustomMaterial";
 
     float absorption_lf = 0.02f;
     float absorption_hf = 0.1f;
@@ -58,11 +57,6 @@ public:
     void set_material_type(int value);
     // Get the internal ID of the VA material
     int get_material_type() const;
-
-    // Set the name of the custom material
-    void set_material_name(const String &value);
-    // Get the name of the custom material
-    String get_material_name() const;
 
     // Set the percentage of low-frequency energy that is lost on each bounce
     void set_absorption_lf(float value);
