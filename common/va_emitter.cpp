@@ -538,7 +538,11 @@ bool VAEmitter::has_listener_results(bool wait_for_own_eax) const
 
     VAEmitter *listener = va_world->get_listener();
 
-    if (!listener || listener == this || vaEmitterHasRaytracedTarget(listener->get_handle(), emitter) != VA_TRUE)
+    if (!listener || listener == this)
+        return false;
+
+    // A raytrace-once emitter has left the listener's targets and holds its last muffling
+    if (!raytrace_once_removed && vaEmitterHasRaytracedTarget(listener->get_handle(), emitter) != VA_TRUE)
         return false;
 
     // Its grouped EAX slot, and so its reverb effect, isn't known until it casts its own reverb rays
@@ -707,6 +711,9 @@ void VAEmitter::_process(double delta)
     if (raytrace_once && !raytrace_once_removed && has_listener_results())
     {
         raytrace_once_removed = true;
+
+        // The listener stops raytracing it too, so its muffling is held at this result, even while its reverb tail keeps it in the world
+        vaEmitterRemoveTarget(va_world->get_listener()->get_handle(), emitter);
         remove_emitter();
     }
 }

@@ -336,6 +336,10 @@ void VARaytracedSource::process_raytracing(double delta)
     // Read from the listener rather than the child VAEmitter, which processes after this node. The effect is null if it casts no reverb rays
     effect = va_world->get_reverb_effect(emitter->get_handle());
 
+    // A raytrace-once source has left the listener's targets, so it keeps its last filter
+    if (!is_raytraced_by_listener())
+        return;
+
     VALowPassFilter vaudio_filter = va_world->get_listener()->get_target_filter(emitter);
     update_filter(vaudio_filter.gainLF, vaudio_filter.gainHF, true);
 }
