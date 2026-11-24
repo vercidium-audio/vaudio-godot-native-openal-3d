@@ -8,6 +8,7 @@
 #include "va_engine_util.h"
 
 #include <algorithm>
+#include <cmath>
 
 void ALSource::_bind_methods()
 {
@@ -62,9 +63,18 @@ void ALSource::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_autoplay", "value"), &ALSource::set_autoplay);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autoplay"), "set_autoplay", "get_autoplay");
 
-    ClassDB::bind_method(D_METHOD("play"), &ALSource::play);
+    ClassDB::bind_method(D_METHOD("get_stream_paused"), &ALSource::get_stream_paused);
+    ClassDB::bind_method(D_METHOD("set_stream_paused", "value"), &ALSource::set_stream_paused);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "stream_paused"), "set_stream_paused", "get_stream_paused");
+
+    ClassDB::bind_method(D_METHOD("play", "start_time"), &ALSource::play, DEFVAL(0.0));
     ClassDB::bind_method(D_METHOD("stop"), &ALSource::stop);
     ClassDB::bind_method(D_METHOD("is_playing"), &ALSource::is_playing);
+    ClassDB::bind_method(D_METHOD("seek", "time"), &ALSource::seek);
+    ClassDB::bind_method(D_METHOD("get_playback_time"), &ALSource::get_playback_time);
+
+    // Script-only alias for get_playback_time() matching AudioStreamPlayer3D's get_playback_position()
+    ClassDB::bind_method(D_METHOD("get_playback_position"), &ALSource::get_playback_time);
     ClassDB::bind_method(D_METHOD("has_reverb"), &ALSource::has_reverb);
     ClassDB::bind_method(D_METHOD("is_dry_output_enabled"), &ALSource::is_dry_output_enabled);
 }
@@ -310,7 +320,7 @@ void ALSource::poll_decode_task()
     if (play_requested)
     {
         play_requested = false;
-        start_playing();
+        start_playing(requested_start_time);
     }
 }
 
@@ -330,7 +340,7 @@ int ALSource::pick_stream_index() const
     return index;
 }
 
-bool ALSource::start_playing()
+bool ALSource::start_playing(float start_time)
 {
     int index = pick_stream_index();
 
@@ -364,13 +374,18 @@ bool ALSource::start_playing()
     update_dry_output();
     apply_filters(*source);
 
-    source->play();
+    // An initial source starts from its offset once played
+    if (start_time > 0)
+        seek_source(*source, start_time);
+
+    if (!stream_paused)
+        source->play();
 
     sources.push_back(std::move(source));
     return true;
 }
 
-bool ALSource::play()
+bool ALSource::play(float start_time)
 {
     bool need_decode = !ensure_stream_decode_started();
 
@@ -378,11 +393,74 @@ bool ALSource::play()
         return false;
 
     if (decode_task_id == WorkerThreadPool::INVALID_TASK_ID && pending_streams.empty())
-        return start_playing();
+        return start_playing(start_time);
 
     // A decode is in flight - poll_decode_task() will start playback once every entry in `streams` has finished decoding.
     play_requested = true;
+    requested_start_time = start_time;
     return true;
+}
+
+void ALSource::set_stream_paused(bool value)
+{
+    if (stream_paused == value)
+        return;
+
+    stream_paused = value;
+
+    for (auto &source : sources)
+        apply_paused(*source);
+}
+
+void ALSource::apply_paused(ALSourceHandle &source) const
+{
+    ALint state = source.get_state();
+
+    if (stream_paused)
+    {
+        if (state == AL_PLAYING)
+            source.pause();
+    }
+    // Not a stopped one, which would restart from the beginning
+    else if (state == AL_PAUSED || state == AL_INITIAL)
+        source.play();
+}
+
+void ALSource::seek(float time)
+{
+    for (auto &source : sources)
+        seek_source(*source, time);
+}
+
+void ALSource::seek_source(ALSourceHandle &source, float time)
+{
+    float length = source.get_buffer_length();
+
+    if (length <= 0)
+        return;
+
+    time = std::max(0.0f, time);
+
+    if (time >= length)
+    {
+        if (!source.get_looping())
+        {
+            source.stop();
+            return;
+        }
+
+        time = std::fmod(time, length);
+    }
+
+    source.set_seconds_offset(time);
+}
+
+float ALSource::get_playback_time() const
+{
+    if (sources.empty())
+        return 0;
+
+    return sources.back()->get_seconds_offset();
 }
 
 void ALSource::stop()
@@ -398,6 +476,11 @@ void ALSource::stop()
 }
 
 bool ALSource::is_playing() const
+{
+    return !stream_paused && has_sound();
+}
+
+bool ALSource::has_sound() const
 {
     for (auto &source : sources)
         if (!source->is_finished())

@@ -12,6 +12,7 @@
 
 void VASourceRelative::_bind_methods()
 {
+    ClassDB::bind_method(D_METHOD("is_ready_to_play"), &VASourceRelative::is_ready_to_play);
 }
 
 VASourceRelative::VASourceRelative()
@@ -73,21 +74,49 @@ void VASourceRelative::retry_find_va_world(Node *node)
     waiting_for_world = false;
 }
 
-bool VASourceRelative::play()
+void VASourceRelative::_ready()
+{
+}
+
+void VASourceRelative::_process(double delta)
+{
+    ALSourceRelative::_process(delta);
+
+    if (!IS_EDITOR_HINT() && playback.process(*this, false, is_ready_to_play(), get_autoplay()))
+        play(playback.get_pending_start_time());
+}
+
+bool VASourceRelative::is_ready_to_play() const
+{
+    return va_world && va_world->is_listener_reverb_ready();
+}
+
+bool VASourceRelative::play(float start_time)
 {
     if (IS_EDITOR_HINT())
     {
         return false;
     }
 
-    if (va_world)
-    {
-        // Matches VASourceRelative.cs: relative sources aren't raytraced and have no emitter of their own, so they always share
-        // the listener's room reverb rather than any grouped-EAX slot (nullptr short-circuits get_reverb_effect to the listener slot).
-        effect = va_world->get_reverb_effect(nullptr);
-    }
+    if (!playback.request_play(*this, false, is_ready_to_play(), start_time))
+        return true;
+
+    // Matches VASourceRelative.cs: relative sources aren't raytraced and have no emitter of their own, so they always share
+    // the listener's room reverb rather than any grouped-EAX slot (nullptr short-circuits get_reverb_effect to the listener slot).
+    effect = va_world->get_reverb_effect(nullptr);
 
     update_filter(1.0f, 1.0f);
 
-    return ALSourceRelative::play();
+    bool played = ALSourceRelative::play(start_time);
+
+    if (played)
+        playback.on_played();
+
+    return played;
+}
+
+void VASourceRelative::stop()
+{
+    playback.cancel();
+    ALSourceRelative::stop();
 }

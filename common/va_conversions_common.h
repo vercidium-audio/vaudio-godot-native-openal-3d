@@ -55,6 +55,7 @@ inline String VAResultToString(VAResult result)
         case VA_MISSING_MATERIAL_CALLBACK: return "VA_MISSING_MATERIAL_CALLBACK";
         case VA_WRONG_THREAD: return "VA_WRONG_THREAD";
         case VA_DENIED_PENDING_REMOVAL: return "VA_DENIED_PENDING_REMOVAL";
+        case VA_PENDING: return "VA_PENDING";
         default: return "UNKNOWN(" + String::num_int64(result) + ")";
     }
 }

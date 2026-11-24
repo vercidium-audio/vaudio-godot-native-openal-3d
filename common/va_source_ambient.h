@@ -20,6 +20,8 @@ private:
 
     bool waiting_for_world = false;
 
+    bool use_listener_reverb = false;
+
     void retry_find_va_world(Node *node);
 
 protected:
@@ -32,4 +34,8 @@ public:
     void _enter_tree() override;
     void _exit_tree() override;
     void _process(double delta) override;
+
+    // If true, this source is sent to the listener's reverb effect, muffled by the ambient filter. It then waits for the listener's first raytraced reverb before it plays
+    bool get_use_listener_reverb() const { return use_listener_reverb; }
+    void set_use_listener_reverb(bool value) { use_listener_reverb = value; }
 };

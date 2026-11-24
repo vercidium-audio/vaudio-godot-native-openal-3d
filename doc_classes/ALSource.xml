@@ -7,6 +7,26 @@
 	<tutorials>
 	</tutorials>
 	<methods>
+		<method name="get_playback_time" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns how many seconds into the most recently played sound it is, or 0 if nothing is playing. [method get_playback_position] is an alias matching [AudioStreamPlayer3D].
+			</description>
+		</method>
+		<method name="play">
+			<return type="bool" />
+			<param index="0" name="start_time" type="float" default="0.0" />
+			<description>
+				Plays a new sound, starting [param start_time] seconds in. While [member stream_paused] is set, the sound starts paused and plays once unpaused.
+			</description>
+		</method>
+		<method name="seek">
+			<return type="void" />
+			<param index="0" name="time" type="float" />
+			<description>
+				Moves every sound this source is playing to [param time] seconds in, while playing or paused. A looping sound wraps around, and a sound that doesn't loop stops if [param time] is past its end. [VAStreamSource] can't seek.
+			</description>
+		</method>
 		<method name="has_reverb" qualifiers="const">
 			<return type="bool" />
 			<description>
@@ -21,6 +41,9 @@
 		</method>
 	</methods>
 	<members>
+		<member name="stream_paused" type="bool" setter="set_stream_paused" getter="get_stream_paused" default="false">
+			If [code]true[/code], every sound this source is playing is paused, and resumes from the same time when set back to [code]false[/code]. Sounds played while paused start paused. [method is_playing] returns [code]false[/code] while paused.
+		</member>
 		<member name="streams" type="Array" setter="set_streams" getter="get_streams">
 			The pool of sounds to play. If more than one is set, a random entry is picked each time [method play] is called.
 		</member>

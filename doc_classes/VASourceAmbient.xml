@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="VASourceAmbient" inherits="ALSourceRelative" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+		A non-spatialised ambient sound (e.g. rain, wind, room tone), muffled by the current [VAListener]'s ambient filter. It plays once the listener has its first ambient result, so give the listener [member VAEmitter.ambient_occlusion_ray_count] or [member VAEmitter.ambient_permeation_ray_count].
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="use_listener_reverb" type="bool" setter="set_use_listener_reverb" getter="get_use_listener_reverb" default="false">
+			If [code]true[/code], this source is sent to the current [VAListener]'s reverb, muffled by the ambient filter. It then waits for the listener's first raytraced reverb before it plays, so it never starts in OpenAL's default reverb.
+		</member>
+	</members>
+</class>

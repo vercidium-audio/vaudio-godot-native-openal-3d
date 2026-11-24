@@ -56,6 +56,9 @@ public:
     // Closes the stream too, else pushed data would queue forever with no source playing it
     void stop() override;
 
+    // Only logs a warning, as a stream only plays the audio pushed to it
+    void seek(float time) override;
+
     bool is_stream_open() const
     {
         return stream_open;

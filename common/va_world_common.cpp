@@ -267,4 +267,12 @@ ALReverbEffect *VAWorld::get_reverb_effect(::VAEmitter *emitter)
     return &listener_reverb_effect;
 }
 
+bool VAWorld::is_listener_reverb_ready() const
+{
+    if (!listener || !listener->get_handle())
+        return false;
+
+    return !listener_reverb_effect.is_valid() || !listener->is_waiting_for_eax() || listener->is_outside_bounds();
+}
+
 } // namespace va_godot

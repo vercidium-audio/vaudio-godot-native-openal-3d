@@ -130,6 +130,21 @@ static func play(source: Node) -> bool:
 static func stop(source: Node) -> void:
 	source.stop()
 
+static func play_from(source: Node, start_time: float) -> bool:
+	return source.play(start_time)
+
+static func set_stream_paused(source: Node, paused: bool) -> void:
+	source.stream_paused = paused
+
+static func is_stream_paused(source: Node) -> bool:
+	return source.stream_paused
+
+static func seek(source: Node, time: float) -> void:
+	source.seek(time)
+
+static func playback_time(source: Node) -> float:
+	return source.get_playback_time()
+
 # HRTF lives on the ALManager singleton here. The world is unused, but the C# adapter needs it to reach ALManager
 static func available_hrtfs(_world: Node) -> PackedStringArray:
 	return ALManager.get_available_hrtfs()

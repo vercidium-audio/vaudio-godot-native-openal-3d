@@ -542,10 +542,12 @@ bool VAEmitter::has_listener_results(bool wait_for_own_eax) const
         return false;
 
     // Its grouped EAX slot, and so its reverb effect, isn't known until it casts its own reverb rays
-    if (wait_for_own_eax && vaEmitterGetAffectsGroupedEAX(emitter) && vaEmitterGetReverbEnabled(emitter))
-        return vaEmitterGetEAX(emitter) != nullptr;
+    return !(wait_for_own_eax && vaEmitterGetAffectsGroupedEAX(emitter) && is_waiting_for_eax());
+}
 
-    return true;
+bool VAEmitter::is_waiting_for_eax() const
+{
+    return emitter && vaEmitterGetReverbEnabled(emitter) && vaEmitterGetEAX(emitter) == nullptr;
 }
 
 bool VAEmitter::is_ready_to_play() const
