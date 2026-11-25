@@ -1,3 +1,5 @@
+// AI-created
+
 #include "va_sdk_check.h"
 
 #ifdef _WIN32

@@ -1,3 +1,5 @@
+// AI-created
+
 #include "va_node_gizmo.h"
 
 #include <godot_cpp/classes/base_material3d.hpp>

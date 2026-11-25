@@ -1,3 +1,5 @@
+// AI-created
+
 #include "al_buffer.h"
 
 #include "../va_engine_util.h"

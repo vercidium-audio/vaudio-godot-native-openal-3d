@@ -1,3 +1,5 @@
+// AI-created
+
 #include "al_capture_device.h"
 
 #include "../va_engine_util.h"

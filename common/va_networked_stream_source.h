@@ -1,3 +1,5 @@
+// Human-reviewed
+
 #pragma once
 
 #include "va_stream_source.h"

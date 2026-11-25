@@ -1,3 +1,5 @@
+// AI-created
+
 #include "va_input_stream_source.h"
 
 #include <godot_cpp/core/class_db.hpp>
@@ -99,19 +101,13 @@ void VAInputStreamSource::_ready()
     VAStreamSource::_ready();
 
     if (IS_EDITOR_HINT())
-    {
         return;
-    }
 
     if (!open_stream(format, sample_rate))
-    {
         return;
-    }
 
     if (!open_capture(device_name, format, sample_rate, buffer_size_frames))
-    {
         return;
-    }
 
     start_capture();
 }
@@ -159,14 +155,10 @@ bool VAInputStreamSource::open_capture(const String &device_name, int format, in
         {
             // Ignore quiet input
             if (microphone_threshold > 0 && peak_amplitude(data, num_bytes, format) < microphone_threshold)
-            {
                 return;
-            }
 
             if (is_stream_open())
-            {
                 push_audio_data(data, num_bytes);
-            }
 
             PackedByteArray packed;
             packed.resize(num_bytes);
@@ -199,9 +191,7 @@ void VAInputStreamSource::start_capture()
 void VAInputStreamSource::stop_capture()
 {
     if (!capture_open)
-    {
         return;
-    }
 
     capture_device.stop();
 }
@@ -209,9 +199,7 @@ void VAInputStreamSource::stop_capture()
 void VAInputStreamSource::close_capture()
 {
     if (!capture_open)
-    {
         return;
-    }
 
     capture_device.close();
     capture_open = false;
@@ -222,7 +210,5 @@ void VAInputStreamSource::_process(double delta)
     VAStreamSource::_process(delta);
 
     if (capture_open)
-    {
         capture_device.update();
-    }
 }

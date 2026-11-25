@@ -1,3 +1,5 @@
+// AI-created
+
 #pragma once
 
 #include <godot_cpp/classes/check_box.hpp>

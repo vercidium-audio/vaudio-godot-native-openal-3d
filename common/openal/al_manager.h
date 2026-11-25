@@ -1,3 +1,5 @@
+// AI-created
+
 #pragma once
 
 // OpenAL Soft is loaded manually (LoadLibrary/GetProcAddress on Windows, dlopen/dlsym elsewhere) rather than linked, since no import lib is vendored.

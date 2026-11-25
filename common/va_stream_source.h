@@ -1,3 +1,5 @@
+// AI-created
+
 #pragma once
 
 #include <godot_cpp/core/property_info.hpp>

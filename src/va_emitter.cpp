@@ -1,8 +1,10 @@
+// Human-created
+
 #include "va_emitter.h"
 
 #include "va_visualisation.h"
 
-// The rest of VAEmitter is dimension-agnostic and lives in common/va_emitter.cpp.
+// The rest of VAEmitter lives in common/va_emitter.cpp.
 
 namespace va_godot
 {

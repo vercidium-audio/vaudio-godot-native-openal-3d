@@ -1,3 +1,5 @@
+// AI-created
+
 #include "al_source3d.h"
 
 #include <godot_cpp/core/class_db.hpp>

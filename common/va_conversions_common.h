@@ -1,3 +1,5 @@
+// Human-created
+
 #pragma once
 
 #include <godot_cpp/variant/color.hpp>
@@ -20,7 +22,6 @@ inline Color FromVAudio(const VAColor &c)
     return Color(c.r / 255.0f, c.g / 255.0f, c.b / 255.0f, c.a / 255.0f);
 }
 
-// Convert VAResults to their string name
 inline String VAResultToString(VAResult result)
 {
     switch (result)

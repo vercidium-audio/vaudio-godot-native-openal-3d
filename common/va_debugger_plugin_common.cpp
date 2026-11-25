@@ -1,3 +1,5 @@
+// AI-created
+
 #include "va_debugger_plugin.h"
 
 #include <godot_cpp/classes/editor_debugger_session.hpp>

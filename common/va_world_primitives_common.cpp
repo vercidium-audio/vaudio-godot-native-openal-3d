@@ -1,3 +1,5 @@
+// AI-created
+
 #include "va_world.h"
 
 #include <godot_cpp/classes/scene_tree.hpp>

@@ -1,3 +1,5 @@
+// Human-created
+
 #pragma once
 
 #include "al_source.h"
@@ -6,7 +8,7 @@ using namespace godot;
 
 class ALSourceHandle;
 
-// Sounds that are relative to the listener, e.g. footsteps, ambience, music
+// Sounds that are relative to the listener, e.g. footsteps
 class ALSourceRelative : public ALSource
 {
     GDCLASS(ALSourceRelative, ALSource);

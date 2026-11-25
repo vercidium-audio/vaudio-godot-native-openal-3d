@@ -1,3 +1,5 @@
+// Human-created
+
 #include "va_source.h"
 
 #include <godot_cpp/core/class_db.hpp>

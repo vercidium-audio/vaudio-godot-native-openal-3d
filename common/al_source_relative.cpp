@@ -1,3 +1,5 @@
+// Human-created
+
 #include "al_source_relative.h"
 
 #include "openal/al_source_handle.h"

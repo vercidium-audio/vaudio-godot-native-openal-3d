@@ -1,3 +1,5 @@
+// Human-reviewed
+
 #pragma once
 
 class ALSource;

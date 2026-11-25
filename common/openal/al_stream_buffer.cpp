@@ -1,3 +1,5 @@
+// AI-created
+
 // Human-reviewed
 
 #include "al_stream_buffer.h"

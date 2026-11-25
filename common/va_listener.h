@@ -1,3 +1,5 @@
+// Human-created
+
 #pragma once
 
 #include "va_emitter.h"

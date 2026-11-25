@@ -1,3 +1,5 @@
+// AI-created
+
 #include "register_types.h"
 
 #include <gdextension_interface.h>

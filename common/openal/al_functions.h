@@ -1,3 +1,5 @@
+// AI-created
+
 #pragma once
 
 // AL_LIBTYPE_STATIC collapses AL_API/ALC_API to no-op since we have no vendored import .lib for soft_oal.dll - entry points are resolved manually via GetProcAddress in ALManager::initialize.

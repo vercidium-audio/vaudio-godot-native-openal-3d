@@ -1,3 +1,5 @@
+// AI-created
+
 #include "openal/al_manager.h"
 #include "va_conversions.h"
 #include "va_emitter.h"

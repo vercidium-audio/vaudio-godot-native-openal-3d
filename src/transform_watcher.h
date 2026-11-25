@@ -1,3 +1,5 @@
+// Human-created
+
 #pragma once
 
 #include <godot_cpp/classes/node3d.hpp>

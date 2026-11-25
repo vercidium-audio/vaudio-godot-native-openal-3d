@@ -1,3 +1,5 @@
+// AI-created
+
 #include "al_manager.h"
 
 #include <godot_cpp/classes/dir_access.hpp>

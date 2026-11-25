@@ -1,3 +1,5 @@
+// AI-created
+
 #include "va_material_inspector_plugin.h"
 
 #include <godot_cpp/classes/editor_interface.hpp>

@@ -1,3 +1,5 @@
+// AI-created
+
 #include "va_raytraced_source.h"
 
 #include <godot_cpp/classes/scene_tree.hpp>
