@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+# AI-created
+
 # Linux/macOS counterpart of build.bat. Linux builds an x86_64 or arm64 .so (the host's arch), macOS builds a universal (arm64 + x86_64) .dylib.
 set -euo pipefail
 cd "$(dirname "$0")"
