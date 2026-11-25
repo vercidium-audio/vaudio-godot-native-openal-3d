@@ -108,6 +108,10 @@ static func is_playing(source: Node) -> bool:
 static func make_current(listener: Node) -> void:
 	listener.make_current()
 
+# PCM formats for open_stream(), open_capture() and VAInputStreamSource's format. Still OpenAL's AL_FORMAT_* values until the native plugin moves onto the backend interface
+const PCM_MONO16 := 4353
+const PCM_MONO_FLOAT := 0x10010
+
 static func open_stream(source: Node, format: int, frequency: int) -> bool:
 	return source.open_stream(format, frequency)
 
