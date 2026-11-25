@@ -7,6 +7,8 @@ addons/vaudio-godot-native-openal-3d/bin/
 devproject/.godot/
 devproject/addons/
 devproject/override.cfg
+devproject/fmod*.dll
+devproject/libfmod*
 src/gen/
 
 # Never commit OpenAL or vaudio binaries
