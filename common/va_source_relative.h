@@ -20,6 +20,8 @@ private:
     // Set to true if _enter_tree did not find a VAWorld
     bool waiting_for_world = false;
 
+    bool warned_no_listener_reverb = false;
+
     void retry_find_va_world(Node *node);
 
     // Never silenced by the bounds, as it plays at the listener

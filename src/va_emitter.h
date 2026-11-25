@@ -86,8 +86,13 @@ private:
     bool raytrace_once = false;
     bool raytrace_once_removed = false;
 
+    bool warned_no_listener_reverb = false;
+
     // The listener has raytraced it and, if wait_for_own_eax, it has cast its own reverb rays for grouped EAX
     bool has_listener_results(bool wait_for_own_eax) const;
+
+    // Sent to the listener's reverb effect (see VAWorld::get_reverb_effect), which has no EAX yet
+    bool is_waiting_for_listener_reverb() const;
 
     bool random_trail_color = false;
     Color trail_color = Color(1.0f, 1.0f, 1.0f, 25.0f / 255.0f);
@@ -180,7 +185,7 @@ public:
     }
 
     // True once this emitter has cast its own rays and the listener has raytraced it. Sources don't play until this is true
-    // Inside the bounds it also waits for its own grouped EAX, which doesn't exist outside them
+    // Inside the bounds it also waits for its own grouped EAX, and with use_listener_reverb for the listener's first EAX, neither of which exist outside them
     bool is_ready_to_play() const;
 
     // is_ready_to_play, but always waiting for its own reverb rays. raytrace_once waits for this, so a sound started outside the bounds still gets reverb once inside

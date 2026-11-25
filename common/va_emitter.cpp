@@ -554,9 +554,18 @@ bool VAEmitter::is_waiting_for_eax() const
     return emitter && vaEmitterGetReverbEnabled(emitter) && vaEmitterGetEAX(emitter) == nullptr;
 }
 
+bool VAEmitter::is_waiting_for_listener_reverb() const
+{
+    return use_listener_reverb && !(vaEmitterGetAffectsGroupedEAX(emitter) && vaEmitterGetGroupedEAXIndex(emitter) >= 0) && !va_world->is_listener_reverb_ready();
+}
+
 bool VAEmitter::is_ready_to_play() const
 {
-    return is_raytraced() && has_listener_results(!is_outside_bounds());
+    if (!is_raytraced())
+        return false;
+
+    bool inside_bounds = !is_outside_bounds();
+    return has_listener_results(inside_bounds) && !(inside_bounds && is_waiting_for_listener_reverb());
 }
 
 bool VAEmitter::has_listener_results() const
@@ -705,6 +714,11 @@ void VAEmitter::_process(double delta)
     if (is_raytraced())
     {
         apply_raytracing_results();
+    }
+
+    if (use_listener_reverb && va_world)
+    {
+        va_world->warn_if_listener_casts_no_reverb_rays(this, warned_no_listener_reverb);
     }
 
     // Once ready, cast rays no more. A parent VARaytracedSource processes before this node, so it has already played. A sound started outside the bounds keeps going until it's raytraced inside and has reverb

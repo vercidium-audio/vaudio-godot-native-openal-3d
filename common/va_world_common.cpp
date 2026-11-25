@@ -275,4 +275,13 @@ bool VAWorld::is_listener_reverb_ready() const
     return !listener_reverb_effect.is_valid() || !listener->is_waiting_for_eax() || listener->is_outside_bounds();
 }
 
+void VAWorld::warn_if_listener_casts_no_reverb_rays(const Node *source, bool &warned) const
+{
+    if (warned || !listener || !listener->get_handle() || vaEmitterGetReverbEnabled(listener->get_handle()))
+        return;
+
+    warned = true;
+    VA_WARN(source->get_name(), ": The listener '", listener->get_name(), "' casts no reverb rays, so this source plays without the listener's reverb. Set the listener's reverb ray and bounce counts above 0.");
+}
+
 } // namespace va_godot

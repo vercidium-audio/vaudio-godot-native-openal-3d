@@ -100,6 +100,9 @@ void VASourceAmbient::_process(double delta)
     // Waits for the listener's first EAX, so it never starts in OpenAL's default reverb
     if (!played && (!use_listener_reverb || va_world->is_listener_reverb_ready()))
     {
+        if (use_listener_reverb)
+            va_world->warn_if_listener_casts_no_reverb_rays(this, warned_no_listener_reverb);
+
         played = ALSourceRelative::play();
     }
 }

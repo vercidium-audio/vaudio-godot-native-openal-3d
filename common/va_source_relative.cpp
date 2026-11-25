@@ -103,6 +103,7 @@ bool VASourceRelative::play(float start_time)
 
     // Matches VASourceRelative.cs: relative sources aren't raytraced and have no emitter of their own, so they always share
     // the listener's room reverb rather than any grouped-EAX slot (nullptr short-circuits get_reverb_effect to the listener slot).
+    va_world->warn_if_listener_casts_no_reverb_rays(this, warned_no_listener_reverb);
     effect = va_world->get_reverb_effect(nullptr);
 
     update_filter(1.0f, 1.0f);

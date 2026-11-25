@@ -1,3 +1,5 @@
+# AI-created
+
 extends RefCounted
 
 # Standard (native GDExtension) plugin adapter - the C# plugin has its own va.gd with the same functions. Property names are always given in snake_case.

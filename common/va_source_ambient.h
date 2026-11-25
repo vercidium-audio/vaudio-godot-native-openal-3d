@@ -17,6 +17,7 @@ private:
     va_godot::VAWorld *va_world = nullptr;
     bool played = false;
     bool warned_no_ambience = false;
+    bool warned_no_listener_reverb = false;
 
     bool waiting_for_world = false;
 
