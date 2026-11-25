@@ -162,3 +162,7 @@ static func active_hrtf(_world: Node) -> String:
 
 static func set_hrtf_enabled(_world: Node, value: bool) -> bool:
 	return ALManager.set_hrtf_enabled(value)
+
+# How many errors the audio backend has logged since the game started. The world is unused, but the C# adapter needs it to reach ALManager
+static func backend_error_count(_world: Node) -> int:
+	return ALManager.get_error_count()

@@ -33,9 +33,9 @@ bool ALSourceHandle::create()
     {
         // OpenAL Soft reports AL_OUT_OF_MEMORY when the device's source limit (mono + stereo sources) is reached
         if (error == AL_OUT_OF_MEMORY)
-            VA_ERROR("Can't play sound because too many sounds are playing at once. Increase audio/vaudio/max_stereo_sources in Project Settings. Error code: ", ALErrorToString(error));
+            VA_AL_ERROR("Can't play sound because too many sounds are playing at once. Increase audio/vaudio/max_stereo_sources in Project Settings. Error code: ", ALErrorToString(error));
         else
-            VA_ERROR("Failed to create an OpenAL source. Error code: ", ALErrorToString(error));
+            VA_AL_ERROR("Failed to create an OpenAL source. Error code: ", ALErrorToString(error));
 
         return false;
     }

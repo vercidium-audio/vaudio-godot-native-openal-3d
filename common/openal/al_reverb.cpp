@@ -18,7 +18,7 @@ bool ALReverbEffect::create()
 
     if (!manager || !manager->is_initialized())
     {
-        VA_ERROR("ALReverbEffect::create called before the OpenAL device is initialized");
+        VA_AL_ERROR("ALReverbEffect::create called before the OpenAL device is initialized");
         return false;
     }
 
@@ -33,7 +33,7 @@ bool ALReverbEffect::create()
 
     if (new_effect == 0)
     {
-        VA_ERROR("alGenEffects failed, AL error ", (int)manager->al_get_error()());
+        VA_AL_ERROR("alGenEffects failed, AL error ", (int)manager->al_get_error()());
         return false;
     }
 
@@ -42,7 +42,7 @@ bool ALReverbEffect::create()
 
     if (new_slot == 0)
     {
-        VA_ERROR("alGenAuxiliaryEffectSlots failed, AL error ", (int)manager->al_get_error()());
+        VA_AL_ERROR("alGenAuxiliaryEffectSlots failed, AL error ", (int)manager->al_get_error()());
         manager->delete_effect(new_effect);
         return false;
     }

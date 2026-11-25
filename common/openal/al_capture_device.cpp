@@ -32,7 +32,7 @@ bool ALCaptureDevice::open(const String &device_name, ALenum p_format, int frequ
 
     if (!manager || !manager->alc_capture_open_device())
     {
-        VA_ERROR("ALCaptureDevice::open called before ALManager has resolved its ALC_EXT_capture entry points");
+        VA_AL_ERROR("ALCaptureDevice::open called before ALManager has resolved its ALC_EXT_capture entry points");
         return false;
     }
 
@@ -58,7 +58,7 @@ bool ALCaptureDevice::open(const String &device_name, ALenum p_format, int frequ
 
     if (!new_device)
     {
-        VA_ERROR("alcCaptureOpenDevice failed to open the input device: ",
+        VA_AL_ERROR("alcCaptureOpenDevice failed to open the input device: ",
             device_name.is_empty() ? String("<default>") : device_name);
         return false;
     }

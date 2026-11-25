@@ -50,7 +50,7 @@ bool ALStreamBuffer::create(ALenum format, int frequency)
         if (!logged)
         {
             logged = true;
-            VA_ERROR("Can't open streams because the OpenAL library doesn't support AL_SOFT_callback_buffer. Use the OpenAL Soft library that ships in the plugin's bin folder");
+            VA_AL_ERROR("Can't open streams because the OpenAL library doesn't support AL_SOFT_callback_buffer. Use the OpenAL Soft library that ships in the plugin's bin folder");
         }
 
         return false;
@@ -81,9 +81,9 @@ bool ALStreamBuffer::create(ALenum format, int frequency)
     {
         // The buffer is new and the callback isn't null, so AL_INVALID_ENUM (unknown or non-PCM format) is the only error the caller can cause
         if (error == AL_INVALID_ENUM)
-            VA_ERROR("Can't open the stream because format ", (int)format, " isn't supported. Use 4353 (AL_FORMAT_MONO16), 4355 (AL_FORMAT_STEREO16), 4352 (AL_FORMAT_MONO8) or 4354 (AL_FORMAT_STEREO8)");
+            VA_AL_ERROR("Can't open the stream because format ", (int)format, " isn't supported. Use 4353 (AL_FORMAT_MONO16), 4355 (AL_FORMAT_STEREO16), 4352 (AL_FORMAT_MONO8) or 4354 (AL_FORMAT_STEREO8)");
         else
-            VA_ERROR("Failed to open the stream. Error code: ", ALErrorToString(error));
+            VA_AL_ERROR("Failed to open the stream. Error code: ", ALErrorToString(error));
 
         manager->delete_buffer(new_handle);
         return false;

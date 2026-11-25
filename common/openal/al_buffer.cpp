@@ -36,7 +36,7 @@ ALBuffer::~ALBuffer()
         ALenum error = manager->al_get_error()();
 
         if (error != AL_NO_ERROR)
-            VA_ERROR("alDeleteBuffers failed: ", ALErrorToString(error));
+            VA_AL_ERROR("alDeleteBuffers failed: ", ALErrorToString(error));
     }
 
     handle = 0;
@@ -157,7 +157,7 @@ bool ALBuffer::upload()
 
     if (error != AL_NO_ERROR)
     {
-        VA_ERROR("Failed to upload decoded audio to OpenAL: ", ALErrorToString(error),
+        VA_AL_ERROR("Failed to upload decoded audio to OpenAL: ", ALErrorToString(error),
             " (", (int)pending_frames_pulled, " frames at ", sample_rate, " Hz)");
         manager->delete_buffer(new_handle);
         return false;

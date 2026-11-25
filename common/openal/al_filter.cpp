@@ -19,7 +19,7 @@ bool ALFilter::create(float initial_gain, float initial_gain_hf)
 
     if (!manager || !manager->is_initialized())
     {
-        VA_ERROR("ALFilter::create called before the OpenAL device is initialized");
+        VA_AL_ERROR("ALFilter::create called before the OpenAL device is initialized");
         return false;
     }
 
@@ -34,7 +34,7 @@ bool ALFilter::create(float initial_gain, float initial_gain_hf)
 
     if (new_handle == 0)
     {
-        VA_ERROR("alGenFilters failed, AL error ", (int)manager->al_get_error()());
+        VA_AL_ERROR("alGenFilters failed, AL error ", (int)manager->al_get_error()());
         return false;
     }
 

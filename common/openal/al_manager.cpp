@@ -31,7 +31,7 @@ ALManager *ALManager::get_initialized_singleton(const char *action)
         return singleton;
 
     // The reason OpenAL didn't start was already logged at startup (or by the failed device switch)
-    VA_ERROR("Can't ", action, " because OpenAL failed to start. Check the earlier vaudio errors in the Output panel, e.g. the OpenAL library is missing from the plugin's bin folder, or no audio output device was found");
+    VA_AL_ERROR("Can't ", action, " because OpenAL failed to start. Check the earlier vaudio errors in the Output panel, e.g. the OpenAL library is missing from the plugin's bin folder, or no audio output device was found");
     return nullptr;
 }
 
@@ -49,9 +49,9 @@ ALuint ALManager::gen_buffer()
         return new_handle;
 
     if (error == AL_OUT_OF_MEMORY)
-        VA_ERROR("Failed to create an OpenAL buffer because the system is out of memory");
+        VA_AL_ERROR("Failed to create an OpenAL buffer because the system is out of memory");
     else
-        VA_ERROR("Failed to create an OpenAL buffer. Error code: ", ALErrorToString(error));
+        VA_AL_ERROR("Failed to create an OpenAL buffer. Error code: ", ALErrorToString(error));
 
     return 0;
 }
@@ -69,6 +69,8 @@ void ALManager::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_active_hrtf"), &ALManager::get_active_hrtf);
     ClassDB::bind_method(D_METHOD("set_hrtf_enabled", "value"), &ALManager::set_hrtf_enabled);
     ClassDB::bind_method(D_METHOD("get_hrtf_enabled"), &ALManager::get_hrtf_enabled);
+
+    ClassDB::bind_method(D_METHOD("get_error_count"), &ALManager::get_error_count);
 
     ClassDB::bind_method(D_METHOD("set_master_volume", "value"), &ALManager::set_master_volume);
 
@@ -176,7 +178,7 @@ bool ALManager::load_library()
 
     if (!library)
     {
-        VA_ERROR("Failed to load ", OPENAL_LIBRARY_NAME, " from ", String(full_path.c_str()));
+        VA_AL_ERROR("Failed to load ", OPENAL_LIBRARY_NAME, " from ", String(full_path.c_str()));
         return false;
     }
 
@@ -190,7 +192,7 @@ static bool resolve(va_dynamic_library library, const char *name, T &out_fn)
 
     if (!out_fn)
     {
-        VA_ERROR(OPENAL_LIBRARY_NAME, " is missing expected export: ", name);
+        VA_AL_ERROR(OPENAL_LIBRARY_NAME, " is missing expected export: ", name);
         return false;
     }
 
@@ -205,7 +207,7 @@ static bool resolve_ext(alGetProcAddressFn alGetProcAddress, const char *name, T
 
     if (!out_fn)
     {
-        VA_ERROR("OpenAL Soft is missing expected EFX entry point: ", name);
+        VA_AL_ERROR("OpenAL Soft is missing expected EFX entry point: ", name);
         return false;
     }
 
@@ -457,7 +459,7 @@ bool ALManager::open_device_and_context()
 
     if (!device)
     {
-        VA_ERROR("alcOpenDevice failed for device '", String::utf8(device_name.c_str()), "'");
+        VA_AL_ERROR("alcOpenDevice failed for device '", String::utf8(device_name.c_str()), "'");
         return false;
     }
 
@@ -480,7 +482,7 @@ bool ALManager::open_device_and_context()
 
     if (!context)
     {
-        VA_ERROR("alcCreateContext failed, ALC error ", (int)alcGetError_(device));
+        VA_AL_ERROR("alcCreateContext failed, ALC error ", (int)alcGetError_(device));
         alcCloseDevice_(device);
         device = nullptr;
         return false;
@@ -488,7 +490,7 @@ bool ALManager::open_device_and_context()
 
     if (alcMakeContextCurrent_(context) == ALC_FALSE)
     {
-        VA_ERROR("alcMakeContextCurrent failed, ALC error ", (int)alcGetError_(device));
+        VA_AL_ERROR("alcMakeContextCurrent failed, ALC error ", (int)alcGetError_(device));
         alcDestroyContext_(context);
         context = nullptr;
         alcCloseDevice_(device);
@@ -833,7 +835,7 @@ void ALManager::check_device_connected()
     }
 
     if (!device_lost)
-        VA_ERROR("Failed to reopen the audio output device after it was disconnected, retrying every second");
+        VA_AL_ERROR("Failed to reopen the audio output device after it was disconnected, retrying every second");
 
     device_lost = true;
 }

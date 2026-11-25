@@ -13,12 +13,17 @@ using va_dynamic_library = void *;
 #include <godot_cpp/variant/packed_string_array.hpp>
 #include <godot_cpp/variant/vector3.hpp>
 
+#include <atomic>
 #include <string>
 
+#include "../va_engine_util.h"
 #include "al_filter.h"
 #include "al_functions.h"
 
 using namespace godot;
+
+// Logs a failed AL/ALC call and counts it in ALManager::get_error_count(), so tests can check a run hit no backend errors
+#define VA_AL_ERROR(...) (ALManager::count_error(), VA_ERROR(__VA_ARGS__))
 
 class ALManager : public Object
 {
@@ -150,6 +155,9 @@ private:
     PackedStringArray cached_capture_devices;
     bool capture_devices_cached = false;
 
+    // Static so errors logged before the singleton exists (or from worker threads) still count
+    inline static std::atomic<int64_t> error_count{0};
+
 protected:
     static void _bind_methods();
 
@@ -158,6 +166,17 @@ public:
 
     // The singleton, or nullptr after logging "Can't <action> because OpenAL failed to start" if OpenAL isn't running
     static ALManager *get_initialized_singleton(const char *action);
+
+    // See VA_AL_ERROR
+    static void count_error()
+    {
+        error_count.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    int64_t get_error_count() const
+    {
+        return error_count.load(std::memory_order_relaxed);
+    }
 
     // Generates one buffer, or logs a readable error and returns 0
     ALuint gen_buffer();

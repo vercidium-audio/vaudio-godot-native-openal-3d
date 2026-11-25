@@ -66,6 +66,12 @@
 				Returns whether HRTF is requested, from [method set_hrtf_enabled] or [code]audio/vaudio/hrtf_enabled[/code].
 			</description>
 		</method>
+		<method name="get_error_count">
+			<return type="int" />
+			<description>
+				Returns how many OpenAL errors have been logged since the game started, e.g. a failed device open or a source that couldn't be created. Useful for tests that check a run hit no audio backend errors.
+			</description>
+		</method>
 		<method name="set_master_volume">
 			<return type="void" />
 			<param index="0" name="value" type="float" />
