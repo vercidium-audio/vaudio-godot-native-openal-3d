@@ -139,6 +139,7 @@ private:
 
     void update_collision_shape_primitive(CollisionShape3D *collision_shape, VAPrimitiveRef *ref);
     void on_collision_shape_changed(CollisionShape3D *collision_shape);
+    void on_mesh_instance_changed(MeshInstance3D *mesh_instance, VAMaterialType material, bool use_flat_transmission);
 
     // A VAMesh built once per Godot Mesh/Shape3D resource and shared by every mesh primitive created from it. Stored on the world rather than as resource metadata, since a VAMesh can only belong to one world
     struct SharedMesh

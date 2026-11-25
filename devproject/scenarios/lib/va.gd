@@ -170,3 +170,10 @@ static func set_hrtf_enabled(_world: Node, value: bool) -> bool:
 # How many errors the audio backend has logged since the game started. The world is unused, but the C# adapter needs it to reach ALManager
 static func backend_error_count(_world: Node) -> int:
 	return ALManager.get_error_count()
+
+# The native plugin only has OpenAL until it gets the backend interface
+static func backend_name(_world: Node) -> String:
+	return "OpenAL"
+
+static func is_backend_initialised(_world: Node) -> bool:
+	return true

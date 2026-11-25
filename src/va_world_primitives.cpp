@@ -746,7 +746,33 @@ void VAWorld::create_primitive(MeshInstance3D *mesh_instance, VAMaterialType mat
     });
 
     ref->shared_geometry = shared_mesh;
+
+    // Editing the mesh resource (e.g. a BoxMesh's size) doesn't move the node, so the watcher won't see it
+    ref->shape_resource = mesh;
+    ref->on_shape_changed = [this, mesh_instance, material, use_flat_transmission]()
+    {
+        on_mesh_instance_changed(mesh_instance, material, use_flat_transmission);
+    };
+    ref->shape_callable = callable_mp(ref, &VAPrimitiveRef::shape_changed);
+    mesh->connect("changed", ref->shape_callable);
+
     mesh_instance->set_meta(PrimitiveMetaKey(), ref);
+}
+
+// Like on_collision_shape_changed for a mesh: the triangles are baked into the shared mesh, so recreate it from scratch
+void VAWorld::on_mesh_instance_changed(MeshInstance3D *mesh_instance, VAMaterialType material, bool use_flat_transmission)
+{
+    if (!mesh_instance || !mesh_instance->has_meta(PrimitiveMetaKey()))
+        return;
+
+    // Held locally so the ref outlives remove_primitive clearing the meta below
+    Ref<VAPrimitiveRef> ref = mesh_instance->get_meta(PrimitiveMetaKey());
+    if (ref.is_null())
+        return;
+
+    invalidate_shared_mesh((SharedMesh *)ref->shared_geometry);
+    remove_primitive(mesh_instance, false);
+    create_primitive(mesh_instance, material, use_flat_transmission);
 }
 
 VAMeshPrimitive *VAWorld::create_shared_mesh_primitive(const Ref<Resource> &resource, std::function<std::vector<VAVector>(VAVector &, VAVector &)> read_triangles, VAMaterialType material, const VAMatrix &transform, Node *node, SharedMesh *&out_shared_mesh)

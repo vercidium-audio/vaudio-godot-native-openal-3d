@@ -32,7 +32,7 @@ public:
     VAPrimitiveKind kind; // always set explicitly at construction, no sensible dimension-neutral default
     TransformWatcher *watcher = nullptr;
 
-    // Only set for CollisionShape nodes - the Shape resource whose changed signal is connected to shape_callable, so remove_primitive can disconnect it
+    // Only set for CollisionShape and MeshInstance3D nodes - the Shape or Mesh resource whose changed signal is connected to shape_callable, so remove_primitive can disconnect it
     Ref<Resource> shape_resource;
     Callable shape_callable;
 
