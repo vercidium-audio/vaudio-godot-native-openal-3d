@@ -1,8 +1,8 @@
-// Human-created
+// AI-created
 
 #pragma once
 
-#include "al_source_relative.h"
+#include "va_player.h"
 
 using namespace godot;
 
@@ -11,9 +11,9 @@ namespace va_godot
 class VAWorld;
 }
 
-class VASourceAmbient : public ALSourceRelative
+class VASourceAmbient : public VAPlayer
 {
-    GDCLASS(VASourceAmbient, ALSourceRelative);
+    GDCLASS(VASourceAmbient, VAPlayer);
 
 private:
     va_godot::VAWorld *va_world = nullptr;
@@ -28,6 +28,11 @@ private:
 
 protected:
     static void _bind_methods();
+
+    void configure_voice(VAVoice &voice) override
+    {
+        configure_listener_relative_voice(voice);
+    }
 
 public:
     VASourceAmbient();

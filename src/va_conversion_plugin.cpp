@@ -16,7 +16,8 @@
 #include <godot_cpp/variant/callable_method_pointer.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
-#include "al_source.h"
+#include "va_player.h"
+#include "backend/va_audio_backend.h"
 #include "register_types.h"
 #include "va_emitter.h"
 #include "va_engine_util.h"
@@ -168,7 +169,7 @@ void ConversionContextMenuPlugin::convert_node(Node *old_node, const String &tar
         return;
     }
 
-    ALSource *new_node = nullptr;
+    VAPlayer *new_node = nullptr;
 
     if (target_class == "VASource")
         new_node = memnew(VASource);
@@ -243,7 +244,7 @@ void ConversionContextMenuPlugin::convert_node(Node *old_node, const String &tar
         copy_property(old_node, new_base_node, "looping", "looping");
         copy_property(old_node, new_base_node, "autoplay", "autoplay");
 
-        // Only relevant when old_node is itself an ALSource - has_property() skips these silently for a plain AudioStreamPlayer3D.
+        // Only relevant when old_node is itself an VAPlayer - has_property() skips these silently for a plain AudioStreamPlayer3D.
         copy_property(old_node, new_base_node, "streams", "streams");
         copy_property(old_node, new_base_node, "pitch_randomness", "pitch_randomness");
         copy_property(old_node, new_base_node, "volume_randomness_db", "volume_randomness_db");
@@ -313,7 +314,7 @@ bool VADeviceRefreshInspectorPlugin::_parse_property(Object *object, Variant::Ty
         return false;
 
     Button *refresh_button = memnew(Button);
-    refresh_button->set_text("Refresh OpenAL Devices");
+    refresh_button->set_text("Refresh Audio Devices");
     refresh_button->connect("pressed", Callable(object, "refresh_devices"));
     add_custom_control(refresh_button);
 
@@ -326,8 +327,8 @@ void VAConversionPlugin::_bind_methods()
 
 void VAConversionPlugin::refresh_output_device_setting()
 {
-    refresh_output_device_hint();
-    refresh_hrtf_hint();
+    if (VAAudioBackend *manager = VAAudioBackend::get_singleton())
+        manager->refresh_device_lists();
 }
 
 void VAConversionPlugin::_enter_tree()
@@ -343,8 +344,8 @@ void VAConversionPlugin::_enter_tree()
     debugger_plugin.instantiate();
     add_debugger_plugin(debugger_plugin);
 
-    hrtf_export_plugin.instantiate();
-    add_export_plugin(hrtf_export_plugin);
+    backend_export_plugin.instantiate();
+    add_export_plugin(backend_export_plugin);
 
     debugger_bridge = memnew(VADebuggerBridge);
     debugger_bridge->set_debugger_plugin(debugger_plugin.ptr());
@@ -364,12 +365,12 @@ void VAConversionPlugin::_enter_tree()
     node_gizmo_plugin.instantiate();
     add_node_3d_gizmo_plugin(node_gizmo_plugin);
 
-    add_tool_menu_item("Refresh OpenAL Devices", callable_mp(this, &VAConversionPlugin::refresh_output_device_setting));
+    add_tool_menu_item("Refresh Audio Devices", callable_mp(this, &VAConversionPlugin::refresh_output_device_setting));
 }
 
 void VAConversionPlugin::_exit_tree()
 {
-    remove_tool_menu_item("Refresh OpenAL Devices");
+    remove_tool_menu_item("Refresh Audio Devices");
 
     remove_context_menu_plugin(context_menu_plugin);
     context_menu_plugin.unref();
@@ -401,6 +402,6 @@ void VAConversionPlugin::_exit_tree()
     remove_debugger_plugin(debugger_plugin);
     debugger_plugin.unref();
 
-    remove_export_plugin(hrtf_export_plugin);
-    hrtf_export_plugin.unref();
+    remove_export_plugin(backend_export_plugin);
+    backend_export_plugin.unref();
 }

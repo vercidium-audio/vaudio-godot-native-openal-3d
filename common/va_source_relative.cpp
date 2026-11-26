@@ -14,6 +14,10 @@
 
 void VASourceRelative::_bind_methods()
 {
+    ClassDB::bind_method(D_METHOD("get_use_listener_reverb"), &VASourceRelative::get_use_listener_reverb);
+    ClassDB::bind_method(D_METHOD("set_use_listener_reverb", "value"), &VASourceRelative::set_use_listener_reverb);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_listener_reverb"), "set_use_listener_reverb", "get_use_listener_reverb");
+
     ClassDB::bind_method(D_METHOD("is_ready_to_play"), &VASourceRelative::is_ready_to_play);
 }
 
@@ -53,8 +57,9 @@ void VASourceRelative::_exit_tree()
 
         waiting_for_world = false;
 
-        // Never found a VAWorld anywhere in the tree for this node's entire time in it (see VAEmitter::_exit_tree).
-        VA_WARN(
+        // Never found a VAWorld anywhere in the tree for this node's entire time in it (see VAEmitter::_exit_tree). Only needed for the listener's reverb
+        if (use_listener_reverb)
+            VA_WARN(
             "'", get_name(),
             "' left the tree without ever finding a VAWorld - "
             "no emitter was created for it. Make sure this node's scene "
@@ -82,7 +87,7 @@ void VASourceRelative::_ready()
 
 void VASourceRelative::_process(double delta)
 {
-    ALSourceRelative::_process(delta);
+    VAPlayer::_process(delta);
 
     if (!IS_EDITOR_HINT() && playback.process(*this, false, is_ready_to_play(), get_autoplay()))
         play(playback.get_pending_start_time());
@@ -90,7 +95,7 @@ void VASourceRelative::_process(double delta)
 
 bool VASourceRelative::is_ready_to_play() const
 {
-    return va_world && va_world->is_listener_reverb_ready();
+    return !use_listener_reverb || (va_world && va_world->is_listener_reverb_ready());
 }
 
 bool VASourceRelative::play(float start_time)
@@ -103,14 +108,15 @@ bool VASourceRelative::play(float start_time)
     if (!playback.request_play(*this, false, is_ready_to_play(), start_time))
         return true;
 
-    // Matches VASourceRelative.cs: relative sources aren't raytraced and have no emitter of their own, so they always share
-    // the listener's room reverb rather than any grouped-EAX slot (nullptr short-circuits get_reverb_effect to the listener slot).
-    va_world->warn_if_listener_casts_no_reverb_rays(this, warned_no_listener_reverb);
-    effect = va_world->get_reverb_effect(nullptr);
+    // Relative sources aren't raytraced and have no emitter of their own, so they share the listener's room reverb rather than any grouped-EAX slot (nullptr short-circuits get_reverb_effect to the listener slot), or none
+    if (use_listener_reverb)
+        va_world->warn_if_listener_casts_no_reverb_rays(this, warned_no_listener_reverb);
+
+    reverb_effect = use_listener_reverb ? va_world->get_reverb_effect(nullptr) : nullptr;
 
     update_filter(1.0f, 1.0f);
 
-    bool played = ALSourceRelative::play(start_time);
+    bool played = VAPlayer::play(start_time);
 
     if (played)
         playback.on_played();
@@ -121,5 +127,5 @@ bool VASourceRelative::play(float start_time)
 void VASourceRelative::stop()
 {
     playback.cancel();
-    ALSourceRelative::stop();
+    VAPlayer::stop();
 }

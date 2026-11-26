@@ -7,8 +7,6 @@
 #include <godot_cpp/variant/callable_method_pointer.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
-#include "openal/al_filter.h"
-#include "openal/al_reverb.h"
 #include "va_conversions.h"
 #include "va_engine_util.h"
 #include "va_listener.h"
@@ -259,7 +257,6 @@ VAEmitter::VAEmitter()
 
 VAEmitter::~VAEmitter()
 {
-    delete filter;
 }
 
 bool VAEmitter::get_raytrace_once() const
@@ -738,7 +735,7 @@ void VAEmitter::_process(double delta)
 // non-listener emitters only, updates the muffling filter from the listener's perspective (how muffled this emitter sounds to the listener).
 void VAEmitter::apply_raytracing_results()
 {
-    effect = va_world->get_reverb_effect(emitter);
+    reverb_effect = va_world->get_reverb_effect(emitter);
 
     VAEmitter *listener = va_world->get_listener();
     if (!listener)
@@ -764,22 +761,11 @@ void VAEmitter::apply_raytracing_results()
         VALowPassFilter vaudio_filter = listener->get_target_filter(this);
         muffling_gain_lf = vaudio_filter.gainLF;
         muffling_gain_hf = vaudio_filter.gainHF;
-
-        if (filter)
-        {
-            filter->set_gain(vaudio_filter.gainLF, vaudio_filter.gainHF);
-        }
     }
 }
 
 void VAEmitter::on_raytraced_by_another_emitter(::VAEmitter *other)
 {
-    if (!filter)
-    {
-        filter = new ALFilter();
-        filter->create(1.0f, 1.0f);
-    }
-
     apply_raytracing_results();
 }
 

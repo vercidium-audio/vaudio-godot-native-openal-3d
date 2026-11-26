@@ -11,7 +11,7 @@
 #include <godot_cpp/variant/typed_array.hpp>
 
 #include "va_debugger_plugin.h"
-#include "va_hrtf_export_plugin.h"
+#include "va_backend_export_plugin.h"
 #include "va_material_inspector_plugin.h"
 #include "va_material_properties_inspector_plugin.h"
 #include "va_node_gizmo.h"
@@ -81,7 +81,7 @@ private:
     Ref<VAWorldGizmoPlugin> world_gizmo_plugin;
     Ref<VANodeGizmoPlugin> node_gizmo_plugin;
     Ref<VADebuggerPlugin> debugger_plugin;
-    Ref<VAHRTFExportPlugin> hrtf_export_plugin;
+    Ref<VABackendExportPlugin> backend_export_plugin;
     VADebuggerBridge *debugger_bridge = nullptr;
 
     void refresh_output_device_setting();

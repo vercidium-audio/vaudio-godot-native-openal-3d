@@ -4,6 +4,7 @@
 
 #include <godot_cpp/variant/callable_method_pointer.hpp>
 
+#include "backend/va_audio_backend.h"
 #include "va_conversions.h"
 #include "va_custom_material.h"
 #include "va_emitter.h"
@@ -205,35 +206,61 @@ void VAWorld::on_reverb_updated_trampoline(::VAWorld *world)
     }
 }
 
-VAEAXReverbParams CopyReverbParams(const VAEAXReverb *eax)
+void VAWorld::on_reverb_updated()
 {
-    VAEAXReverbParams params;
-    params.density = 0.5f; // hardcoded per openal-soft issue #1229 (static when updated live), matching VAWorldReverb.cs's CopyReverb
-    params.diffusion = eax->diffusion;
-    params.gain = 1.0f; // gainLF and gainHF control the actual gain
-    params.gainHF = eax->gainHF;
-    params.gainLF = eax->gainLF;
-    params.decayTime = eax->decayTime;
-    params.decayHFRatio = eax->decayHFRatio;
-    params.decayLFRatio = eax->decayLFRatio;
-    params.reflectionsGain = eax->reflectionsGain;
-    params.reflectionsDelay = eax->reflectionsDelay;
-    params.lateReverbGain = eax->lateReverbGain;
-    params.lateReverbDelay = eax->lateReverbDelay;
-    params.echoTime = eax->echoTime;
-    params.echoDepth = eax->echoDepth;
-    params.modulationTime = eax->modulationTime;
-    params.modulationDepth = eax->modulationDepth;
-    params.airAbsorptionGainHF = eax->airAbsorptionGainHF;
-    params.hfReference = eax->hfReference;
-    params.lfReference = eax->lfReference;
-    params.roomRolloffFactor = eax->roomRolloffFactor;
-    params.decayHFLimit = eax->decayHFLimit;
+    if (!listener || !listener->get_handle())
+    {
+        // Don't warn during teardown - a reverb update can still be in flight after the listener node has unregistered but before this VAWorld node is destroyed.
+        if (!warned_missing_listener && !is_shutting_down)
+        {
+            VA_WARN_NAMED("Has no VAListener node, so reverb cannot be updated. ", MISSING_LISTENER_HINT);
+            warned_missing_listener = true;
+        }
 
-    return params;
+        return;
+    }
+
+    VAEAXReverb *eax = vaEmitterGetEAX(listener->get_handle());
+
+    if (eax && listener_reverb_effect)
+        listener_reverb_effect->set_params(*eax, 1.0f, Vector3(), Vector3());
+
+    VAAudioBackend *manager = VAAudioBackend::get_singleton();
+    int grouped_eax_count = vaWorldGetGroupedEAXCount(world);
+    const VAEAXReverb **grouped_eax = vaWorldGetGroupedEAX(world);
+
+    for (int i = 0; i < grouped_eax_count; i++)
+    {
+        if ((int)grouped_reverb_effects.size() <= i)
+        {
+            std::unique_ptr<VAReverbEffect> new_effect = manager ? manager->create_reverb_effect() : nullptr;
+
+            if (!new_effect)
+                break;
+
+            GroupedReverbEffect grouped;
+            grouped.effect = std::move(new_effect);
+            grouped_reverb_effects.push_back(std::move(grouped));
+        }
+
+        GroupedReverbEffect &grouped = grouped_reverb_effects[i];
+
+        // A grouped zone the listener hasn't raytraced yet keeps its last gain and pan - vaEAXReverbGetRelative* return NULL for "no entry yet"
+        float *relative_gain = vaEAXReverbGetRelativeGain(grouped_eax[i], listener->get_handle());
+        VAVector *relative_direction = vaEAXReverbGetRelativeDirection(grouped_eax[i], listener->get_handle());
+
+        if (relative_gain)
+            grouped.gain = std::clamp(*relative_gain, 0.0f, 1.0f);
+
+        if (relative_direction)
+            grouped.pan = get_grouped_eax_pan(*relative_direction);
+
+        // TODO - separate pan for late reverb and reflections
+        grouped.effect->set_params(*grouped_eax[i], grouped.gain, grouped.pan, grouped.pan);
+    }
 }
 
-ALReverbEffect *VAWorld::get_reverb_effect(::VAEmitter *emitter)
+VAReverbEffect *VAWorld::get_reverb_effect(::VAEmitter *emitter)
 {
     VAEmitter *self = emitter ? static_cast<VAEmitter *>(vaEmitterGetUserData(emitter)) : nullptr;
 
@@ -256,17 +283,17 @@ ALReverbEffect *VAWorld::get_reverb_effect(::VAEmitter *emitter)
                     VA_WARN(
                         "Emitter has a grouped EAX index of ", grouped_eax_index,
                         " but only ", (int)grouped_reverb_effects.size(), " EAX presets are available. Increase the 'Maximum Grouped EAX Count' setting on the VAWorld node.");
-                return &listener_reverb_effect;
+                return listener_reverb_effect.get();
             }
 
-            return grouped_reverb_effects[grouped_eax_index].get();
+            return grouped_reverb_effects[grouped_eax_index].effect.get();
         }
     }
 
     if (self && !self->get_use_listener_reverb())
         return nullptr;
 
-    return &listener_reverb_effect;
+    return listener_reverb_effect.get();
 }
 
 bool VAWorld::is_listener_reverb_ready() const
@@ -274,7 +301,7 @@ bool VAWorld::is_listener_reverb_ready() const
     if (!listener || !listener->get_handle())
         return false;
 
-    return !listener_reverb_effect.is_valid() || !listener->is_waiting_for_eax() || listener->is_outside_bounds();
+    return !listener_reverb_effect || !listener_reverb_effect->is_valid() || !listener->is_waiting_for_eax() || listener->is_outside_bounds();
 }
 
 void VAWorld::warn_if_listener_casts_no_reverb_rays(const Node *source, bool &warned) const

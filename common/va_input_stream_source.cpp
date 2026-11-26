@@ -5,7 +5,7 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/packed_string_array.hpp>
 
-#include "openal/al_manager.h"
+#include "backend/va_audio_backend.h"
 #include "va_engine_util.h"
 
 #include <cstdint>
@@ -25,11 +25,11 @@ void VAInputStreamSource::_bind_methods()
 {
     ClassDB::bind_method(D_METHOD("get_format"), &VAInputStreamSource::get_format);
     ClassDB::bind_method(D_METHOD("set_format", "value"), &VAInputStreamSource::set_format);
-    ADD_PROPERTY(PropertyInfo(Variant::INT, "format", PROPERTY_HINT_ENUM, "Mono 8-bit:4352,Mono 16-bit:4353,Stereo 8-bit:4354,Stereo 16-bit:4355"), "set_format", "get_format");
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "format", PROPERTY_HINT_ENUM, "Mono 8-bit:0,Mono 16-bit:1,Stereo 8-bit:2,Stereo 16-bit:3"), "set_format", "get_format");
 
     ClassDB::bind_method(D_METHOD("get_sample_rate"), &VAInputStreamSource::get_sample_rate);
     ClassDB::bind_method(D_METHOD("set_sample_rate", "value"), &VAInputStreamSource::set_sample_rate);
-    // Unlike ALManager's playback device, ALCaptureDevice::open() has no "use the driver's default rate" concept, so there's no "System Default" entry here.
+    // Unlike the playback device, capture has no "use the driver's default rate" concept, so there's no "System Default" entry here.
     ADD_PROPERTY(PropertyInfo(Variant::INT, "sample_rate", PROPERTY_HINT_ENUM, "22050,44100,48000,96000"), "set_sample_rate", "get_sample_rate");
 
     ClassDB::bind_method(D_METHOD("get_device_name"), &VAInputStreamSource::get_device_name);
@@ -60,7 +60,7 @@ void VAInputStreamSource::_bind_methods()
 // peak_amplitude() only reads 8 and 16-bit PCM, matching the format dropdown
 static bool is_supported_format(int format)
 {
-    return format == AL_FORMAT_MONO8 || format == AL_FORMAT_MONO16 || format == AL_FORMAT_STEREO8 || format == AL_FORMAT_STEREO16;
+    return format >= (int)VAPcmFormat::Mono8 && format <= (int)VAPcmFormat::Stereo16;
 }
 
 // Uses PROPERTY_HINT_ENUM rather than PROPERTY_HINT_ENUM_SUGGESTION since Godot's editor unconditionally injects a blank entry into the latter for Variant::STRING, with no way to suppress it.
@@ -69,7 +69,7 @@ void VAInputStreamSource::_validate_property(PropertyInfo &p_property) const
     if (p_property.name != StringName("device_name"))
         return;
 
-    ALManager *manager = ALManager::get_singleton();
+    VAAudioBackend *manager = VAAudioBackend::get_singleton();
 
     if (!manager)
         return;
@@ -89,13 +89,13 @@ void VAInputStreamSource::set_device_name(const String &value)
 
 void VAInputStreamSource::refresh_devices()
 {
-    if (ALManager *manager = ALManager::get_singleton())
+    if (VAAudioBackend *manager = VAAudioBackend::get_singleton())
         manager->refresh_capture_devices();
 
     notify_property_list_changed();
 }
 
-// Matches ALSource::_ready()'s autoplay pattern: runs the open_stream()/open_capture()/start_capture() sequence once, driven by this node's own exported properties instead of a user script.
+// Matches VAPlayer::_ready()'s autoplay pattern: runs the open_stream()/open_capture()/start_capture() sequence once, driven by this node's own exported properties instead of a user script.
 void VAInputStreamSource::_ready()
 {
     VAStreamSource::_ready();
@@ -112,12 +112,12 @@ void VAInputStreamSource::_ready()
     start_capture();
 }
 
-// AL_FORMAT_MONO8/STEREO8 samples are unsigned (silence = 128); MONO16/STEREO16 are signed (silence = 0) - 8-bit amplitudes are scaled up by 256 so microphone_threshold means the same thing regardless of format.
-int VAInputStreamSource::peak_amplitude(const uint8_t *data, int num_bytes, int format)
+// 8-bit samples are unsigned (silence = 128); 16-bit are signed (silence = 0) - 8-bit amplitudes are scaled up by 256 so microphone_threshold means the same thing regardless of format.
+int VAInputStreamSource::peak_amplitude(const uint8_t *data, int num_bytes, VAPcmFormat format)
 {
     int peak = 0;
 
-    if (format == AL_FORMAT_MONO8 || format == AL_FORMAT_STEREO8)
+    if (va_pcm_bytes_per_sample(format) == 1)
     {
         for (int i = 0; i < num_bytes; i++)
         {
@@ -146,15 +146,22 @@ bool VAInputStreamSource::open_capture(const String &device_name, int format, in
 
     if (!is_supported_format(format))
     {
-        VA_WARN_NAMED(format, " isn't a supported capture format. Use MONO8, MONO16, STEREO8 or STEREO16 instead");
+        VA_WARN_NAMED(format, " isn't a supported capture format. Use Mono8, Mono16, Stereo8 or Stereo16 instead");
         return false;
     }
 
-    bool opened = capture_device.open(device_name, (ALenum)format, frequency, buffer_size_frames,
-        [this, format](const uint8_t *data, int num_bytes)
+    VAPcmFormat pcm_format = (VAPcmFormat)format;
+    int bytes_per_frame = va_pcm_bytes_per_frame(pcm_format);
+    VAAudioBackend *manager = VAAudioBackend::get_singleton();
+
+    // The backend already logged the reason for failure
+    capture_device = manager ? manager->open_capture_device(device_name, pcm_format, frequency, buffer_size_frames,
+        [this, pcm_format, bytes_per_frame](const uint8_t *data, int frame_count)
         {
+            int num_bytes = frame_count * bytes_per_frame;
+
             // Ignore quiet input
-            if (microphone_threshold > 0 && peak_amplitude(data, num_bytes, format) < microphone_threshold)
+            if (microphone_threshold > 0 && peak_amplitude(data, num_bytes, pcm_format) < microphone_threshold)
                 return;
 
             if (is_stream_open())
@@ -164,51 +171,38 @@ bool VAInputStreamSource::open_capture(const String &device_name, int format, in
             packed.resize(num_bytes);
             memcpy(packed.ptrw(), data, num_bytes);
             emit_signal("audio_captured", packed);
-        });
+        }) : nullptr;
 
-    if (!opened)
-    {
-        // ALCaptureDevice::open already logged the reason for failure.
-        return false;
-    }
-
-    capture_open = true;
-    return true;
+    return capture_device != nullptr;
 }
 
 void VAInputStreamSource::start_capture()
 {
     // Reachable from scripts, e.g. after a failed open_capture or after close_capture
-    if (!capture_open)
+    if (!capture_device)
     {
         VA_ERROR_NAMED("start_capture called before open_capture (or after close_capture)");
         return;
     }
 
-    capture_device.start();
+    capture_device->start();
 }
 
 void VAInputStreamSource::stop_capture()
 {
-    if (!capture_open)
-        return;
-
-    capture_device.stop();
+    if (capture_device)
+        capture_device->stop();
 }
 
 void VAInputStreamSource::close_capture()
 {
-    if (!capture_open)
-        return;
-
-    capture_device.close();
-    capture_open = false;
+    capture_device.reset();
 }
 
 void VAInputStreamSource::_process(double delta)
 {
     VAStreamSource::_process(delta);
 
-    if (capture_open)
-        capture_device.update();
+    if (capture_device)
+        capture_device->poll();
 }

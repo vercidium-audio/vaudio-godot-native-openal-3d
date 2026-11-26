@@ -108,9 +108,9 @@ static func is_playing(source: Node) -> bool:
 static func make_current(listener: Node) -> void:
 	listener.make_current()
 
-# PCM formats for open_stream(), open_capture() and VAInputStreamSource's format. Still OpenAL's AL_FORMAT_* values until the native plugin moves onto the backend interface
-const PCM_MONO16 := 4353
-const PCM_MONO_FLOAT := 0x10010
+# VAPcmFormat values for open_stream(), open_capture() and VAInputStreamSource's format
+const PCM_MONO16 := 1
+const PCM_MONO_FLOAT := 4
 
 static func open_stream(source: Node, format: int, frequency: int) -> bool:
 	return source.open_stream(format, frequency)
@@ -123,6 +123,19 @@ static func open_capture(source: Node, device_name: String, format: int, frequen
 
 static func is_capture_open(source: Node) -> bool:
 	return source.is_capture_open()
+
+static func start_capture(source: Node) -> void:
+	source.start_capture()
+
+static func stop_capture(source: Node) -> void:
+	source.stop_capture()
+
+static func close_capture(source: Node) -> void:
+	source.close_capture()
+
+# What the inspector's Refresh Audio Devices button does: re-queries the backend's capture devices for device_name's dropdown
+static func refresh_capture_devices(source: Node) -> void:
+	source.refresh_devices()
 
 static func close_stream(source: Node) -> void:
 	source.close_stream()
@@ -151,29 +164,39 @@ static func seek(source: Node, time: float) -> void:
 static func playback_time(source: Node) -> float:
 	return source.get_playback_time()
 
-# HRTF lives on the ALManager singleton here. The world is unused, but the C# adapter needs it to reach ALManager
+# HRTF lives on the VAAudioBackend singleton here. The world is unused, but the C# adapter needs it to reach VAAudioBackend
 static func available_hrtfs(_world: Node) -> PackedStringArray:
-	return ALManager.get_available_hrtfs()
+	return VAAudioBackend.get_available_hrtfs()
 
 static func set_hrtf(_world: Node, hrtf_name: String) -> bool:
-	return ALManager.set_hrtf(hrtf_name)
+	return VAAudioBackend.set_hrtf(hrtf_name)
 
 static func get_hrtf(_world: Node) -> String:
-	return ALManager.get_hrtf()
+	return VAAudioBackend.get_hrtf()
 
 static func active_hrtf(_world: Node) -> String:
-	return ALManager.get_active_hrtf()
+	return VAAudioBackend.get_active_hrtf()
 
 static func set_hrtf_enabled(_world: Node, value: bool) -> bool:
-	return ALManager.set_hrtf_enabled(value)
+	return VAAudioBackend.set_hrtf_enabled(value)
 
-# How many errors the audio backend has logged since the game started. The world is unused, but the C# adapter needs it to reach ALManager
+# How many errors the audio backend has logged since the game started. The world is unused, but the C# adapter needs it to reach VAAudioBackend
 static func backend_error_count(_world: Node) -> int:
-	return ALManager.get_error_count()
+	return VAAudioBackend.get_error_count()
 
-# The native plugin only has OpenAL until it gets the backend interface
 static func backend_name(_world: Node) -> String:
-	return "OpenAL"
+	return VAAudioBackend.get_backend_name()
 
 static func is_backend_initialised(_world: Node) -> bool:
-	return true
+	return VAAudioBackend.is_initialized()
+
+# The global mix settings the audio backend is using, keyed by the VAWorld property they come from, e.g. "doppler_scale". The world is unused, but the C# adapter needs it to reach the backend
+static func backend_settings(_world: Node) -> Dictionary:
+	var settings := {}
+	for property in ["master_volume", "distance_model", "doppler_scale", "meters_per_unit", "speed_of_sound", "reverb_only"]:
+		settings[property] = VAAudioBackend.get(property)
+	return settings
+
+# The reverb send level (0-1) of a player's most recent voice after distance attenuation, or -1 when it isn't sending or the backend doesn't report it
+static func reverb_send_level(_world: Node, player: Node) -> float:
+	return VAAudioBackend.get_reverb_send_level(player)

@@ -13,7 +13,7 @@
 #include <godot_cpp/variant/callable_method_pointer.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
-#include "openal/al_manager.h"
+#include "backend/va_audio_backend.h"
 #include "va_conversion_plugin.h"
 #include "va_conversions.h"
 #include "va_debug_window_check.h"
@@ -68,14 +68,17 @@ void VAWorld::_bind_methods()
     ClassDB::bind_method(D_METHOD("set_master_volume", "value"), &VAWorld::set_master_volume);
     ClassDB::bind_method(D_METHOD("get_distance_model"), &VAWorld::get_distance_model);
     ClassDB::bind_method(D_METHOD("set_distance_model", "value"), &VAWorld::set_distance_model);
+    ClassDB::bind_method(D_METHOD("get_doppler_scale"), &VAWorld::get_doppler_scale);
+    ClassDB::bind_method(D_METHOD("set_doppler_scale", "value"), &VAWorld::set_doppler_scale);
     ClassDB::bind_method(D_METHOD("get_reverb_only"), &VAWorld::get_reverb_only);
     ClassDB::bind_method(D_METHOD("set_reverb_only", "value"), &VAWorld::set_reverb_only);
 
-    // OpenAL settings, forwarded to the ALManager singleton - if multiple VAWorlds exist in a scene, the last write wins.
-    ADD_GROUP("OpenAL", "");
+    // Audio backend settings, forwarded to the VAAudioBackend singleton - if multiple VAWorlds exist in a scene, the last write wins.
+    ADD_GROUP("Audio Backend", "");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "master_volume"), "set_master_volume", "get_master_volume");
-    // Matches vaudio-godot-mono-openal-3d's ALDistanceModel enum order/values (AL/al.h).
-    ADD_PROPERTY(PropertyInfo(Variant::INT, "distance_model", PROPERTY_HINT_ENUM, "None:0,InverseDistance:53249,InverseDistanceClamped:53250,LinearDistance:53251,LinearDistanceClamped:53252,ExponentDistance:53253,ExponentDistanceClamped:53254"), "set_distance_model", "get_distance_model");
+    // VADistanceModel values, the same as the C# plugin's
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "distance_model", PROPERTY_HINT_ENUM, VA_DISTANCE_MODEL_HINT), "set_distance_model", "get_distance_model");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "doppler_scale", PROPERTY_HINT_RANGE, "0.0,4.0,0.01,or_greater"), "set_doppler_scale", "get_doppler_scale");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "reverb_only"), "set_reverb_only", "get_reverb_only");
 
     ClassDB::bind_method(D_METHOD("get_maximum_grouped_eax_count"), &VAWorld::get_maximum_grouped_eax_count);
@@ -99,7 +102,7 @@ void VAWorld::_bind_methods()
     ClassDB::bind_method(D_METHOD("get_reference_frequency_hf"), &VAWorld::get_reference_frequency_hf);
     ClassDB::bind_method(D_METHOD("set_reference_frequency_hf", "value"), &VAWorld::set_reference_frequency_hf);
 
-    // meters_per_unit/speed_of_sound are also forwarded to the process-wide ALManager singleton (see va_world_properties.cpp), same last-write-wins caveat as OpenAL group properties above.
+    // meters_per_unit/speed_of_sound are also forwarded to the process-wide VAAudioBackend singleton (see va_world_properties.cpp), same last-write-wins caveat as the Audio Backend group properties above.
     ADD_GROUP("AirAbsorption", "");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "meters_per_unit", PROPERTY_HINT_RANGE, "0.0001,1.0,or_greater"), "set_meters_per_unit", "get_meters_per_unit");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "speed_of_sound", PROPERTY_HINT_RANGE, "0.0001,1000.0,1,or_greater"), "set_speed_of_sound", "get_speed_of_sound");
@@ -197,6 +200,7 @@ VAWorld::VAWorld()
     set_speed_of_sound(speed_of_sound);
     set_master_volume(master_volume);
     set_distance_model(distance_model);
+    set_doppler_scale(doppler_scale);
     set_reverb_only(reverb_only);
     set_humidity(humidity);
     set_temperature(temperature);
@@ -210,8 +214,11 @@ VAWorld::VAWorld()
     set_rendering_enabled(rendering_enabled);
     set_visualisation_scale(visualisation_scale);
 
-    // ALManager is initialized at GDExtension module-init time, so it's safe to create AL objects here.
-    listener_reverb_effect.create();
+    // VAAudioBackend is initialized at GDExtension module-init time, so it's safe to create backend objects here. Silent until its first EAX, and kept when re-entering the tree, since sources may still point at it
+    VAAudioBackend *manager = VAAudioBackend::get_singleton();
+
+    if (!listener_reverb_effect && manager)
+        listener_reverb_effect = manager->create_reverb_effect();
 
     set_process(true);
 }
@@ -310,22 +317,19 @@ void VAWorld::_process(double delta)
         return;
     }
 
-    if (ALManager *manager = ALManager::get_singleton())
-        manager->check_device_connected();
+    VAAudioBackend *manager = VAAudioBackend::get_singleton();
 
-    if (listener)
+    if (manager)
+        manager->update();
+
+    if (listener && manager)
     {
-        ALManager *manager = ALManager::get_singleton();
+        Vector3 position = listener->get_global_position();
+        Vector3 forward = -listener->get_global_transform().basis.get_column(2); // Godot's -Z is forward
+        Vector3 up = listener->get_global_transform().basis.get_column(1);
 
-        if (manager && manager->is_initialized())
-        {
-            Vector3 position = listener->get_global_position();
-            Vector3 forward = -listener->get_global_transform().basis.get_column(2); // Godot's -Z is forward
-            Vector3 up = listener->get_global_transform().basis.get_column(1);
-
-            manager->set_listener_position(position);
-            manager->set_listener_orientation(forward, up);
-        }
+        manager->set_listener_position(position);
+        manager->set_listener_orientation(forward, up);
     }
 
     if (world)
@@ -363,69 +367,13 @@ void VAWorld::send_viewport_camera_to_running_game()
     debugger_plugin->sync_viewport_camera(camera->get_global_position(), camera->get_global_rotation(), camera->get_fov());
 }
 
-void VAWorld::on_reverb_updated()
+Vector3 VAWorld::get_grouped_eax_pan(const VAVector &relative_direction) const
 {
-    if (!listener || !listener->get_handle())
-    {
-        // Don't warn during teardown - a reverb update can still be in flight after the listener node has unregistered but before this VAWorld node is destroyed.
-        if (!warned_missing_listener && !is_shutting_down)
-        {
-            VA_WARN_NAMED("Has no VAListener node, so reverb cannot be updated. ", MISSING_LISTENER_HINT);
-            warned_missing_listener = true;
-        }
-
-        return;
-    }
-
-    VAEAXReverb *eax = vaEmitterGetEAX(listener->get_handle());
-
-    if (eax)
-    {
-        listener_reverb_effect.set_params(CopyReverbParams(eax));
-    }
-
-    int grouped_eax_count = vaWorldGetGroupedEAXCount(world);
-    const VAEAXReverb **grouped_eax = vaWorldGetGroupedEAX(world);
-
-    for (int i = 0; i < grouped_eax_count; i++)
-    {
-        if ((int)grouped_reverb_effects.size() <= i)
-        {
-            std::unique_ptr<ALReverbEffect> new_effect = std::make_unique<ALReverbEffect>();
-            new_effect->create();
-            grouped_reverb_effects.push_back(std::move(new_effect));
-        }
-
-        VAEAXReverbParams params = CopyReverbParams(grouped_eax[i]);
-
-        // Blend in this slot's gain/direction relative to the listener, so a grouped zone the listener hasn't raytraced
-        // yet holds its last pan rather than snapping to silence/center - vaEAXReverbGetRelative* return NULL for "no entry yet".
-        float *relative_gain = vaEAXReverbGetRelativeGain(grouped_eax[i], listener->get_handle());
-        VAVector *relative_direction = vaEAXReverbGetRelativeDirection(grouped_eax[i], listener->get_handle());
-
-        if (relative_gain)
-        {
-            params.effectSlotGain = MIN(1.0f, MAX(0.0f, *relative_gain));
-        }
-
-        if (relative_direction)
-        {
-            // Rotate the raytraced world-space direction into the listener's local space so OpenAL's listener-relative reflections/late-reverb pan vectors point the right way regardless of listener facing.
-            Vector3 listener_rotation = listener->get_global_rotation();
-            VAVector pan_vector = {};
-            vaWorldCalculateListenerRelativePan(world, *relative_direction, listener_rotation.x, listener_rotation.y, &pan_vector);
-            Vector3 pan = FromVAudio(pan_vector);
-
-            params.reflectionsPan[0] = pan.x;
-            params.reflectionsPan[1] = pan.y;
-            params.reflectionsPan[2] = pan.z;
-            params.lateReverbPan[0] = pan.x;
-            params.lateReverbPan[1] = pan.y;
-            params.lateReverbPan[2] = pan.z;
-        }
-
-        grouped_reverb_effects[i]->set_params(params);
-    }
+    // Rotate the raytraced world-space direction into the listener's local space, so the listener-relative pan points the right way regardless of listener facing
+    Vector3 listener_rotation = listener->get_global_rotation();
+    VAVector pan = {};
+    vaWorldCalculateListenerRelativePan(world, relative_direction, listener_rotation.x, listener_rotation.y, &pan);
+    return FromVAudio(pan);
 }
 
 } // namespace va_godot

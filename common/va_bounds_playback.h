@@ -1,17 +1,17 @@
-// Human-reviewed
+// AI-created
 
 #pragma once
 
-class ALSource;
+class VAPlayer;
 
 // Autoplay and world bounds rules shared by VASource, VASourceLeech and VASourceRelative, which have no raytraced base class in common. VASourceRelative is never silenced
 struct VABoundsPlayback
 {
     // Call at the top of play(). Returns whether to play now, otherwise the play is queued until it's ready, and a loop waits until it's inside the bounds. A sound that doesn't loop isn't played outside the bounds, with a warning
-    bool request_play(ALSource &source, bool silenced, bool ready, float start_time);
+    bool request_play(VAPlayer &source, bool silenced, bool ready, float start_time);
 
     // Call every frame. While silenced it stops the sound, re-queues a loop that was playing so it resumes inside, and cancels a queued play that doesn't loop. Returns whether to call play(get_pending_start_time()) now, for a queued play or autoplay
-    bool process(ALSource &source, bool silenced, bool ready, bool autoplay);
+    bool process(VAPlayer &source, bool silenced, bool ready, bool autoplay);
 
     void on_played()
     {
@@ -41,5 +41,5 @@ private:
     bool autoplay_done = false;
 
     // Returns whether it's silenced
-    bool stop_if_silenced(ALSource &source, bool silenced);
+    bool stop_if_silenced(VAPlayer &source, bool silenced);
 };

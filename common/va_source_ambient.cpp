@@ -1,4 +1,4 @@
-// Human-reviewed
+// AI-created
 
 #include "va_source_ambient.h"
 
@@ -74,7 +74,7 @@ void VASourceAmbient::retry_find_va_world(Node *node)
 
 void VASourceAmbient::_process(double delta)
 {
-    ALSourceRelative::_process(delta);
+    VAPlayer::_process(delta);
 
     if (IS_EDITOR_HINT())
         return;
@@ -94,15 +94,15 @@ void VASourceAmbient::_process(double delta)
         return;
 
     // nullptr gets the listener's reverb effect. The reverb send is muffled by the ambient filter too
-    effect = use_listener_reverb ? va_world->get_reverb_effect(nullptr) : nullptr;
+    reverb_effect = use_listener_reverb ? va_world->get_reverb_effect(nullptr) : nullptr;
     update_filter(listener->get_ambient_filter_gain_lf(), listener->get_ambient_filter_gain_hf());
 
-    // Waits for the listener's first EAX, so it never starts in OpenAL's default reverb
+    // Waits for the listener's first EAX, so it never starts in the backend's default reverb
     if (!played && (!use_listener_reverb || va_world->is_listener_reverb_ready()))
     {
         if (use_listener_reverb)
             va_world->warn_if_listener_casts_no_reverb_rays(this, warned_no_listener_reverb);
 
-        played = ALSourceRelative::play();
+        played = VAPlayer::play();
     }
 }

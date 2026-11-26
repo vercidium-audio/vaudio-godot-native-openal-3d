@@ -1,6 +1,6 @@
 // AI-created
 
-#include "openal/al_manager.h"
+#include "backend/va_audio_backend.h"
 #include "va_conversions.h"
 #include "va_emitter.h"
 #include "va_engine_util.h"
@@ -207,8 +207,8 @@ void VAWorld::set_meters_per_unit(float value)
             VA_ERROR_NAMED_RESULT(result, "Failed to set world meters per unit (may be <= 0, NaN or Infinity)");
     }
 
-    if (ALManager::get_singleton())
-        ALManager::get_singleton()->set_meters_per_unit(meters_per_unit);
+    if (VAAudioBackend::get_singleton())
+        VAAudioBackend::get_singleton()->set_meters_per_unit(meters_per_unit);
 }
 
 void VAWorld::set_speed_of_sound(float value)
@@ -223,32 +223,40 @@ void VAWorld::set_speed_of_sound(float value)
             VA_ERROR_NAMED_RESULT(result, "Failed to set world speed of sound (may be <= 0, NaN or Infinity)");
     }
 
-    if (ALManager::get_singleton())
-        ALManager::get_singleton()->set_speed_of_sound(speed_of_sound);
+    if (VAAudioBackend::get_singleton())
+        VAAudioBackend::get_singleton()->set_speed_of_sound(speed_of_sound);
 }
 
 void VAWorld::set_master_volume(float value)
 {
     master_volume = value;
 
-    if (ALManager::get_singleton())
-        ALManager::get_singleton()->set_master_volume(master_volume);
+    if (VAAudioBackend::get_singleton())
+        VAAudioBackend::get_singleton()->set_master_volume(master_volume);
 }
 
 void VAWorld::set_distance_model(int value)
 {
     distance_model = value;
 
-    if (ALManager::get_singleton())
-        ALManager::get_singleton()->set_distance_model(static_cast<ALenum>(distance_model));
+    if (VAAudioBackend::get_singleton())
+        VAAudioBackend::get_singleton()->set_distance_model(distance_model);
+}
+
+void VAWorld::set_doppler_scale(float value)
+{
+    doppler_scale = std::max(0.0f, value);
+
+    if (VAAudioBackend::get_singleton())
+        VAAudioBackend::get_singleton()->set_doppler_scale(doppler_scale);
 }
 
 void VAWorld::set_reverb_only(bool value)
 {
     reverb_only = value;
 
-    if (ALManager::get_singleton())
-        ALManager::get_singleton()->set_reverb_only(reverb_only);
+    if (VAAudioBackend::get_singleton())
+        VAAudioBackend::get_singleton()->set_reverb_only(reverb_only);
 }
 
 void VAWorld::set_humidity(float value)

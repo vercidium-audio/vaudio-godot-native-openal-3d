@@ -1,13 +1,13 @@
-// Human-reviewed
+// AI-created
 
 #include "va_bounds_playback.h"
 
 #include <godot_cpp/variant/utility_functions.hpp>
 
-#include "al_source.h"
+#include "va_player.h"
 #include "va_engine_util.h"
 
-bool VABoundsPlayback::stop_if_silenced(ALSource &source, bool silenced)
+bool VABoundsPlayback::stop_if_silenced(VAPlayer &source, bool silenced)
 {
     if (!silenced)
         return false;
@@ -24,11 +24,11 @@ bool VABoundsPlayback::stop_if_silenced(ALSource &source, bool silenced)
     }
 
     // The base stop(), since the overrides cancel the queued play
-    source.ALSource::stop();
+    source.VAPlayer::stop();
     return true;
 }
 
-bool VABoundsPlayback::request_play(ALSource &source, bool silenced, bool ready, float start_time)
+bool VABoundsPlayback::request_play(VAPlayer &source, bool silenced, bool ready, float start_time)
 {
     if (silenced && !source.get_looping())
         VA_WARN(source.get_name(), ": This source did not play because it is outside the world bounds.");
@@ -43,7 +43,7 @@ bool VABoundsPlayback::request_play(ALSource &source, bool silenced, bool ready,
     return false;
 }
 
-bool VABoundsPlayback::process(ALSource &source, bool silenced, bool ready, bool autoplay)
+bool VABoundsPlayback::process(VAPlayer &source, bool silenced, bool ready, bool autoplay)
 {
     if (stop_if_silenced(source, silenced))
         return false;

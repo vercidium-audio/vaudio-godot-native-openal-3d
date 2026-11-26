@@ -24,11 +24,11 @@ macos.release = "res://addons/vaudio-godot-native-openal-3d/bin/mac/libvaudiogod
 
 [dependencies]
 
-windows.x86_64 = { "res://addons/vaudio-godot-native-openal-3d/bin/windows/vaudionative.dll": "", "res://addons/vaudio-godot-native-openal-3d/bin/windows/soft_oal.dll": "" }
-windows.arm64 = { "res://addons/vaudio-godot-native-openal-3d/bin/windows-arm64/vaudionative.dll": "", "res://addons/vaudio-godot-native-openal-3d/bin/windows-arm64/soft_oal.dll": "" }
-linux.x86_64 = { "res://addons/vaudio-godot-native-openal-3d/bin/linux/libvaudionative.so": "", "res://addons/vaudio-godot-native-openal-3d/bin/linux/libopenal.so.1": "" }
-linux.arm64 = { "res://addons/vaudio-godot-native-openal-3d/bin/linux-arm64/libvaudionative.so": "", "res://addons/vaudio-godot-native-openal-3d/bin/linux-arm64/libopenal.so.1": "" }
-macos = { "res://addons/vaudio-godot-native-openal-3d/bin/mac/libvaudionative.dylib": "", "res://addons/vaudio-godot-native-openal-3d/bin/mac/libopenal.1.dylib": "" }
+windows.x86_64 = { "res://addons/vaudio-godot-native-openal-3d/bin/windows/vaudionative.dll": "" }
+windows.arm64 = { "res://addons/vaudio-godot-native-openal-3d/bin/windows-arm64/vaudionative.dll": "" }
+linux.x86_64 = { "res://addons/vaudio-godot-native-openal-3d/bin/linux/libvaudionative.so": "" }
+linux.arm64 = { "res://addons/vaudio-godot-native-openal-3d/bin/linux-arm64/libvaudionative.so": "" }
+macos = { "res://addons/vaudio-godot-native-openal-3d/bin/mac/libvaudionative.dylib": "" }
 
 [icons]
 
@@ -38,6 +38,8 @@ VAEmitter = "res://addons/vaudio-godot-native-openal-3d/icons/VAEmitter.svg"
 VAInputStreamSource = "res://addons/vaudio-godot-native-openal-3d/icons/VAInputStreamSource.svg"
 VAListener = "res://addons/vaudio-godot-native-openal-3d/icons/VAListener.svg"
 VANetworkedStreamSource = "res://addons/vaudio-godot-native-openal-3d/icons/VANetworkedStreamSource.svg"
+VAPlayer = "res://addons/vaudio-godot-native-openal-3d/icons/VAPlayer.svg"
+VAPlayer3D = "res://addons/vaudio-godot-native-openal-3d/icons/VAPlayer3D.svg"
 VASource = "res://addons/vaudio-godot-native-openal-3d/icons/VASource.svg"
 VASourceAmbient = "res://addons/vaudio-godot-native-openal-3d/icons/VASourceAmbient.svg"
 VASourceLeech = "res://addons/vaudio-godot-native-openal-3d/icons/VASourceLeech.svg"

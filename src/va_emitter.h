@@ -1,4 +1,4 @@
-// Human-reviewed
+// AI-created
 
 #pragma once
 
@@ -13,8 +13,7 @@ extern "C"
 
 using namespace godot;
 
-class ALFilter;
-class ALReverbEffect;
+class VAReverbEffect;
 
 namespace va_godot
 {
@@ -103,9 +102,7 @@ private:
     Color permeation_color = Color(255.0f / 255.0f, 127.0f / 255.0f, 42.0f / 255.0f, 51.0f / 255.0f);
     Color ambient_permeation_color = Color(255.0f / 255.0f, 204.0f / 255.0f, 0.0f / 255.0f, 51.0f / 255.0f);
 
-    ALFilter *filter = nullptr;
-
-    // Absolute gains, as ALFilter stores HF relative to LF
+    // Absolute gains
     float muffling_gain_lf = 1.0f;
     float muffling_gain_hf = 1.0f;
 
@@ -113,7 +110,7 @@ private:
     float ambient_filter_gain_hf = 1.0f;
     bool ambient_filter_ready = false;
 
-    ALReverbEffect *effect = nullptr;
+    VAReverbEffect *reverb_effect = nullptr;
 
     VAVisualisation *visualisation = nullptr;
 
@@ -240,14 +237,9 @@ public:
         return muffling_gain_hf;
     }
 
-    ALFilter *get_filter() const
+    VAReverbEffect *get_reverb_effect() const
     {
-        return filter;
-    }
-
-    ALReverbEffect *get_effect() const
-    {
-        return effect;
+        return reverb_effect;
     }
 
     VAVisualisation *get_visualisation() const

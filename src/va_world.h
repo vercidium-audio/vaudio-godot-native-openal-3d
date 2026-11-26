@@ -19,7 +19,8 @@ extern "C"
 #include <vaudio.h>
 }
 
-#include "openal/al_reverb.h"
+#include "backend/va_audio_objects.h"
+#include "backend/va_audio_types.h"
 #include "va_conversions.h"
 #include "va_debug_window_check.h"
 #include "va_engine_util.h"
@@ -52,9 +53,6 @@ enum class PropagateMode
     Visuals,
 };
 
-// Copies a raw ::VAEAXReverb's fields into an OpenAL-facing VAEAXReverbParams. Defined once in common/va_world_common.cpp since it's dimension-agnostic; declared here so each repo's own va_world.cpp (which computes the listener-relative pan differently) can still call it from on_reverb_updated().
-VAEAXReverbParams CopyReverbParams(const VAEAXReverb *eax);
-
 constexpr const char *MISSING_LISTENER_HINT = "Ensure the VAListener node is created and is a sibling or child node of VAWorld.";
 
 // Name collision: the vaudio C SDK's opaque handle type is also called "VAWorld" (global namespace); inside va_godot, 'VAWorld' means this class and '::VAWorld' the SDK handle.
@@ -83,8 +81,21 @@ private:
 
     bool wire_pending_targets_queued = false;
 
-    ALReverbEffect listener_reverb_effect;
-    std::vector<std::unique_ptr<ALReverbEffect>> grouped_reverb_effects;
+    // nullptr while there is no audio backend
+    std::unique_ptr<VAReverbEffect> listener_reverb_effect;
+
+    // A grouped EAX's reverb effect, with the gain and pan last calculated for it, which it keeps while its EAX has no listener-relative results
+    struct GroupedReverbEffect
+    {
+        std::unique_ptr<VAReverbEffect> effect;
+        float gain = 1.0f;
+        Vector3 pan;
+    };
+
+    std::vector<GroupedReverbEffect> grouped_reverb_effects;
+
+    // Where a grouped EAX's reverb comes from relative to the listener, from its listener-relative direction. Per dimension, used by on_reverb_updated
+    Vector3 get_grouped_eax_pan(const VAVector &relative_direction) const;
 
     static void on_reverb_updated_trampoline(::VAWorld *world);
     void on_reverb_updated();
@@ -216,7 +227,7 @@ public:
         return listener;
     }
 
-    ALReverbEffect *get_reverb_effect(::VAEmitter *emitter);
+    VAReverbEffect *get_reverb_effect(::VAEmitter *emitter);
 
     // Whether the current listener's reverb effect has its first EAX, or never will: no reverb effect, no reverb rays, or outside the bounds. False with no listener. VASourceRelative waits for this
     bool is_listener_reverb_ready() const;
@@ -374,6 +385,12 @@ public:
     }
     void set_distance_model(int value);
 
+    float get_doppler_scale() const
+    {
+        return doppler_scale;
+    }
+    void set_doppler_scale(float value);
+
     bool get_reverb_only() const
     {
         return reverb_only;
@@ -477,7 +494,8 @@ private:
     float meters_per_unit = 1.0f;
     float speed_of_sound = 343.0f;
     float master_volume = 1.0f;
-    int distance_model = AL_INVERSE_DISTANCE_CLAMPED;
+    int distance_model = static_cast<int>(VADistanceModel::InverseClamped);
+    float doppler_scale = 1.0f;
     bool reverb_only = false;
     float humidity = 0.1f;
     float temperature = 26.0f;

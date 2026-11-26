@@ -119,10 +119,10 @@
 			The maximum number of grouped EAX reverb properties shared across all emitters that affect grouped EAX. Higher values increase accuracy but are more expensive to run.
 		</member>
 		<member name="meters_per_unit" type="float" setter="set_meters_per_unit" getter="get_meters_per_unit" default="1.0">
-			How many meters one world unit represents. Affects air absorption and reverb. This is separate from [member ALManager.meters_per_unit], which only affects OpenAL's own air-absorption and reverb decay math.
+			How many meters one world unit represents. Affects air absorption and reverb. This is separate from [member VAAudioBackend.meters_per_unit], which only affects OpenAL's own air-absorption and reverb decay math.
 		</member>
 		<member name="speed_of_sound" type="float" setter="set_speed_of_sound" getter="get_speed_of_sound" default="343.0">
-			The speed of sound, in meters per second. Affects air absorption and reverb. This is separate from [member ALManager.speed_of_sound], which only affects OpenAL's own Doppler calculation.
+			The speed of sound, in meters per second. Affects air absorption and reverb. This is separate from [member VAAudioBackend.speed_of_sound], which only affects OpenAL's own Doppler calculation.
 		</member>
 		<member name="humidity" type="float" setter="set_humidity" getter="get_humidity" default="0.1">
 			The air humidity percentage, from 0.0 to 1.0. Affects air absorption.
@@ -159,13 +159,16 @@
 			If [code]true[/code], opens a native debug window visualising raytracing (dev build only). Not applied if the project's renderer is gl_compatibility, since the debug window's own native OpenGL context is known to crash the engine in that configuration.
 		</member>
 		<member name="master_volume" type="float" setter="set_master_volume" getter="get_master_volume" default="1.0">
-			The overall output volume, as a linear multiplier. 1.0 is unchanged, 0.0 is silent. Forwarded to the process-wide [ALManager] singleton; if multiple [VAWorld]s exist, the last one to set this wins.
+			The overall output volume, as a linear multiplier. 1.0 is unchanged, 0.0 is silent. Forwarded to the process-wide [VAAudioBackend] singleton; if multiple [VAWorld]s exist, the last one to set this wins.
 		</member>
-		<member name="distance_model" type="int" setter="set_distance_model" getter="get_distance_model" default="53249">
-			How volume attenuates with distance from the listener. One of OpenAL's distance model constants (Inverse Distance Clamped, Inverse Distance, Linear Distance Clamped, Linear Distance, Exponent Distance Clamped, Exponent Distance, or None). Forwarded to the process-wide [ALManager] singleton; if multiple [VAWorld]s exist, the last one to set this wins.
+		<member name="distance_model" type="int" setter="set_distance_model" getter="get_distance_model" default="2">
+			How volume attenuates with distance from the listener, between each source's reference and max distance: [code]0[/code] None, [code]1[/code] Inverse, [code]2[/code] InverseClamped, [code]3[/code] Linear, [code]4[/code] LinearClamped, [code]5[/code] Exponent, [code]6[/code] ExponentClamped. Forwarded to the process-wide [VAAudioBackend] singleton; if multiple [VAWorld]s exist, the last one to set this wins.
+		</member>
+		<member name="doppler_scale" type="float" setter="set_doppler_scale" getter="get_doppler_scale" default="1.0">
+			Scales the doppler pitch shift of moving sources and listeners. [code]1.0[/code] is physically based, [code]0.0[/code] turns doppler off. Negative values are clamped to [code]0.0[/code]. Forwarded to the process-wide [VAAudioBackend] singleton; if multiple [VAWorld]s exist, the last one to set this wins.
 		</member>
 		<member name="reverb_only" type="bool" setter="set_reverb_only" getter="get_reverb_only" default="false">
-			If [code]true[/code], every sound's direct path is silenced so only reverb is audible. A diagnostic toggle for tuning reverb in isolation. Forwarded to the process-wide [ALManager] singleton; if multiple [VAWorld]s exist, the last one to set this wins. Each source also has its own [member ALSource.reverb_only].
+			If [code]true[/code], every sound's direct path is silenced so only reverb is audible. A diagnostic toggle for tuning reverb in isolation. Forwarded to the process-wide [VAAudioBackend] singleton; if multiple [VAWorld]s exist, the last one to set this wins. Each source also has its own [member VAPlayer.reverb_only].
 		</member>
 	</members>
 </class>

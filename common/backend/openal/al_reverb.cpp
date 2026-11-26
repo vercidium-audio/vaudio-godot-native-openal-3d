@@ -1,0 +1,151 @@
+// AI-created
+
+#include "al_reverb.h"
+
+#include "va_engine_util.h"
+#include "openal_backend.h"
+
+#include <godot_cpp/variant/utility_functions.hpp>
+
+using namespace godot;
+
+ALReverbEffect::~ALReverbEffect()
+{
+    destroy();
+}
+
+bool ALReverbEffect::create()
+{
+    OpenALBackend *manager = OpenALBackend::get_singleton();
+
+    if (!manager || !manager->is_initialised())
+    {
+        VA_BACKEND_ERROR("ALReverbEffect::create called before the OpenAL device is initialized");
+        return false;
+    }
+
+    if (!manager->has_efx())
+    {
+        // Not an error - devices without ALC_EXT_EFX just play without reverb.
+        return false;
+    }
+
+    ALuint new_effect = 0;
+    manager->al_gen_effects()(1, &new_effect);
+
+    if (new_effect == 0)
+    {
+        VA_BACKEND_ERROR("alGenEffects failed, AL error ", (int)manager->al_get_error()());
+        return false;
+    }
+
+    ALuint new_slot = 0;
+    manager->al_gen_auxiliary_effect_slots()(1, &new_slot);
+
+    if (new_slot == 0)
+    {
+        VA_BACKEND_ERROR("alGenAuxiliaryEffectSlots failed, AL error ", (int)manager->al_get_error()());
+        manager->delete_effect(new_effect);
+        return false;
+    }
+
+    effect_handle = new_effect;
+    slot_handle = new_slot;
+
+    manager->al_effecti()(effect_handle, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB);
+    manager->al_auxiliary_effect_sloti()(slot_handle, AL_EFFECTSLOT_EFFECT, (ALint)effect_handle);
+
+    // Silent until set_params() applies the first EAX, so nothing plays through OpenAL's default reverb
+    manager->al_auxiliary_effect_slotf()(slot_handle, AL_EFFECTSLOT_GAIN, 0.0f);
+
+    return true;
+}
+
+void ALReverbEffect::destroy()
+{
+    OpenALBackend *manager = OpenALBackend::get_singleton();
+
+    if (manager && manager->has_efx())
+    {
+        if (slot_handle != 0)
+            manager->delete_auxiliary_effect_slot(slot_handle);
+
+        if (effect_handle != 0)
+            manager->delete_effect(effect_handle);
+    }
+
+    slot_handle = 0;
+    effect_handle = 0;
+}
+
+void ALReverbEffect::set_params(const VAEAXReverbParams &params)
+{
+    if (!is_valid())
+    {
+        return;
+    }
+
+    OpenALBackend *manager = OpenALBackend::get_singleton();
+    auto effectf = manager->al_effectf();
+    auto effecti = manager->al_effecti();
+    auto effectfv = manager->al_effectfv();
+
+    effecti(effect_handle, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB);
+
+    effectf(effect_handle, AL_EAXREVERB_DENSITY, params.density);
+    effectf(effect_handle, AL_EAXREVERB_DIFFUSION, params.diffusion);
+    effectf(effect_handle, AL_EAXREVERB_GAIN, params.gain);
+    effectf(effect_handle, AL_EAXREVERB_GAINHF, params.gainHF);
+    effectf(effect_handle, AL_EAXREVERB_GAINLF, params.gainLF);
+    effectf(effect_handle, AL_EAXREVERB_DECAY_TIME, params.decayTime);
+    effectf(effect_handle, AL_EAXREVERB_DECAY_HFRATIO, params.decayHFRatio);
+    effectf(effect_handle, AL_EAXREVERB_DECAY_LFRATIO, params.decayLFRatio);
+    effectf(effect_handle, AL_EAXREVERB_REFLECTIONS_GAIN, params.reflectionsGain);
+    effectf(effect_handle, AL_EAXREVERB_REFLECTIONS_DELAY, params.reflectionsDelay);
+    effectfv(effect_handle, AL_EAXREVERB_REFLECTIONS_PAN, params.reflectionsPan);
+    effectf(effect_handle, AL_EAXREVERB_LATE_REVERB_GAIN, params.lateReverbGain);
+    effectf(effect_handle, AL_EAXREVERB_LATE_REVERB_DELAY, params.lateReverbDelay);
+    effectfv(effect_handle, AL_EAXREVERB_LATE_REVERB_PAN, params.lateReverbPan);
+    effectf(effect_handle, AL_EAXREVERB_ECHO_TIME, params.echoTime);
+    effectf(effect_handle, AL_EAXREVERB_ECHO_DEPTH, params.echoDepth);
+    effectf(effect_handle, AL_EAXREVERB_MODULATION_TIME, params.modulationTime);
+    effectf(effect_handle, AL_EAXREVERB_MODULATION_DEPTH, params.modulationDepth);
+    effectf(effect_handle, AL_EAXREVERB_AIR_ABSORPTION_GAINHF, params.airAbsorptionGainHF);
+    effectf(effect_handle, AL_EAXREVERB_HFREFERENCE, params.hfReference);
+    effectf(effect_handle, AL_EAXREVERB_LFREFERENCE, params.lfReference);
+    effectf(effect_handle, AL_EAXREVERB_ROOM_ROLLOFF_FACTOR, params.roomRolloffFactor);
+    effecti(effect_handle, AL_EAXREVERB_DECAY_HFLIMIT, params.decayHFLimit);
+
+    // Re-bind: effect parameter edits only take effect on the slot once AL_EFFECTSLOT_EFFECT is re-written, per EFX semantics.
+    manager->al_auxiliary_effect_sloti()(slot_handle, AL_EFFECTSLOT_EFFECT, (ALint)effect_handle);
+
+    manager->al_auxiliary_effect_slotf()(slot_handle, AL_EFFECTSLOT_GAIN, params.effectSlotGain);
+}
+
+VAEAXReverbParams CopyReverbParams(const VAEAXReverb *eax)
+{
+    VAEAXReverbParams params;
+    params.density = 0.5f; // hardcoded per openal-soft issue #1229 (static when updated live), matching VAWorldReverb.cs's CopyReverb
+    params.diffusion = eax->diffusion;
+    params.gain = 1.0f; // gainLF and gainHF control the actual gain
+    params.gainHF = eax->gainHF;
+    params.gainLF = eax->gainLF;
+    params.decayTime = eax->decayTime;
+    params.decayHFRatio = eax->decayHFRatio;
+    params.decayLFRatio = eax->decayLFRatio;
+    params.reflectionsGain = eax->reflectionsGain;
+    params.reflectionsDelay = eax->reflectionsDelay;
+    params.lateReverbGain = eax->lateReverbGain;
+    params.lateReverbDelay = eax->lateReverbDelay;
+    params.echoTime = eax->echoTime;
+    params.echoDepth = eax->echoDepth;
+    params.modulationTime = eax->modulationTime;
+    params.modulationDepth = eax->modulationDepth;
+    params.airAbsorptionGainHF = eax->airAbsorptionGainHF;
+    params.hfReference = eax->hfReference;
+    params.lfReference = eax->lfReference;
+    params.roomRolloffFactor = eax->roomRolloffFactor;
+    params.decayHFLimit = eax->decayHFLimit;
+
+    return params;
+}

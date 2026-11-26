@@ -1,11 +1,13 @@
-// Human-reviewed
+// AI-created
 
 #include "va_stream_source.h"
 
 #include <godot_cpp/core/class_db.hpp>
 
-#include "openal/al_source_handle.h"
+#include "backend/va_audio_backend.h"
 #include "va_engine_util.h"
+
+#include <algorithm>
 
 VAStreamSource::VAStreamSource()
 {
@@ -28,19 +30,18 @@ bool VAStreamSource::open_stream(int format, int frequency)
 {
     close_stream();
 
-    if (!stream_buffer.create((ALenum)format, frequency))
+    if (format < (int)VAPcmFormat::Mono8 || format > (int)VAPcmFormat::StereoFloat)
     {
-        // ALStreamBuffer::create already logged the reason for failure.
+        VA_ERROR_NAMED(format, " isn't a VAPcmFormat");
         return false;
     }
 
+    stream_format = (VAPcmFormat)format;
+    stream_frequency = frequency;
     stopped_by_bounds = is_silenced_by_bounds();
 
     if (!stopped_by_bounds && !start_sound())
-    {
-        stream_buffer.destroy();
         return false;
-    }
 
     stream_open = true;
     stream_ready = false;
@@ -49,27 +50,52 @@ bool VAStreamSource::open_stream(int format, int frequency)
 
 bool VAStreamSource::start_sound()
 {
-    auto source = std::make_unique<ALSourceHandle>();
+    VAAudioBackend *manager = VAAudioBackend::get_singleton();
 
-    // ALSourceHandle::create already logged the reason for failure.
-    if (!source->create())
+    // The backend already logged the reason for failure
+    std::unique_ptr<VAStream> new_stream = manager ? manager->create_stream(stream_format, stream_frequency) : nullptr;
+
+    if (!new_stream)
         return false;
 
-    source->set_buffer(stream_buffer.get_handle());
-    source->set_gain(get_gain());
-    source->set_pitch(get_pitch());
+    VAVoice &voice = *new_stream->get_voice();
+    voice.set_gain(get_gain());
+    voice.set_pitch(get_pitch());
 
-    configure_source(*source);
+    configure_voice(voice);
 
     update_dry_output();
-    apply_filters(*source);
+    apply_filters(voice);
 
-    // The is_ready_to_play() check happens below in push_audio_data()
-    source->play();
-    apply_paused(*source);
+    // The stream's voice starts playing as soon as it's created. The is_ready_to_play() check happens below in push_audio_data()
+    apply_paused(voice);
 
-    get_sources().push_back(std::move(source));
+    stream = new_stream.get();
+
+    VAPlayerVoice entry;
+    entry.stream = std::move(new_stream);
+    voices.push_back(std::move(entry));
     return true;
+}
+
+void VAStreamSource::stop_sound()
+{
+    for (auto it = voices.begin(); it != voices.end(); ++it)
+    {
+        if (it->stream.get() == stream)
+        {
+            voices.erase(it);
+            break;
+        }
+    }
+
+    stream = nullptr;
+}
+
+void VAStreamSource::clear_voices()
+{
+    stream = nullptr;
+    VAPlayer::clear_voices();
 }
 
 void VAStreamSource::seek(float time)
@@ -84,10 +110,10 @@ void VAStreamSource::apply_bounds_rules()
 
     if (is_silenced_by_bounds())
     {
-        if (!has_sound())
+        if (!stream)
             return;
 
-        ALSource::stop();
+        stop_sound();
         stopped_by_bounds = true;
         return;
     }
@@ -95,9 +121,8 @@ void VAStreamSource::apply_bounds_rules()
     if (!stopped_by_bounds)
         return;
 
-    // Audio queued before it left would play late, so it starts from the next push
+    // Audio queued before it left would play late, so the new sound starts from the next push
     stopped_by_bounds = false;
-    stream_buffer.clear();
 
     if (!start_sound())
     {
@@ -120,7 +145,7 @@ void VAStreamSource::push_audio_data(const uint8_t *data, int num_bytes)
     }
 
     // Nothing plays it while the bounds have stopped it, and audio queued while paused would play late
-    if (num_bytes == 0 || stopped_by_bounds || get_stream_paused())
+    if (num_bytes == 0 || stopped_by_bounds || get_stream_paused() || !stream)
         return;
 
     // Ignore data that arrives before raytracing completed, so the stream never plays unmuffled or without reverb
@@ -132,7 +157,7 @@ void VAStreamSource::push_audio_data(const uint8_t *data, int num_bytes)
         stream_ready = true;
     }
 
-    stream_buffer.enqueue(data, num_bytes);
+    stream->enqueue(data, num_bytes);
 }
 
 void VAStreamSource::close_stream()
@@ -140,8 +165,7 @@ void VAStreamSource::close_stream()
     if (!stream_open)
         return;
 
-    ALSource::stop();
-    stream_buffer.destroy();
+    stop_sound();
     stream_open = false;
     stopped_by_bounds = false;
 }
@@ -149,7 +173,7 @@ void VAStreamSource::close_stream()
 void VAStreamSource::stop()
 {
     close_stream();
-    ALSource::stop();
+    VAPlayer::stop();
 }
 
 void VAStreamSource::_validate_property(PropertyInfo &p_property) const
@@ -176,6 +200,11 @@ void VAStreamSource::_validate_property(PropertyInfo &p_property) const
 void VAStreamSource::_process(double delta)
 {
     VARaytracedSource::_process(delta);
+
+    // VAPlayer::_process drops a finished voice, which would take the stream with it
+    if (stream && std::none_of(voices.begin(), voices.end(), [this](const VAPlayerVoice &voice) { return voice.stream.get() == stream; }))
+        stream = nullptr;
+
     process_raytracing(delta);
     apply_bounds_rules();
 
@@ -184,12 +213,4 @@ void VAStreamSource::_process(double delta)
     {
         stream_ready = true;
     }
-
-    drain_used_chunks();
-}
-
-void VAStreamSource::drain_used_chunks()
-{
-    // Discard each used chunk's bytes
-    while (stream_buffer.try_get_used_chunk(drained_chunk)) { }
 }

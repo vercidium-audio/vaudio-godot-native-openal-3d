@@ -17,7 +17,7 @@ env.Append(CPPPATH=["src/", "common/", "thirdparty/vaudio/include/", "thirdparty
 obj_dir = "obj/" + env["platform"] + "-" + env["arch"] + "/" + env["target"]
 VariantDir(obj_dir + "/src", "src", duplicate=0)
 VariantDir(obj_dir + "/common", "common", duplicate=0)
-sources = Glob(obj_dir + "/src/*.cpp") + Glob(obj_dir + "/src/openal/*.cpp") + Glob(obj_dir + "/common/*.cpp") + Glob(obj_dir + "/common/openal/*.cpp")
+sources = Glob(obj_dir + "/src/*.cpp") + Glob(obj_dir + "/common/*.cpp") + Glob(obj_dir + "/common/backend/*.cpp") + Glob(obj_dir + "/common/backend/openal/*.cpp")
 
 if env["target"] in ["editor", "template_debug"]:
     doc_data = env.GodotCPPDocData(obj_dir + "/gen/doc_data.gen.cpp", source=Glob("doc_classes/*.xml"))
@@ -78,7 +78,7 @@ library = env.SharedLibrary(
 def copy_beside_library(src_dir, name):
     env.Depends(library, env.Command(bin_dir + name, src_dir + name, Copy("$TARGET", "$SOURCE")))
 
-# vaudionative and OpenAL Soft are loaded from beside the plugin binary (delay-load / $ORIGIN / @loader_path for vaudionative, LoadLibrary / dlopen for OpenAL - see src/openal/al_manager.cpp)
+# vaudionative and OpenAL Soft are loaded from beside the plugin binary (delay-load / $ORIGIN / @loader_path for vaudionative, LoadLibrary / dlopen for OpenAL - see common/backend/openal/openal_backend.cpp)
 copy_beside_library(vaudio_libdir, vaudio_runtime_lib)
 copy_beside_library(openal_libdir, openal_runtime_lib)
 

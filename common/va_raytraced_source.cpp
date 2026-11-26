@@ -176,12 +176,12 @@ void VARaytracedSource::set_raytrace_once(bool value)
 
 float VARaytracedSource::get_muffling_gain_lf() const
 {
-    return filter.get_gain();
+    return get_muffling_gain_lf_value();
 }
 
 float VARaytracedSource::get_muffling_gain_hf() const
 {
-    return filter.get_gain_hf();
+    return get_muffling_gain_hf_value();
 }
 
 void VARaytracedSource::_enter_tree()
@@ -336,7 +336,7 @@ void VARaytracedSource::process_raytracing(double delta)
         return;
 
     // Read from the listener rather than the child VAEmitter, which processes after this node. The effect is null if it casts no reverb rays
-    effect = va_world->get_reverb_effect(emitter->get_handle());
+    reverb_effect = va_world->get_reverb_effect(emitter->get_handle());
 
     // A raytrace-once source has left the listener's targets, so it keeps its last filter
     if (!is_raytraced_by_listener())

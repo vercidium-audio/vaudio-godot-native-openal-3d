@@ -5,7 +5,7 @@
 #include <godot_cpp/core/property_info.hpp>
 #include <godot_cpp/variant/string.hpp>
 
-#include "openal/al_capture_device.h"
+#include "backend/va_audio_objects.h"
 #include "va_device_name.h"
 #include "va_stream_source.h"
 
@@ -17,11 +17,11 @@ class VAInputStreamSource : public VAStreamSource
 
 private:
     // Feeds this stream directly - see open_capture(). Kept as a convenience for the common "play back what the mic just heard" case.
-    ALCaptureDevice capture_device;
-    bool capture_open = false;
+    std::unique_ptr<VACaptureDevice> capture_device;
 
     // Exported settings driving the automatic open_stream()+open_capture()+start_capture() sequence _ready() runs.
-    int format = 4353; // AL_FORMAT_MONO16
+    // A VAPcmFormat. Only the 8 and 16-bit formats are supported
+    int format = (int)VAPcmFormat::Mono16;
     int sample_rate = 44100;
     String device_name;
     int buffer_size_frames = 1024;
@@ -30,7 +30,7 @@ private:
     int microphone_threshold = 0;
 
     // Greatest absolute sample amplitude in a chunk of format-encoded PCM data, scaled to a 16-bit range so microphone_threshold means the same thing regardless of format.
-    static int peak_amplitude(const uint8_t *data, int num_bytes, int format);
+    static int peak_amplitude(const uint8_t *data, int num_bytes, VAPcmFormat format);
 
 protected:
     static void _bind_methods();
@@ -101,11 +101,11 @@ public:
     void start_capture();
     void stop_capture();
 
-    // Safe to call even if open_capture() was never called or already closed. Also called by the destructor, before ~VAStreamSource destroys the underlying stream_buffer.
+    // Safe to call even if open_capture() was never called or already closed. Also called by the destructor, before ~VAStreamSource closes the stream.
     void close_capture();
 
     bool is_capture_open() const
     {
-        return capture_open;
+        return capture_device != nullptr;
     }
 };

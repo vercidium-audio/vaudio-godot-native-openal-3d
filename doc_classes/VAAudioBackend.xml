@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="VAAudioBackend" inherits="Object" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+		Global audio device and mixer control for the audio backend selected by the [code]audio/vaudio/backend[/code] project setting (OpenAL by default), registered as an [Engine] singleton - reach it from any script as [code]VAAudioBackend[/code], at any time, with no scene-tree node required. The output device, sample rate, HRTF, max reverb sends, and max mono/stereo sources used for the one device open at game start come from Project Settings ([code]audio/vaudio/output_device[/code], [code]audio/vaudio/sample_rate[/code], [code]audio/vaudio/openal_hrtf_enabled[/code], [code]audio/vaudio/openal_hrtf[/code], [code]audio/vaudio/openal_max_reverb_sends[/code], [code]audio/vaudio/openal_max_mono_sources[/code], [code]audio/vaudio/openal_max_stereo_sources[/code]), not from this singleton - [method set_output_device], [method set_hrtf] and [method set_hrtf_enabled] are the exceptions, letting a shipped game's audio settings menu change them at runtime.
+		Custom HRTFs: place OpenAL Soft [code].mhr[/code] files in the [code]audio/vaudio/openal_hrtf_folder[/code] folder (default [code]res://hrtf[/code]) and they're listed alongside OpenAL Soft's built-in HRTF, using the file name without its extension. Custom HRTFs are listed before the built-in one, so with the [code]Default[/code] setting OpenAL Soft uses the first custom HRTF. They're bundled into exports automatically. SOFA ([code].sofa[/code]) HRTF datasets can be converted to [code].mhr[/code] with OpenAL Soft's [code]makemhr[/code] utility, e.g. [code]makemhr -i subject.sofa -o subject.mhr[/code].
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_backend_name">
+			<return type="String" />
+			<description>
+				Returns the name of the running audio backend, e.g. [code]OpenAL[/code], or an empty string if none is available. An unavailable [code]audio/vaudio/backend[/code] value falls back to OpenAL with an error.
+			</description>
+		</method>
+		<method name="is_initialized">
+			<return type="bool" />
+			<description>
+				Returns whether the audio backend opened its output device.
+			</description>
+		</method>
+		<method name="get_reverb_send_level" qualifiers="const">
+			<return type="float" />
+			<param index="0" name="player" type="Node" />
+			<description>
+				Returns the reverb send level (0-1) of the player node's most recently played sound after distance attenuation, or [code]-1[/code] when it has none or the audio backend doesn't report it (OpenAL doesn't). For tests.
+			</description>
+		</method>
+		<method name="refresh_device_lists">
+			<return type="void" />
+			<description>
+				Refreshes the dropdowns of the [code]audio/vaudio/output_device[/code] and [code]audio/vaudio/openal_hrtf[/code] project settings from the devices available now.
+			</description>
+		</method>
+		<method name="get_available_devices">
+			<return type="PackedStringArray" />
+			<description>
+				Returns the names of the playback devices currently available on this machine.
+			</description>
+		</method>
+		<method name="get_available_capture_devices">
+			<return type="PackedStringArray" />
+			<description>
+				Returns the names of the capture (input/microphone) devices currently available on this machine.
+			</description>
+		</method>
+		<method name="set_output_device">
+			<return type="bool" />
+			<param index="0" name="device_name" type="String" />
+			<description>
+				Switches the playback device at runtime, keeping the current sample rate, HRTF, and max reverb sends settings. OpenAL moves playing sounds to the new device when OpenAL Soft supports it, otherwise it recreates the device, which stops them. Pass an empty string to use the driver's default device. Returns [code]false[/code] on failure.
+			</description>
+		</method>
+		<method name="get_available_hrtfs">
+			<return type="PackedStringArray" />
+			<description>
+				Returns the names of the HRTFs OpenAL Soft can use, including any [code].mhr[/code] files in the [code]audio/vaudio/openal_hrtf_folder[/code] folder. Pass one of these to [method set_hrtf].
+			</description>
+		</method>
+		<method name="set_hrtf">
+			<return type="bool" />
+			<param index="0" name="name" type="String" />
+			<description>
+				Switches to the named HRTF at runtime, without interrupting playing sounds. Pass an empty string to use OpenAL Soft's default HRTF. If the name isn't found, the default HRTF is used and a warning is logged. Returns [code]false[/code] if the device couldn't be reset.
+			</description>
+		</method>
+		<method name="get_hrtf">
+			<return type="String" />
+			<description>
+				Returns the HRTF name last passed to [method set_hrtf] or set in [code]audio/vaudio/openal_hrtf[/code], or an empty string for the default HRTF.
+			</description>
+		</method>
+		<method name="get_active_hrtf">
+			<return type="String" />
+			<description>
+				Returns the name of the HRTF OpenAL Soft is actually using, or an empty string if HRTF is not active (e.g. it's disabled, or the output isn't stereo).
+			</description>
+		</method>
+		<method name="set_hrtf_enabled">
+			<return type="bool" />
+			<param index="0" name="value" type="bool" />
+			<description>
+				Turns HRTF on or off at runtime, without interrupting playing sounds. HRTF is intended for headphones - players using speakers may prefer it off. Returns [code]false[/code] if the device couldn't be reset.
+			</description>
+		</method>
+		<method name="get_hrtf_enabled">
+			<return type="bool" />
+			<description>
+				Returns whether HRTF is requested, from [method set_hrtf_enabled] or [code]audio/vaudio/openal_hrtf_enabled[/code].
+			</description>
+		</method>
+		<method name="get_error_count">
+			<return type="int" />
+			<description>
+				Returns how many audio backend errors have been logged since the game started, e.g. a failed device open or a source that couldn't be created. Useful for tests that check a run hit no audio backend errors.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="distance_model" type="int" setter="set_distance_model" getter="get_distance_model" default="2">
+			How volume attenuates with distance from the listener, between each source's reference and max distance: [code]0[/code] None, [code]1[/code] Inverse, [code]2[/code] InverseClamped, [code]3[/code] Linear, [code]4[/code] LinearClamped, [code]5[/code] Exponent, [code]6[/code] ExponentClamped. Safe to change at any time.
+		</member>
+		<member name="doppler_scale" type="float" setter="set_doppler_scale" getter="get_doppler_scale" default="1.0">
+			Scales the Doppler effect: 0 turns it off, 1 is physically accurate. Safe to change at any time.
+		</member>
+		<member name="master_volume" type="float" setter="set_master_volume" getter="get_master_volume" default="1.0">
+			The overall output volume, as a linear multiplier. 1.0 is unchanged, 0.0 is silent. Safe to change at any time.
+		</member>
+		<member name="meters_per_unit" type="float" setter="set_meters_per_unit" getter="get_meters_per_unit" default="1.0">
+			How many meters one world unit represents, for the audio backend's own distance and Doppler calculations. This is separate from [member VAWorld.meters_per_unit], which only affects vaudio's raytracing/acoustics model. Safe to change at any time.
+		</member>
+		<member name="speed_of_sound" type="float" setter="set_speed_of_sound" getter="get_speed_of_sound" default="343.0">
+			The speed of sound, in meters per second, used for the audio backend's Doppler effect calculation. This is separate from [member VAWorld.speed_of_sound], which only affects vaudio's raytracing/acoustics model. Safe to change at any time.
+		</member>
+		<member name="reverb_only" type="bool" setter="set_reverb_only" getter="get_reverb_only" default="false">
+			If [code]true[/code], every sound's direct path is silenced so only reverb is audible. A diagnostic toggle for tuning reverb in isolation.
+		</member>
+	</members>
+</class>

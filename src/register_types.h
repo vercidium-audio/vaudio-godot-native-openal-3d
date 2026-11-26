@@ -13,12 +13,6 @@ using namespace godot;
 void initialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel p_level);
 void uninitialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel p_level);
 
-// Rebuilds audio/vaudio/output_device's Project Settings dropdown from ALManager::get_available_devices() - see the definition in register_types.cpp.
-void refresh_output_device_hint();
-
-// Rebuilds audio/vaudio/hrtf's Project Settings dropdown from ALManager::get_available_hrtfs(). Defined once in common/register_types_common.cpp.
-void refresh_hrtf_hint();
-
 // Receiving end of VADebuggerPlugin::sync_viewport_camera - defined per-repo in register_types.cpp since the camera-sync payload shape/native calls differ per dimension. Declared here (rather than static) so the shared on_debugger_message in common/register_types_common.cpp can dispatch to it.
 bool on_sync_viewport_camera(const Array &data);
 
@@ -32,3 +26,9 @@ bool on_debugger_message(const String &message, const Array &data);
 
 // Dimension-agnostic Project Settings registration (audio/vaudio/*). Defined once in common/register_types_common.cpp.
 void register_project_settings();
+
+// Disconnects what register_project_settings() connected. Defined once in common/register_types_common.cpp.
+void unregister_project_settings();
+
+// Hides the audio/vaudio/* settings of the backends that aren't selected. Defined once in common/register_types_common.cpp.
+void update_backend_visibility();

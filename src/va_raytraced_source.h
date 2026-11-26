@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "al_source3d.h"
+#include "va_player3d.h"
 
 extern "C"
 {
@@ -17,9 +17,9 @@ class VAWorld;
 class VAEmitter;
 }
 
-class VARaytracedSource : public ALSource3D
+class VARaytracedSource : public VAPlayer3D
 {
-    GDCLASS(VARaytracedSource, ALSource3D);
+    GDCLASS(VARaytracedSource, VAPlayer3D);
 
 private:
     va_godot::VAWorld *va_world = nullptr;

@@ -13,10 +13,9 @@
 #include <godot_cpp/variant/callable_method_pointer.hpp>
 #include <godot_cpp/variant/vector3.hpp>
 
-#include "al_source.h"
-#include "al_source3d.h"
-#include "al_source_relative.h"
-#include "openal/al_manager.h"
+#include "va_player.h"
+#include "va_player3d.h"
+#include "backend/va_audio_backend.h"
 #include "transform_watcher.h"
 #include "va_conversion_plugin.h"
 #include "va_conversions.h"
@@ -24,7 +23,7 @@
 #include "va_default_material.h"
 #include "va_emitter.h"
 #include "va_engine_util.h"
-#include "va_hrtf_export_plugin.h"
+#include "va_backend_export_plugin.h"
 #include "va_input_stream_source.h"
 #include "va_listener.h"
 #include "va_custom_material.h"
@@ -46,9 +45,8 @@
 
 using namespace godot;
 
-// Process-wide OpenAL device/context owner, registered as the "ALManager" Engine singleton. Heap-allocated with
-// `memnew` rather than a plain `static ALManager`, since constructing a GDCLASS Object at CRT static-init time (before GDExtensionBinding exists) would crash.
-static ALManager *al_manager = nullptr;
+// Owns the audio backend selected by audio/vaudio/backend, registered as the "VAAudioBackend" Engine singleton. Heap-allocated with `memnew` rather than a plain `static VAAudioBackend`, since constructing a GDCLASS Object at CRT static-init time (before GDExtensionBinding exists) would crash.
+static VAAudioBackend *audio_backend = nullptr;
 
 // False when vaudionative.dll is missing - nothing gets registered, so the user sees one readable error instead of a crash
 static bool sdk_loaded = false;
@@ -102,7 +100,7 @@ void initialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel p
         ClassDB::register_class<va_godot::VANodeGizmoPlugin>();
         ClassDB::register_class<va_godot::VADebuggerPlugin>();
         ClassDB::register_class<va_godot::VADebuggerBridge>();
-        ClassDB::register_class<va_godot::VAHRTFExportPlugin>();
+        ClassDB::register_class<va_godot::VABackendExportPlugin>();
         // Not auto-added via EditorPlugins::add_by_type - plugin.gd adds it as a child, so it can be toggled in the Plugins tab
         ClassDB::register_class<va_godot::VAConversionPlugin>();
         return;
@@ -113,10 +111,9 @@ void initialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel p
         return;
     }
 
-    // AL* nodes must be registered before VA* nodes
-    ClassDB::register_abstract_class<ALSource>();
-    ClassDB::register_class<ALSource3D>();
-    ClassDB::register_class<ALSourceRelative>();
+    // Player nodes must be registered before VA* nodes
+    ClassDB::register_abstract_class<VAPlayer>();
+    ClassDB::register_class<VAPlayer3D>();
 
     ClassDB::register_class<va_godot::VAWorld>();
     ClassDB::register_class<va_godot::VAEmitter>();
@@ -139,18 +136,16 @@ void initialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel p
 
     register_project_settings();
 
-    ClassDB::register_class<ALManager>();
+    ClassDB::register_class<VAAudioBackend>();
 
-    al_manager = memnew(ALManager);
+    audio_backend = memnew(VAAudioBackend);
 
-    if (al_manager->initialize())
-    {
-        Engine::get_singleton()->register_singleton("ALManager", al_manager);
+    // Registered even when the backend fails to start, so scripts can still read its error count
+    Engine::get_singleton()->register_singleton("VAAudioBackend", audio_backend);
 
-        // register_project_settings() ran before there was a device to enumerate from, so these dropdowns only had their default entry
-        refresh_output_device_hint();
-        refresh_hrtf_hint();
-    }
+    // register_project_settings() ran before there was a device to enumerate from, so these dropdowns only had their default entry
+    if (audio_backend->initialize())
+        audio_backend->refresh_device_lists();
 
     // Only the running game needs to receive VADebuggerPlugin's messages - there's no running game to sync in the editor process itself.
     if (!IS_EDITOR_HINT() && EngineDebugger::get_singleton() && EngineDebugger::get_singleton()->is_active())
@@ -164,12 +159,14 @@ void uninitialize_vaudio_godot_native_openal_3d_module(ModuleInitializationLevel
         return;
     }
 
-    if (Engine::get_singleton()->has_singleton("ALManager"))
-        Engine::get_singleton()->unregister_singleton("ALManager");
+    if (Engine::get_singleton()->has_singleton("VAAudioBackend"))
+        Engine::get_singleton()->unregister_singleton("VAAudioBackend");
 
-    al_manager->shutdown();
-    memdelete(al_manager);
-    al_manager = nullptr;
+    audio_backend->shutdown();
+    memdelete(audio_backend);
+    audio_backend = nullptr;
+
+    unregister_project_settings();
 
     if (EngineDebugger::get_singleton() && EngineDebugger::get_singleton()->has_capture("vaudio"))
         EngineDebugger::get_singleton()->unregister_message_capture("vaudio");

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="VASourceRelative" inherits="ALSourceRelative" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+<class name="VASourceRelative" inherits="VAPlayer" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
 	<brief_description>
 	</brief_description>
 	<description>
-		A non-spatialised sound source for sounds made by the player's own character (e.g. footsteps, gunshots). It isn't raytraced or muffled, and is sent to the current [VAListener]'s reverb.
-		The listener's reverb is silent until the listener has its first raytraced reverb, so calling [method play] before this source is ready to play (see [method is_ready_to_play]) waits, and starts playback once it is. If [member ALSource.autoplay] is [code]true[/code], playback starts automatically once it's ready. [method stop] cancels that wait.
+		A non-spatialised sound source for sounds made by the player's own character (e.g. footsteps, gunshots). It isn't raytraced or muffled, and is sent to the current [VAListener]'s reverb, unless [member use_listener_reverb] is off.
+		The listener's reverb is silent until the listener has its first raytraced reverb, so calling [method play] before this source is ready to play (see [method is_ready_to_play]) waits, and starts playback once it is. If [member VAPlayer.autoplay] is [code]true[/code], playback starts automatically once it's ready. [method stop] cancels that wait.
 		A [VAListener] casts no reverb rays by default, so give it [member VAEmitter.reverb_ray_count] and [member VAEmitter.reverb_bounce_count] for relative sources to have reverb.
 	</description>
 	<tutorials>
@@ -13,8 +13,13 @@
 		<method name="is_ready_to_play" qualifiers="const">
 			<return type="bool" />
 			<description>
-				Returns [code]true[/code] once the current [VAListener] has its first raytraced reverb, or never will (it casts no reverb rays, or is outside the [VAWorld]'s bounds). Also [code]true[/code] if OpenAL has no EFX. Returns [code]false[/code] while there's no listener.
+				Returns [code]true[/code] once the current [VAListener] has its first raytraced reverb, or never will (it casts no reverb rays, or is outside the [VAWorld]'s bounds). Also [code]true[/code] if the audio backend has no reverb, and always [code]true[/code] while [member use_listener_reverb] is off. Returns [code]false[/code] while there's no listener.
 			</description>
 		</method>
 	</methods>
+	<members>
+		<member name="use_listener_reverb" type="bool" setter="set_use_listener_reverb" getter="get_use_listener_reverb" default="true">
+			If [code]true[/code], this source is sent to the listener's reverb, and waits for the listener's first raytraced reverb before it plays. If [code]false[/code], it plays straight away with no reverb (e.g. music, UI), and needs no [VAWorld].
+		</member>
+	</members>
 </class>

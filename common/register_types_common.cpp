@@ -8,15 +8,18 @@
 #include <godot_cpp/classes/window.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/node_path.hpp>
+#include <godot_cpp/variant/callable_method_pointer.hpp>
 #include <godot_cpp/variant/typed_array.hpp>
 
-#include "openal/al_manager.h"
+#include "backend/va_audio_backend_registry.h"
 #include "va_custom_material.h"
 #include "va_default_material.h"
 #include "va_device_name.h"
 #include "va_engine_util.h"
 #include "va_world.h"
 #include "va_world_lookup.h"
+
+#include <string>
 
 using namespace godot;
 
@@ -224,131 +227,114 @@ bool on_debugger_message(const String &message, const Array &data)
     return true;
 }
 
-void refresh_output_device_hint()
+// Settings that only apply to one audio backend start with its prefix, and are hidden while another backend is selected. Matches the C# plugin's VAProjectSettings.gd
+static const char *BACKEND_PREFIXES[][2] = {
+    {"OpenAL", "audio/vaudio/openal_"},
+    {"FMOD", "audio/vaudio/fmod_"},
+};
+
+// The backend the visible settings were last picked for. A std::string, since a static godot::String can't be constructed before the extension is initialised
+static std::string visible_backend;
+
+static void add_setting(const String &name, const Variant &default_value, Variant::Type type, PropertyHint hint = PROPERTY_HINT_NONE, const String &hint_string = String())
 {
     ProjectSettings *settings = ProjectSettings::get_singleton();
 
-    PackedStringArray devices = ALManager::get_singleton() ? ALManager::get_singleton()->get_available_devices() : PackedStringArray();
-    devices.insert(0, DEFAULT_DEVICE_LABEL);
+    if (!settings->has_setting(name))
+        settings->set_setting(name, default_value);
 
-    Dictionary output_device_info;
-    output_device_info["name"] = "audio/vaudio/output_device";
-    output_device_info["type"] = Variant::STRING;
-    output_device_info["hint"] = PROPERTY_HINT_ENUM;
-    output_device_info["hint_string"] = String(",").join(devices);
-    settings->add_property_info(output_device_info);
+    settings->set_initial_value(name, default_value);
+
+    Dictionary info;
+    info["name"] = name;
+    info["type"] = type;
+    info["hint"] = hint;
+    info["hint_string"] = hint_string;
+    settings->add_property_info(info);
 }
 
-void refresh_hrtf_hint()
+void update_backend_visibility()
 {
     ProjectSettings *settings = ProjectSettings::get_singleton();
+    String selected = settings->get_setting(VAAudioBackendRegistry::SETTING_NAME, VAAudioBackendRegistry::DEFAULT_BACKEND);
+    std::string selected_utf8 = selected.utf8().get_data();
 
-    PackedStringArray hrtfs = ALManager::get_singleton() ? ALManager::get_singleton()->get_available_hrtfs() : PackedStringArray();
-    hrtfs.insert(0, DEFAULT_HRTF_LABEL);
+    if (selected_utf8 == visible_backend)
+        return;
 
-    // Keep a selected HRTF that isn't installed on this machine in the list, rather than the dropdown silently showing a different entry
-    String current = settings->get_setting("audio/vaudio/hrtf");
+    visible_backend = selected_utf8;
 
-    if (!hrtfs.has(current))
-        hrtfs.push_back(current);
+    TypedArray<Dictionary> properties = settings->get_property_list();
 
-    Dictionary hrtf_info;
-    hrtf_info["name"] = "audio/vaudio/hrtf";
-    hrtf_info["type"] = Variant::STRING;
-    hrtf_info["hint"] = PROPERTY_HINT_ENUM;
-    hrtf_info["hint_string"] = String(",").join(hrtfs);
-    settings->add_property_info(hrtf_info);
+    for (int i = 0; i < properties.size(); i++)
+    {
+        String name = Dictionary(properties[i])["name"];
+
+        for (const auto &prefix : BACKEND_PREFIXES)
+        {
+            // Internal settings keep their saved values in project.godot, so switching back shows them unchanged
+            if (name.begins_with(prefix[1]))
+                settings->set_as_internal(name, selected != prefix[0]);
+        }
+    }
 }
 
-// Registers this plugin's own audio/vaudio/* entries under Project Settings - device_name/max_reverb_sends/sample_rate/
-// hrtf_enabled must exist here so ALManager::initialize() can read them before it opens the one-and-only device, below.
+// Registers this plugin's own audio/vaudio/* entries under Project Settings. They must exist before VAAudioBackend::initialize() reads them to open the one-and-only device
 void register_project_settings()
 {
     ProjectSettings *settings = ProjectSettings::get_singleton();
 
-    // output_device: stored as DEFAULT_DEVICE_LABEL, not "", so the strict PROPERTY_HINT_ENUM dropdown below always has
-    // a current value among its own entries. ALManager::read_settings_from_project_settings() translates it back to "" ("driver default").
-    if (!settings->has_setting("audio/vaudio/output_device"))
-        settings->set_setting("audio/vaudio/output_device", DEFAULT_DEVICE_LABEL);
+    // Each backend's library is loaded once at startup
+    PackedStringArray backend_names;
 
-    settings->set_initial_value("audio/vaudio/output_device", DEFAULT_DEVICE_LABEL);
+    for (const auto &prefix : BACKEND_PREFIXES)
+        backend_names.push_back(prefix[0]);
 
-    refresh_output_device_hint();
+    add_setting(VAAudioBackendRegistry::SETTING_NAME, VAAudioBackendRegistry::DEFAULT_BACKEND, Variant::STRING, PROPERTY_HINT_ENUM, String(",").join(backend_names));
+    settings->set_restart_if_changed(VAAudioBackendRegistry::SETTING_NAME, true);
 
-    if (!settings->has_setting("audio/vaudio/max_reverb_sends"))
-        settings->set_setting("audio/vaudio/max_reverb_sends", 1);
+    // Stored as DEFAULT_DEVICE_LABEL, not "", so the strict PROPERTY_HINT_ENUM dropdown always has a current value among its own entries. The backend translates it back to "" ("driver default"). The dropdown is filled by VAAudioBackend::refresh_device_lists()
+    add_setting("audio/vaudio/output_device", DEFAULT_DEVICE_LABEL, Variant::STRING, PROPERTY_HINT_ENUM, DEFAULT_DEVICE_LABEL);
 
-    settings->set_initial_value("audio/vaudio/max_reverb_sends", 1);
+    // 0 means the driver default
+    add_setting("audio/vaudio/sample_rate", 0, Variant::INT, PROPERTY_HINT_ENUM, "System Default:0,22050,44100,48000,96000");
 
-    Dictionary max_reverb_sends_info;
-    max_reverb_sends_info["name"] = "audio/vaudio/max_reverb_sends";
-    max_reverb_sends_info["type"] = Variant::INT;
-    max_reverb_sends_info["hint"] = PROPERTY_HINT_RANGE;
-    max_reverb_sends_info["hint_string"] = "1,16,or_greater";
-    settings->add_property_info(max_reverb_sends_info);
+    // Dev-only setting (not end-user-facing)
+    add_setting("audio/vaudio/openal_max_reverb_sends", 1, Variant::INT, PROPERTY_HINT_RANGE, "1,16,or_greater");
 
-    // max_mono_sources/max_stereo_sources: project-level settings set by the developer, matching ALManager.cs's
-    // MaximumMonoSources/MaximumStereoSources defaults (16/240). Read once before the one-and-only device open, not settable at runtime.
-    if (!settings->has_setting("audio/vaudio/max_mono_sources"))
-        settings->set_setting("audio/vaudio/max_mono_sources", 16);
+    add_setting("audio/vaudio/openal_hrtf_enabled", true, Variant::BOOL);
 
-    settings->set_initial_value("audio/vaudio/max_mono_sources", 16);
+    // Same DEFAULT_*_LABEL storage as output_device. The dropdown is filled by VAAudioBackend::refresh_device_lists() once OpenAL has a device to enumerate HRTFs from
+    add_setting("audio/vaudio/openal_hrtf", DEFAULT_HRTF_LABEL, Variant::STRING, PROPERTY_HINT_ENUM, DEFAULT_HRTF_LABEL);
 
-    Dictionary max_mono_sources_info;
-    max_mono_sources_info["name"] = "audio/vaudio/max_mono_sources";
-    max_mono_sources_info["type"] = Variant::INT;
-    max_mono_sources_info["hint"] = PROPERTY_HINT_RANGE;
-    max_mono_sources_info["hint_string"] = "0,256,or_greater";
-    settings->add_property_info(max_mono_sources_info);
+    // .mhr files in here are listed alongside OpenAL Soft's built-in HRTF, and are bundled into exports by VABackendExportPlugin
+    add_setting("audio/vaudio/openal_hrtf_folder", "res://hrtf", Variant::STRING, PROPERTY_HINT_DIR);
 
-    if (!settings->has_setting("audio/vaudio/max_stereo_sources"))
-        settings->set_setting("audio/vaudio/max_stereo_sources", 240);
+    // Read once before the one-and-only device open, not settable at runtime
+    add_setting("audio/vaudio/openal_max_mono_sources", 16, Variant::INT, PROPERTY_HINT_RANGE, "0,256,or_greater");
+    add_setting("audio/vaudio/openal_max_stereo_sources", 240, Variant::INT, PROPERTY_HINT_RANGE, "0,256,or_greater");
 
-    settings->set_initial_value("audio/vaudio/max_stereo_sources", 240);
+    // The FMOD library (or the folder holding it), searched after the project folder and the executable's folder. FMOD isn't shipped with vaudio
+    add_setting("audio/vaudio/fmod_library_path", "", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
 
-    Dictionary max_stereo_sources_info;
-    max_stereo_sources_info["name"] = "audio/vaudio/max_stereo_sources";
-    max_stereo_sources_info["type"] = Variant::INT;
-    max_stereo_sources_info["hint"] = PROPERTY_HINT_RANGE;
-    max_stereo_sources_info["hint_string"] = "0,256,or_greater";
-    settings->add_property_info(max_stereo_sources_info);
+    // Read once when FMOD initialises: the most sounds FMOD tracks at once (virtual voices)
+    add_setting("audio/vaudio/fmod_max_channels", 512, Variant::INT, PROPERTY_HINT_RANGE, "1,4095");
 
-    // sample_rate: 0 means "driver default" - never shown to the user as 0.
-    if (!settings->has_setting("audio/vaudio/sample_rate"))
-        settings->set_setting("audio/vaudio/sample_rate", 0);
+    // Samples per mix buffer, 0 means FMOD's default (1024). Smaller is lower latency but uses more CPU
+    add_setting("audio/vaudio/fmod_dsp_buffer_size", 0, Variant::INT, PROPERTY_HINT_ENUM, "FMOD Default:0,256,512,1024,2048");
 
-    settings->set_initial_value("audio/vaudio/sample_rate", 0);
+    update_backend_visibility();
 
-    Dictionary sample_rate_info;
-    sample_rate_info["name"] = "audio/vaudio/sample_rate";
-    sample_rate_info["type"] = Variant::INT;
-    sample_rate_info["hint"] = PROPERTY_HINT_ENUM;
-    sample_rate_info["hint_string"] = "System Default:0,22050,44100,48000,96000";
-    settings->add_property_info(sample_rate_info);
+    settings->connect("settings_changed", callable_mp_static(&update_backend_visibility));
+}
 
-    // hrtf_enabled: default true
-    if (!settings->has_setting("audio/vaudio/hrtf_enabled"))
-        settings->set_setting("audio/vaudio/hrtf_enabled", true);
+void unregister_project_settings()
+{
+    ProjectSettings *settings = ProjectSettings::get_singleton();
+    Callable callable = callable_mp_static(&update_backend_visibility);
 
-    settings->set_initial_value("audio/vaudio/hrtf_enabled", true);
+    if (settings->is_connected("settings_changed", callable))
+        settings->disconnect("settings_changed", callable);
 
-    // hrtf: same DEFAULT_*_LABEL storage as output_device. The dropdown is filled by refresh_hrtf_hint() once ALManager has a device to enumerate HRTFs from
-    if (!settings->has_setting("audio/vaudio/hrtf"))
-        settings->set_setting("audio/vaudio/hrtf", DEFAULT_HRTF_LABEL);
-
-    settings->set_initial_value("audio/vaudio/hrtf", DEFAULT_HRTF_LABEL);
-
-    refresh_hrtf_hint();
-
-    // hrtf_folder: .mhr files in here are listed alongside OpenAL Soft's built-in HRTF, and are bundled into exports by VAHRTFExportPlugin
-    if (!settings->has_setting("audio/vaudio/hrtf_folder"))
-        settings->set_setting("audio/vaudio/hrtf_folder", "res://hrtf");
-
-    settings->set_initial_value("audio/vaudio/hrtf_folder", "res://hrtf");
-
-    Dictionary hrtf_folder_info;
-    hrtf_folder_info["name"] = "audio/vaudio/hrtf_folder";
-    hrtf_folder_info["type"] = Variant::STRING;
-    hrtf_folder_info["hint"] = PROPERTY_HINT_DIR;
-    settings->add_property_info(hrtf_folder_info);
+    visible_backend.clear();
 }
