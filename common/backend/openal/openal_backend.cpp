@@ -17,10 +17,6 @@
 #include <cstring>
 #include <string>
 
-#ifndef _WIN32
-#include <dlfcn.h>
-#endif
-
 using namespace godot;
 
 // Registers with the backend registry when the plugin library loads, so core code never names OpenALBackend
@@ -187,79 +183,20 @@ static const char *OPENAL_LIBRARY_NAME = "libopenal.1.dylib";
 static const char *OPENAL_LIBRARY_NAME = "libopenal.so.1";
 #endif
 
-// Need to resolve our own module's path - directly loading soft_oal.dll or libopenal.so.1 only searches the OS's default paths, not this GDExtension's directory
-static std::string get_own_module_directory()
-{
-#ifdef _WIN32
-    HMODULE self = nullptr;
-    GetModuleHandleExW(
-        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-        reinterpret_cast<LPCWSTR>(&get_own_module_directory),
-        &self);
-
-    char path[MAX_PATH];
-    DWORD length = GetModuleFileNameA(self, path, MAX_PATH);
-
-    if (length == 0 || length == MAX_PATH)
-        return "";
-
-    std::string result(path, length);
-#else
-    Dl_info info;
-    if (dladdr(reinterpret_cast<const void *>(&get_own_module_directory), &info) == 0 || !info.dli_fname)
-        return "";
-
-    std::string result(info.dli_fname);
-#endif
-
-    size_t last_slash = result.find_last_of("\\/");
-
-    if (last_slash == std::string::npos)
-        return "";
-
-    return result.substr(0, last_slash + 1);
-}
-
-static va_dynamic_library open_library(const char *path)
-{
-#ifdef _WIN32
-    return LoadLibraryA(path);
-#else
-    return dlopen(path, RTLD_NOW | RTLD_LOCAL);
-#endif
-}
-
-static void *library_symbol(va_dynamic_library library, const char *name)
-{
-#ifdef _WIN32
-    return reinterpret_cast<void *>(GetProcAddress(library, name));
-#else
-    return dlsym(library, name);
-#endif
-}
-
-static void close_library(va_dynamic_library library)
-{
-#ifdef _WIN32
-    FreeLibrary(library);
-#else
-    dlclose(library);
-#endif
-}
-
 bool OpenALBackend::load_library()
 {
-    std::string full_path = get_own_module_directory() + OPENAL_LIBRARY_NAME;
+    // Loading soft_oal.dll or libopenal.so.1 by name only searches the OS's default paths, not this GDExtension's folder
+    std::string full_path = va_get_own_module_directory() + OPENAL_LIBRARY_NAME;
 
-    library = open_library(full_path.c_str());
+    library = va_open_library(full_path.c_str());
 
     // Fall back to the OS's default search path if the binary isn't next in this GDExtension's folder
     if (!library)
-        library = open_library(OPENAL_LIBRARY_NAME);
+        library = va_open_library(OPENAL_LIBRARY_NAME);
 
     if (!library)
     {
-        VA_BACKEND_ERROR("Failed to load ", OPENAL_LIBRARY_NAME, " from ", String(full_path.c_str()));
+        VA_BACKEND_ERROR("Failed to load ", OPENAL_LIBRARY_NAME, " from ", String::utf8(full_path.c_str()));
         return false;
     }
 
@@ -269,7 +206,7 @@ bool OpenALBackend::load_library()
 template <typename T>
 static bool resolve(va_dynamic_library library, const char *name, T &out_fn)
 {
-    out_fn = reinterpret_cast<T>(library_symbol(library, name));
+    out_fn = reinterpret_cast<T>(va_library_symbol(library, name));
 
     if (!out_fn)
     {
@@ -390,7 +327,7 @@ void OpenALBackend::unload_library()
 {
     if (library)
     {
-        close_library(library);
+        va_close_library(library);
         library = nullptr;
     }
 }

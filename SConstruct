@@ -17,7 +17,7 @@ env.Append(CPPPATH=["src/", "common/", "thirdparty/vaudio/include/", "thirdparty
 obj_dir = "obj/" + env["platform"] + "-" + env["arch"] + "/" + env["target"]
 VariantDir(obj_dir + "/src", "src", duplicate=0)
 VariantDir(obj_dir + "/common", "common", duplicate=0)
-sources = Glob(obj_dir + "/src/*.cpp") + Glob(obj_dir + "/common/*.cpp") + Glob(obj_dir + "/common/backend/*.cpp") + Glob(obj_dir + "/common/backend/openal/*.cpp")
+sources = Glob(obj_dir + "/src/*.cpp") + Glob(obj_dir + "/common/*.cpp") + Glob(obj_dir + "/common/backend/*.cpp") + Glob(obj_dir + "/common/backend/openal/*.cpp") + Glob(obj_dir + "/common/backend/fmod/*.cpp")
 
 if env["target"] in ["editor", "template_debug"]:
     doc_data = env.GodotCPPDocData(obj_dir + "/gen/doc_data.gen.cpp", source=Glob("doc_classes/*.xml"))

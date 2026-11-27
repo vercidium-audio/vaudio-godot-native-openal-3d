@@ -2,20 +2,13 @@
 
 #pragma once
 
-// OpenAL Soft is loaded manually (LoadLibrary/GetProcAddress on Windows, dlopen/dlsym elsewhere) rather than linked, since no import lib is vendored.
-#ifdef _WIN32
-#include <windows.h>
-using va_dynamic_library = HMODULE;
-#else
-using va_dynamic_library = void *;
-#endif
-
 #include <godot_cpp/variant/packed_string_array.hpp>
 #include <godot_cpp/variant/vector3.hpp>
 
 #include <string>
 
 #include "backend/va_audio_backend_base.h"
+#include "backend/va_dynamic_library.h"
 #include "al_filter.h"
 #include "al_functions.h"
 

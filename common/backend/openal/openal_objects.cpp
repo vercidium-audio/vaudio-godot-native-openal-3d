@@ -168,7 +168,7 @@ std::unique_ptr<VAVoice> OpenALSound::create_voice(bool spatialised)
 
 bool OpenALStream::create(VAPcmFormat format, int frequency)
 {
-    if (!buffer.create(OpenALBackend::to_al(format), frequency))
+    if (!buffer.create(format, frequency))
         return false;
 
     if (!voice.create(buffer.get_handle(), true))
@@ -180,11 +180,6 @@ bool OpenALStream::create(VAPcmFormat format, int frequency)
 
 void OpenALStream::enqueue(const uint8_t *data, int length)
 {
-    // Played chunks aren't reused, so drop them
-    std::vector<uint8_t> played;
-
-    while (buffer.try_get_used_chunk(played)) { }
-
     buffer.enqueue(data, length);
 }
 
