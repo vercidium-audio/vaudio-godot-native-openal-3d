@@ -14,11 +14,33 @@ using namespace godot;
 namespace va_godot
 {
 
-void VABackendExportPlugin::_export_begin(const PackedStringArray &features, bool is_debug, const String &path, uint32_t flags)
+// "windows", "linux", "macos" or empty for an export platform the plugin doesn't support
+static String feature_os(const PackedStringArray &features)
 {
-    if (!VAAudioBackendRegistry::is_selected("OpenAL"))
-        return;
+    for (const char *os : { "windows", "linux", "macos" })
+    {
+        if (features.has(os))
+            return os;
+    }
 
+    return String();
+}
+
+// The names FMODLibrary loads at runtime
+static String fmod_library_name(const String &os)
+{
+    if (os == "windows")
+        return "fmod.dll";
+    if (os == "linux")
+        return "libfmod.so";
+    if (os == "macos")
+        return "libfmod.dylib";
+
+    return String();
+}
+
+static void export_hrtf(VABackendExportPlugin *plugin)
+{
     String folder = ProjectSettings::get_singleton()->get_setting("audio/vaudio/openal_hrtf_folder");
 
     if (folder.is_empty() || !DirAccess::dir_exists_absolute(folder))
@@ -32,8 +54,49 @@ void VABackendExportPlugin::_export_begin(const PackedStringArray &features, boo
             continue;
 
         String file_path = folder.path_join(files[i]);
-        add_file(file_path, FileAccess::get_file_as_bytes(file_path), false);
+        plugin->add_file(file_path, FileAccess::get_file_as_bytes(file_path), false);
     }
+}
+
+// Looks in the project folder, then audio/vaudio/fmod_library_path (the library or its folder). The library must be the export target's platform and architecture
+static void export_fmod(VABackendExportPlugin *plugin, const PackedStringArray &features)
+{
+    String library_name = fmod_library_name(feature_os(features));
+
+    if (library_name.is_empty())
+    {
+        UtilityFunctions::push_warning("[vaudio] FMOD isn't supported on this export platform (", String(", ").join(features), "), so the exported game will have no audio");
+        return;
+    }
+
+    ProjectSettings *settings = ProjectSettings::get_singleton();
+    PackedStringArray candidates = { settings->globalize_path("res://" + library_name) };
+
+    String setting = settings->get_setting("audio/vaudio/fmod_library_path", "");
+    if (!setting.is_empty())
+    {
+        String path = settings->globalize_path(setting);
+        candidates.push_back(DirAccess::dir_exists_absolute(path) ? path.path_join(library_name) : path);
+    }
+
+    for (const String &candidate : candidates)
+    {
+        if (FileAccess::file_exists(candidate))
+        {
+            plugin->add_shared_object(candidate, PackedStringArray(), "");
+            return;
+        }
+    }
+
+    UtilityFunctions::push_warning("[vaudio] The FMOD library ", library_name, " wasn't found, so it isn't in the export. Copy it from the FMOD Engine (FMOD Studio API) 2.03.x install beside the exported game's executable, or the game will have no audio. Searched: ", String(", ").join(candidates));
+}
+
+void VABackendExportPlugin::_export_begin(const PackedStringArray &features, bool is_debug, const String &path, uint32_t flags)
+{
+    if (VAAudioBackendRegistry::is_selected("OpenAL"))
+        export_hrtf(this);
+    else if (VAAudioBackendRegistry::is_selected("FMOD"))
+        export_fmod(this, features);
 }
 
 void VABackendExportPlugin::_export_file(const String &path, const String &type, const PackedStringArray &features)
@@ -42,23 +105,24 @@ void VABackendExportPlugin::_export_file(const String &path, const String &type,
         return;
 
     // Same folder and file names as the .gdextension's [libraries] and SConstruct
+    String os = feature_os(features);
     String folder;
     String openal_file;
     PackedStringArray debug_window_files;
 
-    if (features.has("macos"))
+    if (os == "macos")
     {
         folder = "mac";
         openal_file = "libopenal.1.dylib";
         debug_window_files = { "vaudio-debug-window", "libglfw.3.dylib" };
     }
-    else if (features.has("windows"))
+    else if (os == "windows")
     {
         folder = "windows";
         openal_file = "soft_oal.dll";
         debug_window_files = { "vaudio-debug-window.exe", "glfw3.dll" };
     }
-    else if (features.has("linux"))
+    else if (os == "linux")
     {
         folder = "linux";
         openal_file = "libopenal.so.1";

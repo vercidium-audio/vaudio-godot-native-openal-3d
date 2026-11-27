@@ -9,7 +9,7 @@ using namespace godot;
 namespace va_godot
 {
 
-// Adds the export files the .gdextension can't list: the selected backend's library (OpenAL: the addon's OpenAL Soft plus the audio/vaudio/openal_hrtf_folder .mhr files, which aren't Godot resources, so exports skip them unless they're added to the include filter by hand), plus the dev SDK's debug window, which production SDKs don't have
+// Adds the export files the .gdextension can't list: the selected backend's library (OpenAL: the addon's OpenAL Soft plus the audio/vaudio/openal_hrtf_folder .mhr files, which aren't Godot resources, so exports skip them unless they're added to the include filter by hand; FMOD: the user's own FMOD library, since vaudio doesn't ship FMOD), plus the dev SDK's debug window, which production SDKs don't have
 class VABackendExportPlugin : public EditorExportPlugin
 {
     GDCLASS(VABackendExportPlugin, EditorExportPlugin);
