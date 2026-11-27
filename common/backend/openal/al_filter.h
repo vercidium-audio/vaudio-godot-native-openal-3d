@@ -1,10 +1,10 @@
-// AI-created
+// Human-created
 
 #pragma once
 
 #include "al_functions.h"
 
-// Owns one EFX lowpass filter object, native equivalent of ALFilter.cs, scoped to AL_FILTER_LOWPASS only.
+// Represents an EFX lowpass filter object
 class ALFilter
 {
 private:
@@ -16,15 +16,16 @@ public:
     ALFilter() = default;
     ~ALFilter();
 
+    // Prevent copying
     ALFilter(const ALFilter &) = delete;
     ALFilter &operator=(const ALFilter &) = delete;
 
-    // Allocates a new EFX filter object and sets its type to AL_FILTER_LOWPASS. No-ops (handle stays 0) if OpenALBackend::has_efx() is false.
+    // No-ops if OpenALBackend::has_efx() is false (rare)
     bool create(float initial_gain, float initial_gain_hf);
 
     void destroy();
 
-    // gain is AL_LOWPASS_GAIN, written unclamped. gain_hf is an absolute HF gain converted relative to gain before writing to AL_LOWPASS_GAINHF, matching ALFilter.cs's SetGain.
+    // gain is AL_LOWPASS_GAIN. gain_hf is relative to gain
     void set_gain(float new_gain, float new_gain_hf);
 
     ALuint get_handle() const

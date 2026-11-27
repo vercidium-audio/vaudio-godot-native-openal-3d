@@ -1,4 +1,4 @@
-// AI-created
+// Human-reviewed
 
 #pragma once
 
@@ -6,6 +6,7 @@
 
 #include "al_functions.h"
 
+// TODO - move this to a separate file
 struct VAEAXReverbParams
 {
     float density = 1.0f;
@@ -46,6 +47,7 @@ public:
     ALReverbEffect() = default;
     ~ALReverbEffect();
 
+    // Prevent copying
     ALReverbEffect(const ALReverbEffect &) = delete;
     ALReverbEffect &operator=(const ALReverbEffect &) = delete;
 
@@ -66,5 +68,5 @@ public:
     }
 };
 
-// Copies the SDK's EAX fields into the OpenAL-facing params, with density pinned (see the definition)
+// Copiy the SDK's EAX params onto the OpenAL effect
 VAEAXReverbParams CopyReverbParams(const VAEAXReverb *eax);

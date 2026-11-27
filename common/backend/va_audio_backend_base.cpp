@@ -1,4 +1,4 @@
-// AI-created
+// Human-created
 
 #include "va_audio_backend_base.h"
 

@@ -1,4 +1,4 @@
-// AI-created
+// Human-reviewed
 
 #include "va_debugger_plugin.h"
 
@@ -7,8 +7,7 @@
 
 using namespace va_godot;
 
-void VADebuggerPlugin::sync_primitive(const String &scene_root_name, const NodePath &node_path, const String &material,
-    const Variant &use_flat_transmission, const String &propagate)
+void VADebuggerPlugin::sync_primitive(const String &scene_root_name, const NodePath &node_path, const String &material, const Variant &use_flat_transmission, const String &propagate)
 {
     Array sessions = get_sessions();
 
@@ -31,9 +30,9 @@ void VADebuggerPlugin::sync_primitive(const String &scene_root_name, const NodeP
 }
 
 void VADebuggerPlugin::sync_material_properties(const String &scene_root_name, const NodePath &node_path, const String &node_name,
-    bool is_custom_material, int material_type, float absorption_lf,
-    float absorption_hf, float scattering, float transmission_lf, float transmission_hf,
-    float flat_transmission_lf, float flat_transmission_hf, const Color &color)
+                                                bool is_custom_material, int material_type, float absorption_lf,
+                                                float absorption_hf, float scattering, float transmission_lf, float transmission_hf,
+                                                float flat_transmission_lf, float flat_transmission_hf, const Color &color)
 {
     Array sessions = get_sessions();
 

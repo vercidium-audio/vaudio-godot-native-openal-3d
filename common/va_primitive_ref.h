@@ -1,4 +1,4 @@
-// AI-created
+// Human-reviewed
 
 #pragma once
 
