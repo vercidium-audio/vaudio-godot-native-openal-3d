@@ -26,9 +26,18 @@
     X(FMOD_System_CreateSound) \
     X(FMOD_System_CreateDSPByType) \
     X(FMOD_System_PlaySound) \
+    X(FMOD_System_CreateChannelGroup) \
+    X(FMOD_System_RecordStart) \
+    X(FMOD_System_RecordStop) \
+    X(FMOD_System_GetRecordPosition) \
     X(FMOD_Sound_Release) \
     X(FMOD_Sound_GetUserData) \
+    X(FMOD_Sound_Lock) \
+    X(FMOD_Sound_Unlock) \
     X(FMOD_ChannelGroup_SetVolume) \
+    X(FMOD_ChannelGroup_AddDSP) \
+    X(FMOD_ChannelGroup_RemoveDSP) \
+    X(FMOD_ChannelGroup_Release) \
     X(FMOD_Channel_Stop) \
     X(FMOD_Channel_SetPaused) \
     X(FMOD_Channel_GetPaused) \
@@ -44,7 +53,10 @@
     X(FMOD_Channel_AddDSP) \
     X(FMOD_Channel_RemoveDSP) \
     X(FMOD_DSP_Release) \
-    X(FMOD_DSP_SetParameterFloat)
+    X(FMOD_DSP_SetParameterFloat) \
+    X(FMOD_DSP_SetParameterInt) \
+    X(FMOD_DSP_GetParameterInt) \
+    X(FMOD_DSP_SetBypass)
 
 // The resolved functions, called as va_fmod.FMOD_System_Create(...). Only valid once FMODLibrary::load has succeeded
 struct FMODApi

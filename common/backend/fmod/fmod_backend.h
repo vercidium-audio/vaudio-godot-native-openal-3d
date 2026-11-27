@@ -65,6 +65,9 @@ private:
 
     std::vector<RecordDriver> get_record_drivers(FMOD_SYSTEM *target);
 
+    // The connected record driver with this name, or the one flagged as the system default when empty. -1 if none
+    int find_record_driver(const String &name);
+
     // The live system, or (in the editor or after a failed start) a temporary one that lists the drivers. Record drivers are only enumerated once it's initialised (FMOD returns ERR_UNINITIALIZED before), which opens the output device briefly
     PackedStringArray with_system(const std::function<PackedStringArray(FMOD_SYSTEM *)> &list, bool initialise_temporary);
 

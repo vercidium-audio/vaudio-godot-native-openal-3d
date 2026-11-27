@@ -159,8 +159,14 @@ bool FMODBackend::create_system()
 
 void FMODBackend::update()
 {
-    if (is_initialised())
-        check(va_fmod.FMOD_System_Update(system), "System::update");
+    if (!is_initialised())
+        return;
+
+    // FMOD's rolloff comes after the reverb send, so each send applies its own distance attenuation from this frame's positions
+    for (FMODVoice *voice : voices)
+        voice->update_send_level();
+
+    check(va_fmod.FMOD_System_Update(system), "System::update");
 }
 
 void FMODBackend::shutdown()
@@ -402,11 +408,53 @@ std::unique_ptr<VAStream> FMODBackend::create_stream(VAPcmFormat format, int fre
 
 std::unique_ptr<VAReverbEffect> FMODBackend::create_reverb_effect()
 {
-    return nullptr;
+    return is_initialised() ? std::make_unique<FMODReverbEffect>() : nullptr;
 }
+
+int FMODBackend::find_record_driver(const String &name)
+{
+    for (const RecordDriver &driver : get_record_drivers(system))
+    {
+        if (driver.connected && (name.is_empty() ? driver.is_default : driver.name == name))
+            return driver.index;
+    }
+
+    return -1;
+}
+
+// The recording loops round this much audio, so it only has to be polled more often than this
+static constexpr float RECORD_BUFFER_SECONDS = 1.0f;
 
 std::unique_ptr<VACaptureDevice> FMODBackend::open_capture_device(const String &device_name, VAPcmFormat format, int frequency, int buffer_frames, VACaptureCallback on_data)
 {
-    VA_BACKEND_ERROR("Can't open the capture device because the native FMOD backend doesn't support capture yet");
-    return nullptr;
+    if (!is_initialised())
+    {
+        VA_BACKEND_ERROR("Can't open the capture device because FMOD failed to start. Check the earlier vaudio errors in the Output panel");
+        return nullptr;
+    }
+
+    int driver = find_record_driver(device_name);
+
+    if (driver < 0)
+    {
+        VA_BACKEND_ERROR(device_name.is_empty() ? String("Can't open the capture device because FMOD has no default capture device") : "Can't open the capture device because FMOD has no capture device named '" + device_name + "'");
+        return nullptr;
+    }
+
+    // FMOD resamples and remixes to the sound's rate and channels. At least the requested buffer, like OpenAL's capture ring
+    unsigned int length_frames = (unsigned int)std::max((float)buffer_frames, frequency * RECORD_BUFFER_SECONDS);
+
+    FMOD_CREATESOUNDEXINFO exinfo = {};
+    exinfo.cbsize = sizeof(exinfo);
+    exinfo.numchannels = va_pcm_channels(format);
+    exinfo.defaultfrequency = frequency;
+    exinfo.format = to_fmod(format);
+    exinfo.length = length_frames * (unsigned int)va_pcm_bytes_per_frame(format);
+
+    FMOD_SOUND *sound = nullptr;
+
+    if (!check(va_fmod.FMOD_System_CreateSound(system, nullptr, FMOD_OPENUSER | FMOD_LOOP_NORMAL | FMOD_CREATESAMPLE | FMOD_2D, &exinfo, &sound), "System::createSound"))
+        return nullptr;
+
+    return std::make_unique<FMODCaptureDevice>(system, driver, device_name, format, std::move(on_data), sound, length_frames);
 }
